@@ -1,9 +1,18 @@
 using AssuranceApi.Example.Endpoints;
 using AssuranceApi.Example.Services;
+using AssuranceApi.ServiceStandard.Endpoints;
+using AssuranceApi.ServiceStandard.Services;
+using AssuranceApi.ServiceStandard.Models;
+using AssuranceApi.ServiceStandard.Validators;
+using AssuranceApi.Project.Endpoints;
+using AssuranceApi.Project.Services;
+using AssuranceApi.Project.Models;
+using AssuranceApi.Project.Validators;
 using AssuranceApi.Utils;
 using AssuranceApi.Utils.Http;
 using AssuranceApi.Utils.Logging;
 using AssuranceApi.Utils.Mongo;
+using AssuranceApi.Config;
 using FluentValidation;
 using Serilog;
 using Serilog.Core;
@@ -56,7 +65,7 @@ static Logger ConfigureLogging(WebApplicationBuilder _builder)
    var logger = new LoggerConfiguration()
        .ReadFrom.Configuration(_builder.Configuration)
        .Enrich.With<LogLevelMapper>()
-       .Enrich.WithProperty("service.version", Environment.GetEnvironmentVariable("SERVICE_VERSION"))
+       .Enrich.WithProperty("service.version", System.Environment.GetEnvironmentVariable("SERVICE_VERSION"))
        .CreateLogger();
    _builder.Logging.AddSerilog(logger);
    logger.Information("Starting application");
@@ -67,8 +76,11 @@ static Logger ConfigureLogging(WebApplicationBuilder _builder)
 static void ConfigureMongoDb(WebApplicationBuilder _builder)
 {
    _builder.Services.AddSingleton<IMongoDbClientFactory>(_ =>
-       new MongoDbClientFactory(_builder.Configuration.GetValue<string>("Mongo:DatabaseUri")!,
-           _builder.Configuration.GetValue<string>("Mongo:DatabaseName")!));
+       new MongoDbClientFactory(
+           AssuranceApi.Config.Environment.GetMongoConnectionString(_builder.Configuration),
+           AssuranceApi.Config.Environment.GetMongoDatabaseName(_builder.Configuration)
+       )
+   );
 }
 
 [ExcludeFromCodeCoverage]
@@ -76,6 +88,11 @@ static void ConfigureEndpoints(WebApplicationBuilder _builder)
 {
    // our Example service, remove before deploying!
    _builder.Services.AddSingleton<IExamplePersistence, ExamplePersistence>();
+   _builder.Services.AddSingleton<IServiceStandardPersistence, ServiceStandardPersistence>();
+   _builder.Services.AddSingleton<IProjectPersistence, ProjectPersistence>();
+
+   _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
+   _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();
 
    _builder.Services.AddHealthChecks();
 }
@@ -91,5 +108,9 @@ static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
    // Example module, remove before deploying!
    app.UseExampleEndpoints();
 
+   app.UseServiceStandardEndpoints();
+   app.UseProjectEndpoints();
+
    return app;
 }
+
