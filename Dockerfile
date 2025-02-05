@@ -1,9 +1,11 @@
 ﻿# Base dotnet image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
-EXPOSE 5000
+EXPOSE 80
+EXPOSE 443
 
-# Add curl for CDP platform healthcheck
+# Add curl to template.
+# CDP PLATFORM HEALTHCHECK REQUIREMENT
 RUN apt update && \
     apt install curl -y && \
     apt-get clean && \
@@ -23,12 +25,10 @@ RUN dotnet publish AssuranceApi -c Release -o /app/publish /p:UseAppHost=false
 
 # Environment variables
 ENV ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
-ENV ASPNETCORE_URLS=http://+:5000
-ENV ASPNETCORE_ENVIRONMENT=Production
 
 # Final production image
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-EXPOSE 5000
+EXPOSE 8085
 ENTRYPOINT ["dotnet", "AssuranceApi.dll"]
