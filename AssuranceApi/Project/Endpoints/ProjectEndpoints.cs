@@ -12,6 +12,34 @@ public static class ProjectEndpoints
         app.MapGet("projects", GetAll);
         app.MapGet("projects/{id}", GetById);
         app.MapPut("projects/{id}", Update);
+        app.MapPost("/projects/seedData", async (IProjectPersistence persistence, ProjectModel[] projects) =>
+        {
+            try
+            {
+                await persistence.DeleteAllAsync();
+                foreach (var project in projects)
+                {
+                    await persistence.CreateAsync(project);
+                }
+                return Results.Ok("Projects seeded successfully");
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem($"Failed to seed projects: {ex.Message}");
+            }
+        });
+        app.MapPost("/projects/deleteAll", async (IProjectPersistence persistence) =>
+        {
+            try
+            {
+                await persistence.DeleteAllAsync();
+                return Results.Ok("All projects deleted");
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem($"Failed to delete projects: {ex.Message}");
+            }
+        });
     }
 
     private static async Task<IResult> Create(

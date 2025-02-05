@@ -17,6 +17,12 @@ public static class ServiceStandardEndpoints
         List<ServiceStandardModel> standards, 
         IServiceStandardPersistence persistence)
     {
+        if (!standards.Any())
+        {
+            await persistence.DeleteAllAsync();
+            return Results.Ok();
+        }
+
         var created = await persistence.SeedStandardsAsync(standards);
         return created ? Results.Ok() : Results.BadRequest("Failed to seed standards");
     }
@@ -31,5 +37,15 @@ public static class ServiceStandardEndpoints
     {
         var standard = await persistence.GetByIdAsync(id);
         return standard is not null ? Results.Ok(standard) : Results.NotFound();
+    }
+
+    private static List<ServiceStandardModel> GetDefaultStandards()
+    {
+        return new List<ServiceStandardModel>
+        {
+            new() { Number = 1, Name = "Understand users and their needs", Description = "Research to develop a deep knowledge of who the service users are and what that means for digital service design" },
+            new() { Number = 2, Name = "Solve a whole problem for users", Description = "Work to solve a whole problem for users to achieve a goal that delivers a complete end to end user journey" },
+            // ... add all standards
+        };
     }
 } 
