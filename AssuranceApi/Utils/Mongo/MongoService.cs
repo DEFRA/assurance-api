@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Logging;
 
 namespace AssuranceApi.Utils.Mongo;
 
@@ -8,15 +9,13 @@ public abstract class MongoService<T>
 {
     protected readonly IMongoClient Client;
     protected readonly IMongoCollection<T> Collection;
-
-    protected readonly ILogger _logger;
+    protected readonly ILogger<MongoService<T>> Logger;
 
     protected MongoService(IMongoDbClientFactory connectionFactory, string collectionName, ILoggerFactory loggerFactory)
     {
         Client = connectionFactory.GetClient();
         Collection = connectionFactory.GetCollection<T>(collectionName);
-        var loggerName = GetType().FullName ?? GetType().Name;
-        _logger = loggerFactory.CreateLogger(loggerName);
+        Logger = loggerFactory.CreateLogger<MongoService<T>>();
         EnsureIndexes();
     }
 
@@ -28,7 +27,7 @@ public abstract class MongoService<T>
         var indexes = DefineIndexes(builder);
         if (indexes.Count == 0) return;
 
-        _logger.LogInformation(
+        Logger.LogInformation(
             "Ensuring index is created if it does not exist for collection {CollectionNamespaceCollectionName} in DB {DatabaseDatabaseNamespace}",
             Collection.CollectionNamespace.CollectionName,
             Collection.Database.DatabaseNamespace);

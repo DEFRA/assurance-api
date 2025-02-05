@@ -2,6 +2,7 @@
 using AssuranceApi.Utils.Mongo;
 using MongoDB.Driver;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Logging;
 
 namespace AssuranceApi.Example.Services;
 
@@ -36,9 +37,9 @@ public class ExamplePersistence(IMongoDbClientFactory connectionFactory, ILogger
          await Collection.InsertOneAsync(example);
          return true;
       }
-      catch (Exception e)
+      catch (Exception ex)
       {
-         _logger.LogError(e, "Failed to insert {example}", example);
+         Logger.LogError(ex, "Failed to create example");
          return false;
       }
    }
@@ -47,7 +48,7 @@ public class ExamplePersistence(IMongoDbClientFactory connectionFactory, ILogger
    public async Task<ExampleModel?> GetByExampleName(string name)
    {
       var result = await Collection.Find(b => b.Name == name).FirstOrDefaultAsync();
-      _logger.LogInformation("Searching for {Name}, found {Result}", name, result);
+      Logger.LogInformation("Searching for {Name}, found {Result}", name, result);
       return result;
    }
 

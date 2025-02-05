@@ -1,12 +1,14 @@
 ﻿{
   "profiles": {
-    "AssuranceApi": {
+    "Development": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": false,
       "applicationUrl": "http://localhost:5000",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "MONGODB__CONNECTION_STRING": "mongodb://localhost:27017",
+        "MONGODB__DATABASE_NAME": "assurance-api"
       }
     }
   }
