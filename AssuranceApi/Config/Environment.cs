@@ -11,8 +11,8 @@ public static class Environment
 
     public static string GetMongoConnectionString(IConfiguration configuration)
     {
-        return configuration.GetValue<string>("Mongo:ConnectionString") 
-            ?? throw new InvalidOperationException("Mongo:ConnectionString configuration is not set");
+        return configuration.GetValue<string>("Mongo:DatabaseUri") 
+            ?? throw new InvalidOperationException("Mongo:DatabaseUri configuration is not set");
     }
 
     public static string GetMongoDatabaseName(IConfiguration configuration)
