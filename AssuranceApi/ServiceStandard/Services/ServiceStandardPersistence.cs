@@ -52,4 +52,9 @@ public class ServiceStandardPersistence : MongoService<ServiceStandardModel>, IS
     {
         return await Collection.Find(x => x.Id == id).FirstOrDefaultAsync();
     }
+
+    public async Task DeleteAllAsync()
+    {
+        await Collection.DeleteManyAsync(Builders<ServiceStandardModel>.Filter.Empty);
+    }
 } 

@@ -64,4 +64,9 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
             return false;
         }
     }
+
+    public async Task DeleteAllAsync()
+    {
+        await Collection.DeleteManyAsync(Builders<ProjectModel>.Filter.Empty);
+    }
 } 
