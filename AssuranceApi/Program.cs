@@ -90,6 +90,7 @@ static void ConfigureEndpoints(WebApplicationBuilder _builder)
    _builder.Services.AddSingleton<IExamplePersistence, ExamplePersistence>();
    _builder.Services.AddSingleton<IServiceStandardPersistence, ServiceStandardPersistence>();
    _builder.Services.AddSingleton<IProjectPersistence, ProjectPersistence>();
+   _builder.Services.AddSingleton<IStandardHistoryPersistence, StandardHistoryPersistence>();
 
    _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
    _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();

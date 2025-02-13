@@ -7,6 +7,6 @@ public interface IProjectPersistence
     Task<bool> CreateAsync(ProjectModel project);
     Task<List<ProjectModel>> GetAllAsync();
     Task<ProjectModel?> GetByIdAsync(string id);
-    Task<bool> UpdateAsync(ProjectModel project);
+    Task<bool> UpdateAsync(string id, ProjectModel project);
     Task DeleteAllAsync();
 } 

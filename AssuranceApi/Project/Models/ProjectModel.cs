@@ -12,10 +12,10 @@ public class ProjectModel
     public string Status { get; set; } = null!;  // RED, AMBER, GREEN
     public string LastUpdated { get; set; } = null!;
     public string Commentary { get; set; } = null!;
-    public List<StandardAssessment> Standards { get; set; } = new();
+    public List<StandardModel> Standards { get; set; } = new();
 }
 
-public class StandardAssessment
+public class StandardModel
 {
     public string StandardId { get; set; } = null!;
     public string Status { get; set; } = null!;  // RED, AMBER, GREEN

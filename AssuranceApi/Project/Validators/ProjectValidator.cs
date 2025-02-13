@@ -7,40 +7,23 @@ public class ProjectValidator : AbstractValidator<ProjectModel>
 {
     public ProjectValidator()
     {
-        RuleFor(x => x.Name)
-            .NotEmpty()
-            .MaximumLength(200);
-
-        RuleFor(x => x.Status)
-            .NotEmpty()
-            .Must(x => new[] { "RED", "AMBER", "GREEN" }.Contains(x))
-            .WithMessage("Status must be RED, AMBER, or GREEN");
-
-        RuleFor(x => x.LastUpdated)
-            .NotEmpty();
-
-        RuleFor(x => x.Commentary)
-            .NotEmpty()
-            .MaximumLength(2000);
-
-        RuleForEach(x => x.Standards).SetValidator(new StandardAssessmentValidator());
+        RuleFor(x => x.Name).NotEmpty();
+        RuleFor(x => x.Status).NotEmpty().Must(x => 
+            x == "RED" || x == "AMBER" || x == "GREEN");
+        RuleFor(x => x.Commentary).NotEmpty();
+        RuleFor(x => x.LastUpdated).NotEmpty();
+        RuleFor(x => x.Standards).NotNull();
+        RuleForEach(x => x.Standards).SetValidator(new StandardValidator());
     }
 }
 
-public class StandardAssessmentValidator : AbstractValidator<StandardAssessment>
+public class StandardValidator : AbstractValidator<StandardModel>
 {
-    public StandardAssessmentValidator()
+    public StandardValidator()
     {
-        RuleFor(x => x.StandardId)
-            .NotEmpty();
-
-        RuleFor(x => x.Status)
-            .NotEmpty()
-            .Must(x => new[] { "RED", "AMBER", "GREEN" }.Contains(x))
-            .WithMessage("Status must be RED, AMBER, or GREEN");
-
-        RuleFor(x => x.Commentary)
-            .NotEmpty()
-            .MaximumLength(1000);
+        RuleFor(x => x.StandardId).NotEmpty();
+        RuleFor(x => x.Status).NotEmpty().Must(x => 
+            x == "RED" || x == "AMBER" || x == "GREEN");
+        RuleFor(x => x.Commentary).NotEmpty();
     }
 } 
