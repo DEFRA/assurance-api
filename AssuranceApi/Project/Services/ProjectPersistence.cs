@@ -49,18 +49,30 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
         return await Collection.Find(x => x.Id == id).FirstOrDefaultAsync();
     }
 
-    public async Task<bool> UpdateAsync(ProjectModel project)
+    public async Task<bool> UpdateAsync(string id, ProjectModel project)
     {
         try
         {
+            Logger.LogInformation(
+                "Updating project {ProjectId} with {StandardCount} standards",
+                id,
+                project.Standards?.Count ?? 0
+            );
+
             var result = await Collection.ReplaceOneAsync(
-                x => x.Id == project.Id,
+                x => x.Id == id,
                 project);
+
+            if (result.ModifiedCount == 0)
+            {
+                Logger.LogWarning("No project was updated for ID {ProjectId}", id);
+            }
+
             return result.ModifiedCount > 0;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to update project");
+            Logger.LogError(ex, "Failed to update project {ProjectId}", id);
             return false;
         }
     }

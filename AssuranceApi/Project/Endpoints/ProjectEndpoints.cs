@@ -1,6 +1,8 @@
 using AssuranceApi.Project.Models;
 using AssuranceApi.Project.Services;
 using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
+using MongoDB.Driver;
 
 namespace AssuranceApi.Project.Endpoints;
 
@@ -11,7 +13,6 @@ public static class ProjectEndpoints
         app.MapPost("projects", Create);
         app.MapGet("projects", GetAll);
         app.MapGet("projects/{id}", GetById);
-        app.MapPut("projects/{id}", Update);
         app.MapPost("/projects/seedData", async (IProjectPersistence persistence, ProjectModel[] projects) =>
         {
             try
@@ -40,6 +41,19 @@ public static class ProjectEndpoints
                 return Results.Problem($"Failed to delete projects: {ex.Message}");
             }
         });
+
+        // Get history for a specific standard
+        app.MapGet("/projects/{projectId}/standards/{standardId}/history", async (
+            string projectId,
+            string standardId,
+            IStandardHistoryPersistence historyPersistence) =>
+        {
+            var history = await historyPersistence.GetHistoryAsync(projectId, standardId);
+            return Results.Ok(history);
+        });
+
+        // Update project and track changes
+        app.MapPut("/projects/{id}", Update);
     }
 
     private static async Task<IResult> Create(
@@ -70,15 +84,70 @@ public static class ProjectEndpoints
 
     private static async Task<IResult> Update(
         string id,
-        ProjectModel project,
+        ProjectModel updatedProject,
         IProjectPersistence persistence,
+        IStandardHistoryPersistence historyPersistence,
         IValidator<ProjectModel> validator)
     {
-        project.Id = id;
-        var validationResult = await validator.ValidateAsync(project);
+        var validationResult = await validator.ValidateAsync(updatedProject);
         if (!validationResult.IsValid) return Results.BadRequest(validationResult.Errors);
 
-        var updated = await persistence.UpdateAsync(project);
-        return updated ? Results.Ok(project) : Results.NotFound();
+        var existingProject = await persistence.GetByIdAsync(id);
+        if (existingProject == null) return Results.NotFound();
+
+        // Track changes for each standard
+        foreach (var updatedStandard in updatedProject.Standards)
+        {
+            var existingStandard = existingProject.Standards
+                .FirstOrDefault(s => s.StandardId == updatedStandard.StandardId);
+
+            if (existingStandard == null) continue;
+
+            var changes = new StandardChanges();
+            var hasChanges = false;
+
+            // Check for status change
+            if (existingStandard.Status != updatedStandard.Status)
+            {
+                changes.Status = new StatusChange
+                {
+                    From = existingStandard.Status,
+                    To = updatedStandard.Status
+                };
+                hasChanges = true;
+            }
+
+            // Check for commentary change
+            if (existingStandard.Commentary != updatedStandard.Commentary)
+            {
+                changes.Commentary = new CommentaryChange
+                {
+                    From = existingStandard.Commentary,
+                    To = updatedStandard.Commentary
+                };
+                hasChanges = true;
+            }
+
+            // If there are changes, create history record
+            if (hasChanges)
+            {
+                var history = new StandardHistory
+                {
+                    Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
+                    ProjectId = id,
+                    StandardId = updatedStandard.StandardId,
+                    Timestamp = DateTime.UtcNow,
+                    ChangedBy = "system",
+                    Changes = changes
+                };
+
+                await historyPersistence.CreateAsync(history);
+            }
+        }
+
+        var updated = await persistence.UpdateAsync(id, updatedProject);
+        if (!updated) return Results.NotFound();
+
+        return Results.Ok(updatedProject);
     }
 } 
