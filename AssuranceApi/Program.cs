@@ -17,7 +17,6 @@ using FluentValidation;
 using Serilog;
 using Serilog.Core;
 using System.Diagnostics.CodeAnalysis;
-
 //-------- Configure the WebApplication builder------------------//
 
 var app = CreateWebApplication(args);
@@ -75,12 +74,16 @@ static Logger ConfigureLogging(WebApplicationBuilder _builder)
 [ExcludeFromCodeCoverage]
 static void ConfigureMongoDb(WebApplicationBuilder _builder)
 {
-   _builder.Services.AddSingleton<IMongoDbClientFactory>(_ =>
-       new MongoDbClientFactory(
-           AssuranceApi.Config.Environment.GetMongoConnectionString(_builder.Configuration),
-           AssuranceApi.Config.Environment.GetMongoDatabaseName(_builder.Configuration)
-       )
-   );
+   _builder.Services.AddSingleton<IMongoDbClientFactory>(sp => {
+       var logger = sp.GetRequiredService<ILogger<Program>>();
+       var connectionString = AssuranceApi.Config.Environment.GetMongoConnectionString(_builder.Configuration);
+       var databaseName = AssuranceApi.Config.Environment.GetMongoDatabaseName(_builder.Configuration);
+       
+       logger.LogInformation("Configuring MongoDB with connection string: {ConnectionString}, database: {DatabaseName}", 
+           connectionString, databaseName);
+
+       return new MongoDbClientFactory(connectionString, databaseName);
+   });
 }
 
 [ExcludeFromCodeCoverage]
@@ -91,6 +94,8 @@ static void ConfigureEndpoints(WebApplicationBuilder _builder)
    _builder.Services.AddSingleton<IServiceStandardPersistence, ServiceStandardPersistence>();
    _builder.Services.AddSingleton<IProjectPersistence, ProjectPersistence>();
    _builder.Services.AddSingleton<IStandardHistoryPersistence, StandardHistoryPersistence>();
+   _builder.Services.AddSingleton<IProjectHistoryPersistence, ProjectHistoryPersistence>();
+   _builder.Services.AddSingleton<IServiceStandardHistoryPersistence, ServiceStandardHistoryPersistence>();
 
    _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
    _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();

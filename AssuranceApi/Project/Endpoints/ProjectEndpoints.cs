@@ -2,7 +2,9 @@ using AssuranceApi.Project.Models;
 using AssuranceApi.Project.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using MongoDB.Driver;
+using Microsoft.Extensions.Logging;
 
 namespace AssuranceApi.Project.Endpoints;
 
@@ -54,6 +56,18 @@ public static class ProjectEndpoints
 
         // Update project and track changes
         app.MapPut("/projects/{id}", Update);
+
+        app.MapGet("/projects/{id}/history", async (
+            string id,
+            IProjectHistoryPersistence historyPersistence,
+            ILogger<string> logger) =>
+        {
+            logger.LogInformation("Fetching history for project {ProjectId}", id);
+            var history = await historyPersistence.GetHistoryAsync(id);
+            logger.LogInformation("Found {Count} history entries for project {ProjectId}", 
+                history.Count(), id);
+            return Results.Ok(history);
+        });
     }
 
     private static async Task<IResult> Create(
@@ -86,7 +100,9 @@ public static class ProjectEndpoints
         string id,
         ProjectModel updatedProject,
         IProjectPersistence persistence,
-        IStandardHistoryPersistence historyPersistence,
+        IProjectHistoryPersistence projectHistoryPersistence,
+        IStandardHistoryPersistence standardHistoryPersistence,
+        ILogger<string> logger,
         IValidator<ProjectModel> validator)
     {
         var validationResult = await validator.ValidateAsync(updatedProject);
@@ -94,6 +110,74 @@ public static class ProjectEndpoints
 
         var existingProject = await persistence.GetByIdAsync(id);
         if (existingProject == null) return Results.NotFound();
+
+        logger.LogInformation("Updating project {ProjectId}. Checking for changes...", id);
+
+        // Track project-level changes
+        var projectChanges = new ProjectChanges();
+        var hasProjectChanges = false;
+
+        // Check for name change
+        if (existingProject.Name != updatedProject.Name)
+        {
+            logger.LogInformation("Name changed from '{OldName}' to '{NewName}'", 
+                existingProject.Name, updatedProject.Name);
+            projectChanges.Name = new NameChange
+            {
+                From = existingProject.Name,
+                To = updatedProject.Name
+            };
+            hasProjectChanges = true;
+        }
+
+        // Check for status change
+        if (existingProject.Status != updatedProject.Status)
+        {
+            logger.LogInformation("Status changed from '{OldStatus}' to '{NewStatus}'", 
+                existingProject.Status, updatedProject.Status);
+            projectChanges.Status = new StatusChange
+            {
+                From = existingProject.Status,
+                To = updatedProject.Status
+            };
+            hasProjectChanges = true;
+        }
+
+        // Check for commentary change
+        if (existingProject.Commentary != updatedProject.Commentary)
+        {
+            logger.LogInformation("Commentary changed");
+            projectChanges.Commentary = new CommentaryChange
+            {
+                From = existingProject.Commentary,
+                To = updatedProject.Commentary
+            };
+            hasProjectChanges = true;
+        }
+
+        // If there are project-level changes, create history record
+        if (hasProjectChanges)
+        {
+            logger.LogInformation("Creating history record for project changes");
+            var projectHistory = new ProjectHistory
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                ProjectId = id,
+                Timestamp = DateTime.UtcNow,
+                ChangedBy = "system",
+                Changes = projectChanges
+            };
+
+            var historyCreated = await projectHistoryPersistence.CreateAsync(projectHistory);
+            if (!historyCreated)
+            {
+                logger.LogError("Failed to create project history record");
+            }
+        }
+        else 
+        {
+            logger.LogInformation("No project-level changes detected");
+        }
 
         // Track changes for each standard
         foreach (var updatedStandard in updatedProject.Standards)
@@ -141,7 +225,7 @@ public static class ProjectEndpoints
                     Changes = changes
                 };
 
-                await historyPersistence.CreateAsync(history);
+                await standardHistoryPersistence.CreateAsync(history);
             }
         }
 

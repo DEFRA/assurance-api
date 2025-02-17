@@ -10,6 +10,21 @@ public class StandardHistoryPersistence : MongoService<StandardHistory>, IStanda
     public StandardHistoryPersistence(IMongoDbClientFactory connectionFactory, ILoggerFactory loggerFactory)
         : base(connectionFactory, "standardHistory", loggerFactory)
     {
+        Logger.LogInformation("Initializing StandardHistoryPersistence with collection: standardHistory");
+        try 
+        {
+            var builder = Builders<StandardHistory>.IndexKeys;
+            var indexes = DefineIndexes(builder);
+            foreach (var index in indexes)
+            {
+                Collection.Indexes.CreateOne(index);
+            }
+            Logger.LogInformation("Successfully created indexes for standardHistory collection");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to create indexes for standardHistory collection");
+        }
     }
 
     protected override List<CreateIndexModel<StandardHistory>> DefineIndexes(
@@ -28,7 +43,10 @@ public class StandardHistoryPersistence : MongoService<StandardHistory>, IStanda
     {
         try
         {
+            Logger.LogInformation("Creating history entry for standard {StandardId} in project {ProjectId}", 
+                history.StandardId, history.ProjectId);
             await Collection.InsertOneAsync(history);
+            Logger.LogInformation("Successfully created history entry");
             return true;
         }
         catch (Exception ex)
@@ -42,15 +60,14 @@ public class StandardHistoryPersistence : MongoService<StandardHistory>, IStanda
     {
         try
         {
-            var filter = Builders<StandardHistory>.Filter.And(
-                Builders<StandardHistory>.Filter.Eq(h => h.ProjectId, projectId),
-                Builders<StandardHistory>.Filter.Eq(h => h.StandardId, standardId)
-            );
-
-            return await Collection
-                .Find(filter)
-                .SortByDescending(h => h.Timestamp)
+            Logger.LogInformation("Getting history for standard {StandardId} in project {ProjectId}", 
+                standardId, projectId);
+            var result = await Collection
+                .Find(x => x.ProjectId == projectId && x.StandardId == standardId)
+                .SortByDescending(x => x.Timestamp)
                 .ToListAsync();
+            Logger.LogInformation("Found {Count} history entries", result.Count);
+            return result;
         }
         catch (Exception ex)
         {
