@@ -11,6 +11,17 @@ public static class ServiceStandardEndpoints
         app.MapPost("serviceStandards/seed", SeedStandards);
         app.MapGet("serviceStandards", GetAll);
         app.MapGet("serviceStandards/{id}", GetById);
+        app.MapGet("/serviceStandards/{standardId}/history", async (
+            string standardId,
+            IServiceStandardHistoryPersistence historyPersistence,
+            ILogger<string> logger) =>
+        {
+            logger.LogInformation("Fetching history for standard {StandardId}", standardId);
+            var history = await historyPersistence.GetHistoryAsync(standardId);
+            logger.LogInformation("Found {Count} history entries for standard {StandardId}", 
+                history.Count(), standardId);
+            return Results.Ok(history);
+        });
     }
 
     private static async Task<IResult> SeedStandards(
