@@ -13,7 +13,11 @@ public static class ProjectEndpoints
     public static void UseProjectEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapPost("projects", Create);
-        app.MapGet("projects", GetAll);
+        app.MapGet("projects", async (IProjectPersistence persistence, string? tag) =>
+        {
+            var projects = await persistence.GetAllAsync(tag);
+            return Results.Ok(projects);
+        });
         app.MapGet("projects/{id}", GetById);
         app.MapPost("/projects/seedData", async (IProjectPersistence persistence, ProjectModel[] projects) =>
         {
@@ -68,6 +72,28 @@ public static class ProjectEndpoints
                 history.Count(), id);
             return Results.Ok(history);
         });
+
+        app.MapGet("/projects/tags/summary", async (IProjectPersistence persistence) =>
+        {
+            var projects = await persistence.GetAllAsync();
+            var summary = projects
+                .SelectMany(p => p.Tags)
+                .Select(tag => 
+                {
+                    var parts = tag.Split(": ", 2);
+                    return new { Category = parts[0], Value = parts[1] };
+                })
+                .GroupBy(t => t.Category)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.GroupBy(t => t.Value)
+                        .ToDictionary(
+                            sg => sg.Key,
+                            sg => sg.Count()
+                        )
+                );
+            return Results.Ok(summary);
+        });
     }
 
     private static async Task<IResult> Create(
@@ -82,12 +108,6 @@ public static class ProjectEndpoints
         if (!created) return Results.BadRequest("Failed to create project");
 
         return Results.Created($"/projects/{project.Id}", project);
-    }
-
-    private static async Task<IResult> GetAll(IProjectPersistence persistence)
-    {
-        var projects = await persistence.GetAllAsync();
-        return Results.Ok(projects);
     }
 
     private static async Task<IResult> GetById(string id, IProjectPersistence persistence)
@@ -114,7 +134,7 @@ public static class ProjectEndpoints
         logger.LogInformation("Updating project {ProjectId}. Checking for changes...", id);
 
         // Track project-level changes
-        var projectChanges = new ProjectChanges();
+        var projectChanges = new Changes();
         var hasProjectChanges = false;
 
         // Check for name change

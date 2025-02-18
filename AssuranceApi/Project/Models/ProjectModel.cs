@@ -12,6 +12,7 @@ public class ProjectModel
     public string Status { get; set; } = null!;  // RED, AMBER, GREEN
     public string LastUpdated { get; set; } = null!;
     public string Commentary { get; set; } = null!;
+    public List<string> Tags { get; set; } = new();
     public List<StandardModel> Standards { get; set; } = new();
 }
 

@@ -19,16 +19,4 @@ public class StandardChanges
 {
     public StatusChange? Status { get; set; }
     public CommentaryChange? Commentary { get; set; }
-}
-
-public class StatusChange
-{
-    public string From { get; set; } = null!;
-    public string To { get; set; } = null!;
-}
-
-public class CommentaryChange
-{
-    public string From { get; set; } = null!;
-    public string To { get; set; } = null!;
 } 

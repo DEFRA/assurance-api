@@ -37,11 +37,13 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
         }
     }
 
-    public async Task<List<ProjectModel>> GetAllAsync()
+    public async Task<List<ProjectModel>> GetAllAsync(string? tag = null)
     {
-        return await Collection.Find(Builders<ProjectModel>.Filter.Empty)
-            .SortBy(p => p.Name)
-            .ToListAsync();
+        var filter = tag == null 
+            ? Builders<ProjectModel>.Filter.Empty
+            : Builders<ProjectModel>.Filter.AnyEq(p => p.Tags, tag);
+        
+        return await Collection.Find(filter).ToListAsync();
     }
 
     public async Task<ProjectModel?> GetByIdAsync(string id)
