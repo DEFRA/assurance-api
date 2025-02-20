@@ -73,4 +73,9 @@ public class ProjectHistoryPersistence : MongoService<ProjectHistory>, IProjectH
             return Enumerable.Empty<ProjectHistory>();
         }
     }
+
+    public async Task DeleteAllAsync()
+    {
+        await Collection.DeleteManyAsync(Builders<ProjectHistory>.Filter.Empty);
+    }
 } 

@@ -75,4 +75,9 @@ public class StandardHistoryPersistence : MongoService<StandardHistory>, IStanda
             return Enumerable.Empty<StandardHistory>();
         }
     }
+
+    public async Task DeleteAllAsync()
+    {
+        await Collection.DeleteManyAsync(Builders<StandardHistory>.Filter.Empty);
+    }
 } 
