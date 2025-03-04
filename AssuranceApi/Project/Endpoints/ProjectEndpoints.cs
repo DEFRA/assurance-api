@@ -150,6 +150,21 @@ public static class ProjectEndpoints
                 );
             return Results.Ok(summary);
         });
+
+        app.MapDelete("/projects/{id}", async (string id, IProjectPersistence projectPersistence) =>
+        {
+            var result = await projectPersistence.DeleteAsync(id);
+            
+            if (!result)
+            {
+                return Results.NotFound($"Project with ID {id} not found");
+            }
+            
+            return Results.NoContent();
+        })
+        .WithName("DeleteProject")
+        .Produces(204)
+        .Produces(404);
     }
 
     private static async Task<IResult> Create(
