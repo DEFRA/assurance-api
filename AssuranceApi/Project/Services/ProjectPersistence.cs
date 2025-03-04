@@ -2,6 +2,7 @@ using AssuranceApi.Project.Models;
 using AssuranceApi.Utils.Mongo;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using System.Text.Json;
 
 namespace AssuranceApi.Project.Services;
 
@@ -82,5 +83,30 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
     public async Task DeleteAllAsync()
     {
         await Collection.DeleteManyAsync(Builders<ProjectModel>.Filter.Empty);
+    }
+
+    public async Task<bool> DeleteAsync(string id)
+    {
+        try
+        {
+            Logger.LogInformation("Deleting project with ID: {Id}", id);
+            
+            // Delete the project
+            var deleteResult = await Collection.DeleteOneAsync(p => p.Id == id);
+            
+            if (deleteResult.DeletedCount == 0)
+            {
+                Logger.LogWarning("Project with ID {Id} not found for deletion", id);
+                return false;
+            }
+            
+            Logger.LogInformation("Successfully deleted project with ID: {Id}", id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting project with ID: {Id}", id);
+            throw;
+        }
     }
 } 

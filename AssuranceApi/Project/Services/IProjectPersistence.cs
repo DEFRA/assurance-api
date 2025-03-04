@@ -9,4 +9,5 @@ public interface IProjectPersistence
     Task<ProjectModel?> GetByIdAsync(string id);
     Task<bool> UpdateAsync(string id, ProjectModel project);
     Task DeleteAllAsync();
+    Task<bool> DeleteAsync(string id);
 } 
