@@ -22,6 +22,18 @@ public static class ServiceStandardEndpoints
                 history.Count(), standardId);
             return Results.Ok(history);
         });
+        app.MapPost("/serviceStandards/deleteAll", async (IServiceStandardPersistence persistence) =>
+        {
+            try
+            {
+                await persistence.DeleteAllAsync();
+                return Results.Ok("All service standards deleted");
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem($"Failed to delete service standards: {ex.Message}");
+            }
+        });
     }
 
     private static async Task<IResult> SeedStandards(

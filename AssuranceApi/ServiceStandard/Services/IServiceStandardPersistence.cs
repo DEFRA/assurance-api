@@ -8,4 +8,5 @@ public interface IServiceStandardPersistence
     Task<List<ServiceStandardModel>> GetAllAsync();
     Task<ServiceStandardModel?> GetByIdAsync(string id);
     Task DeleteAllAsync();
+    Task<bool> DeleteAsync(string id);
 } 
