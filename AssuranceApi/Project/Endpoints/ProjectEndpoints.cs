@@ -29,7 +29,7 @@ public static class ProjectEndpoints
             bool clearExisting = true;
             if (request.Query.TryGetValue("clearExisting", out var clearParam))
             {
-                bool.TryParse(clearParam, out clearExisting);
+                clearExisting = !string.Equals(clearParam, "false", StringComparison.OrdinalIgnoreCase);
             }
             
             if (clearExisting)
