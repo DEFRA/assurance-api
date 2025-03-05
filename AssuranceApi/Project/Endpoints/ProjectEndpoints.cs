@@ -20,76 +20,83 @@ public static class ProjectEndpoints
         });
         app.MapGet("projects/{id}", GetById);
         app.MapPost("/projects/seedData", async (
-            IProjectPersistence persistence,
+            List<ProjectModel> projects, 
+            IProjectPersistence persistence, 
             IProjectHistoryPersistence projectHistoryPersistence,
             IStandardHistoryPersistence standardHistoryPersistence,
-            ProjectModel[] projects) =>
+            HttpRequest request) =>
         {
-            try
+            bool clearExisting = true;
+            if (request.Query.TryGetValue("clearExisting", out var clearParam))
             {
+                bool.TryParse(clearParam, out clearExisting);
+            }
+            
+            if (clearExisting)
+            {
+                // Clear existing projects
                 await persistence.DeleteAllAsync();
                 await projectHistoryPersistence.DeleteAllAsync();
                 await standardHistoryPersistence.DeleteAllAsync();
-
-                foreach (var project in projects)
+            }
+            
+            // Add new projects
+            await persistence.SeedAsync(projects);
+            
+            // Create historical data for each project
+            foreach (var project in projects)
+            {
+                // Create historical project status changes
+                var statuses = new[] { "RED", "AMBER", "GREEN" };
+                var random = new Random();
+                
+                for (var i = 90; i >= 0; i -= 15) // Create history every 15 days for past 90 days
                 {
-                    await persistence.CreateAsync(project);
-
-                    // Create historical project status changes
-                    var statuses = new[] { "RED", "AMBER", "GREEN" };
-                    var random = new Random();
-                    
-                    for (var i = 90; i >= 0; i -= 15) // Create history every 15 days for past 90 days
+                    var projectHistory = new ProjectHistory
                     {
-                        var projectHistory = new ProjectHistory
+                        Id = ObjectId.GenerateNewId().ToString(),
+                        ProjectId = project.Id,
+                        Timestamp = DateTime.UtcNow.AddDays(-i),
+                        ChangedBy = "system",
+                        Changes = new Changes
+                        {
+                            Status = new StatusChange
+                            {
+                                From = statuses[random.Next(statuses.Length)],
+                                To = i == 0 ? project.Status : statuses[random.Next(statuses.Length)]
+                            }
+                        }
+                    };
+                    await projectHistoryPersistence.CreateAsync(projectHistory);
+                }
+
+                // Create historical standard status changes
+                foreach (var standard in project.Standards)
+                {
+                    for (var i = 90; i >= 0; i -= 30) // Create history every 30 days for past 90 days
+                    {
+                        var standardHistory = new StandardHistory
                         {
                             Id = ObjectId.GenerateNewId().ToString(),
                             ProjectId = project.Id,
+                            StandardId = standard.StandardId,
                             Timestamp = DateTime.UtcNow.AddDays(-i),
                             ChangedBy = "system",
-                            Changes = new Changes
+                            Changes = new StandardChanges
                             {
                                 Status = new StatusChange
                                 {
                                     From = statuses[random.Next(statuses.Length)],
-                                    To = i == 0 ? project.Status : statuses[random.Next(statuses.Length)]
+                                    To = i == 0 ? standard.Status : statuses[random.Next(statuses.Length)]
                                 }
                             }
                         };
-                        await projectHistoryPersistence.CreateAsync(projectHistory);
-                    }
-
-                    // Create historical standard status changes
-                    foreach (var standard in project.Standards)
-                    {
-                        for (var i = 90; i >= 0; i -= 30) // Create history every 30 days for past 90 days
-                        {
-                            var standardHistory = new StandardHistory
-                            {
-                                Id = ObjectId.GenerateNewId().ToString(),
-                                ProjectId = project.Id,
-                                StandardId = standard.StandardId,
-                                Timestamp = DateTime.UtcNow.AddDays(-i),
-                                ChangedBy = "system",
-                                Changes = new StandardChanges
-                                {
-                                    Status = new StatusChange
-                                    {
-                                        From = statuses[random.Next(statuses.Length)],
-                                        To = i == 0 ? standard.Status : statuses[random.Next(statuses.Length)]
-                                    }
-                                }
-                            };
-                            await standardHistoryPersistence.CreateAsync(standardHistory);
-                        }
+                        await standardHistoryPersistence.CreateAsync(standardHistory);
                     }
                 }
-                return Results.Ok("Projects and history seeded successfully");
             }
-            catch (Exception ex)
-            {
-                return Results.Problem($"Failed to seed projects: {ex.Message}");
-            }
+            
+            return Results.Ok();
         });
         app.MapPost("/projects/deleteAll", async (IProjectPersistence persistence) =>
         {
@@ -165,6 +172,72 @@ public static class ProjectEndpoints
         .WithName("DeleteProject")
         .Produces(204)
         .Produces(404);
+
+        // Add a new endpoint for adding sample projects without clearing
+        app.MapPost("/projects/addSamples", async (
+            List<ProjectModel> projects, 
+            IProjectPersistence persistence,
+            IProjectHistoryPersistence projectHistoryPersistence,
+            IStandardHistoryPersistence standardHistoryPersistence) =>
+        {
+            // Add new projects without clearing existing ones
+            await persistence.AddProjectsAsync(projects);
+            
+            // Create historical data for each project
+            foreach (var project in projects)
+            {
+                // Create historical project status changes
+                var statuses = new[] { "RED", "AMBER", "GREEN" };
+                var random = new Random();
+                
+                for (var i = 90; i >= 0; i -= 15) // Create history every 15 days for past 90 days
+                {
+                    var projectHistory = new ProjectHistory
+                    {
+                        Id = ObjectId.GenerateNewId().ToString(),
+                        ProjectId = project.Id,
+                        Timestamp = DateTime.UtcNow.AddDays(-i),
+                        ChangedBy = "system",
+                        Changes = new Changes
+                        {
+                            Status = new StatusChange
+                            {
+                                From = statuses[random.Next(statuses.Length)],
+                                To = i == 0 ? project.Status : statuses[random.Next(statuses.Length)]
+                            }
+                        }
+                    };
+                    await projectHistoryPersistence.CreateAsync(projectHistory);
+                }
+
+                // Create historical standard status changes
+                foreach (var standard in project.Standards)
+                {
+                    for (var i = 90; i >= 0; i -= 30) // Create history every 30 days for past 90 days
+                    {
+                        var standardHistory = new StandardHistory
+                        {
+                            Id = ObjectId.GenerateNewId().ToString(),
+                            ProjectId = project.Id,
+                            StandardId = standard.StandardId,
+                            Timestamp = DateTime.UtcNow.AddDays(-i),
+                            ChangedBy = "system",
+                            Changes = new StandardChanges
+                            {
+                                Status = new StatusChange
+                                {
+                                    From = statuses[random.Next(statuses.Length)],
+                                    To = i == 0 ? standard.Status : statuses[random.Next(statuses.Length)]
+                                }
+                            }
+                        };
+                        await standardHistoryPersistence.CreateAsync(standardHistory);
+                    }
+                }
+            }
+            
+            return Results.Ok();
+        });
     }
 
     private static async Task<IResult> Create(

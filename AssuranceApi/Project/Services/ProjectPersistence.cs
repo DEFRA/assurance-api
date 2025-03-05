@@ -109,4 +109,40 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
             throw;
         }
     }
+
+    public async Task<bool> SeedAsync(List<ProjectModel> projects)
+    {
+        try
+        {
+            // Insert new projects
+            if (projects.Any())
+            {
+                await Collection.InsertManyAsync(projects);
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to seed projects");
+            return false;
+        }
+    }
+
+    // Add a new method for adding projects without clearing
+    public async Task<bool> AddProjectsAsync(List<ProjectModel> projects)
+    {
+        try
+        {
+            if (projects.Any())
+            {
+                await Collection.InsertManyAsync(projects);
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to add projects");
+            return false;
+        }
+    }
 } 

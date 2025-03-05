@@ -10,4 +10,6 @@ public interface IProjectPersistence
     Task<bool> UpdateAsync(string id, ProjectModel project);
     Task DeleteAllAsync();
     Task<bool> DeleteAsync(string id);
+    Task<bool> SeedAsync(List<ProjectModel> projects);
+    Task<bool> AddProjectsAsync(List<ProjectModel> projects);
 } 
