@@ -50,6 +50,28 @@ public static class ProjectEndpoints
                 var statuses = new[] { "RED", "AMBER", "GREEN" };
                 var random = new Random();
                 
+                // Sample project commentaries
+                var projectCommentaries = new[] {
+                    "Project is progressing well with minor delays",
+                    "Some risks identified but mitigation plans in place",
+                    "Major milestone achieved ahead of schedule",
+                    "Resource constraints affecting delivery timeline",
+                    "Stakeholder feedback incorporated successfully",
+                    "Technical challenges being addressed",
+                    "Budget constraints requiring reprioritization"
+                };
+
+                // Sample standard commentaries
+                var standardCommentaries = new[] {
+                    "Good progress made in implementing requirements",
+                    "Further user research needed to validate approach",
+                    "Documentation needs improvement",
+                    "Successfully meeting accessibility requirements",
+                    "Integration testing revealed minor issues",
+                    "Positive feedback from user testing",
+                    "Security review recommendations being implemented"
+                };
+
                 for (var i = 90; i >= 0; i -= 15) // Create history every 15 days for past 90 days
                 {
                     var projectHistory = new ProjectHistory
@@ -64,6 +86,11 @@ public static class ProjectEndpoints
                             {
                                 From = statuses[random.Next(statuses.Length)],
                                 To = i == 0 ? project.Status : statuses[random.Next(statuses.Length)]
+                            },
+                            Commentary = new CommentaryChange
+                            {
+                                From = projectCommentaries[random.Next(projectCommentaries.Length)],
+                                To = projectCommentaries[random.Next(projectCommentaries.Length)]
                             }
                         }
                     };
@@ -88,6 +115,11 @@ public static class ProjectEndpoints
                                 {
                                     From = statuses[random.Next(statuses.Length)],
                                     To = i == 0 ? standard.Status : statuses[random.Next(statuses.Length)]
+                                },
+                                Commentary = new CommentaryChange
+                                {
+                                    From = standardCommentaries[random.Next(standardCommentaries.Length)],
+                                    To = standardCommentaries[random.Next(standardCommentaries.Length)]
                                 }
                             }
                         };
@@ -190,6 +222,28 @@ public static class ProjectEndpoints
                 var statuses = new[] { "RED", "AMBER", "GREEN" };
                 var random = new Random();
                 
+                // Sample project commentaries
+                var projectCommentaries = new[] {
+                    "Project is progressing well with minor delays",
+                    "Some risks identified but mitigation plans in place",
+                    "Major milestone achieved ahead of schedule",
+                    "Resource constraints affecting delivery timeline",
+                    "Stakeholder feedback incorporated successfully",
+                    "Technical challenges being addressed",
+                    "Budget constraints requiring reprioritization"
+                };
+
+                // Sample standard commentaries
+                var standardCommentaries = new[] {
+                    "Good progress made in implementing requirements",
+                    "Further user research needed to validate approach",
+                    "Documentation needs improvement",
+                    "Successfully meeting accessibility requirements",
+                    "Integration testing revealed minor issues",
+                    "Positive feedback from user testing",
+                    "Security review recommendations being implemented"
+                };
+
                 for (var i = 90; i >= 0; i -= 15) // Create history every 15 days for past 90 days
                 {
                     var projectHistory = new ProjectHistory
@@ -204,6 +258,11 @@ public static class ProjectEndpoints
                             {
                                 From = statuses[random.Next(statuses.Length)],
                                 To = i == 0 ? project.Status : statuses[random.Next(statuses.Length)]
+                            },
+                            Commentary = new CommentaryChange
+                            {
+                                From = projectCommentaries[random.Next(projectCommentaries.Length)],
+                                To = projectCommentaries[random.Next(projectCommentaries.Length)]
                             }
                         }
                     };
@@ -217,7 +276,7 @@ public static class ProjectEndpoints
                     {
                         var standardHistory = new StandardHistory
                         {
-                            Id = ObjectId.GenerateNewId().ToString(),
+                            Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
                             ProjectId = project.Id,
                             StandardId = standard.StandardId,
                             Timestamp = DateTime.UtcNow.AddDays(-i),
@@ -228,6 +287,11 @@ public static class ProjectEndpoints
                                 {
                                     From = statuses[random.Next(statuses.Length)],
                                     To = i == 0 ? standard.Status : statuses[random.Next(statuses.Length)]
+                                },
+                                Commentary = new CommentaryChange
+                                {
+                                    From = standardCommentaries[random.Next(standardCommentaries.Length)],
+                                    To = standardCommentaries[random.Next(standardCommentaries.Length)]
                                 }
                             }
                         };
