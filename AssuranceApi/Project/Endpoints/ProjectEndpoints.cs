@@ -50,20 +50,66 @@ public static class ProjectEndpoints
                 var statuses = new[] { "RED", "AMBER", "GREEN" };
                 var random = new Random();
                 
-                for (var i = 90; i >= 0; i -= 15) // Create history every 15 days for past 90 days
+                // Sample project commentaries
+                var projectCommentaries = new[] {
+                    "Project is progressing well with minor delays. Team has identified key bottlenecks and is working on solutions.",
+                    "Some risks identified but mitigation plans in place. Additional resources have been allocated to address critical areas.",
+                    "Major milestone achieved ahead of schedule. User feedback has been overwhelmingly positive on latest features.",
+                    "Resource constraints affecting delivery timeline. Working with stakeholders to reprioritize upcoming sprints.",
+                    "Stakeholder feedback incorporated successfully. New requirements have been documented and prioritized.",
+                    "Technical challenges being addressed. Architecture team reviewing proposed solutions for scalability.",
+                    "Budget constraints requiring reprioritization. Working with finance team to secure additional funding.",
+                    "Integration testing revealed performance issues. Team implementing optimizations.",
+                    "Security review completed successfully. Minor recommendations being implemented.",
+                    "User research highlighting need for accessibility improvements. UCD team leading improvements.",
+                    "Dependencies with external systems causing delays. Technical team engaging with third-party vendors.",
+                    "Sprint velocity improving after team restructure. New working patterns showing positive results."
+                };
+
+                // Sample standard commentaries
+                var standardCommentaries = new[] {
+                    "Good progress made in implementing requirements. Team has completed all acceptance criteria.",
+                    "Further user research needed to validate approach. Planning sessions with target user groups.",
+                    "Documentation needs improvement. Technical writers being engaged to update materials.",
+                    "Successfully meeting accessibility requirements. WCAG 2.1 AA compliance achieved.",
+                    "Integration testing revealed minor issues. Team implementing fixes with automated test coverage.",
+                    "Positive feedback from user testing. Usability scores have improved significantly.",
+                    "Security review recommendations being implemented. Penetration testing scheduled.",
+                    "Performance metrics meeting targets. Response times within acceptable thresholds.",
+                    "API documentation updated to reflect latest changes. Swagger specs generated.",
+                    "Code quality metrics showing improvement. Static analysis tools implemented.",
+                    "Continuous deployment pipeline optimized. Build times reduced by 40%.",
+                    "Monitoring and alerting configured. On-call rotations established.",
+                    "Database optimization complete. Query performance improved by 60%.",
+                    "Mobile responsiveness issues addressed. Testing across multiple devices."
+                };
+
+                for (var i = 180; i >= 0; i -= 10) // Create history every 10 days for past 180 days
                 {
                     var projectHistory = new ProjectHistory
                     {
                         Id = ObjectId.GenerateNewId().ToString(),
                         ProjectId = project.Id,
                         Timestamp = DateTime.UtcNow.AddDays(-i),
-                        ChangedBy = "system",
+                        ChangedBy = new[] {
+                            "DELIVERY MANAGEMENT",
+                            "PRODUCT MANAGEMENT",
+                            "USER CENTRED DESIGN",
+                            "ARCHITECTURE",
+                            "SOFTWARE DEVELOPMENT",
+                            "BUSINESS ANALYSIS"
+                        }[random.Next(6)],
                         Changes = new Changes
                         {
                             Status = new StatusChange
                             {
                                 From = statuses[random.Next(statuses.Length)],
                                 To = i == 0 ? project.Status : statuses[random.Next(statuses.Length)]
+                            },
+                            Commentary = new CommentaryChange
+                            {
+                                From = projectCommentaries[random.Next(projectCommentaries.Length)],
+                                To = projectCommentaries[random.Next(projectCommentaries.Length)]
                             }
                         }
                     };
@@ -73,21 +119,33 @@ public static class ProjectEndpoints
                 // Create historical standard status changes
                 foreach (var standard in project.Standards)
                 {
-                    for (var i = 90; i >= 0; i -= 30) // Create history every 30 days for past 90 days
+                    for (var i = 180; i >= 0; i -= 15) // Create history every 15 days for past 180 days
                     {
                         var standardHistory = new StandardHistory
                         {
-                            Id = ObjectId.GenerateNewId().ToString(),
+                            Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
                             ProjectId = project.Id,
                             StandardId = standard.StandardId,
                             Timestamp = DateTime.UtcNow.AddDays(-i),
-                            ChangedBy = "system",
+                            ChangedBy = new[] {
+                                "DELIVERY MANAGEMENT",
+                                "PRODUCT MANAGEMENT",
+                                "USER CENTRED DESIGN",
+                                "ARCHITECTURE",
+                                "SOFTWARE DEVELOPMENT",
+                                "BUSINESS ANALYSIS"
+                            }[random.Next(6)],
                             Changes = new StandardChanges
                             {
                                 Status = new StatusChange
                                 {
                                     From = statuses[random.Next(statuses.Length)],
                                     To = i == 0 ? standard.Status : statuses[random.Next(statuses.Length)]
+                                },
+                                Commentary = new CommentaryChange
+                                {
+                                    From = standardCommentaries[random.Next(standardCommentaries.Length)],
+                                    To = standardCommentaries[random.Next(standardCommentaries.Length)]
                                 }
                             }
                         };
@@ -190,20 +248,66 @@ public static class ProjectEndpoints
                 var statuses = new[] { "RED", "AMBER", "GREEN" };
                 var random = new Random();
                 
-                for (var i = 90; i >= 0; i -= 15) // Create history every 15 days for past 90 days
+                // Sample project commentaries
+                var projectCommentaries = new[] {
+                    "Project is progressing well with minor delays. Team has identified key bottlenecks and is working on solutions.",
+                    "Some risks identified but mitigation plans in place. Additional resources have been allocated to address critical areas.",
+                    "Major milestone achieved ahead of schedule. User feedback has been overwhelmingly positive on latest features.",
+                    "Resource constraints affecting delivery timeline. Working with stakeholders to reprioritize upcoming sprints.",
+                    "Stakeholder feedback incorporated successfully. New requirements have been documented and prioritized.",
+                    "Technical challenges being addressed. Architecture team reviewing proposed solutions for scalability.",
+                    "Budget constraints requiring reprioritization. Working with finance team to secure additional funding.",
+                    "Integration testing revealed performance issues. Team implementing optimizations.",
+                    "Security review completed successfully. Minor recommendations being implemented.",
+                    "User research highlighting need for accessibility improvements. UCD team leading improvements.",
+                    "Dependencies with external systems causing delays. Technical team engaging with third-party vendors.",
+                    "Sprint velocity improving after team restructure. New working patterns showing positive results."
+                };
+
+                // Sample standard commentaries
+                var standardCommentaries = new[] {
+                    "Good progress made in implementing requirements. Team has completed all acceptance criteria.",
+                    "Further user research needed to validate approach. Planning sessions with target user groups.",
+                    "Documentation needs improvement. Technical writers being engaged to update materials.",
+                    "Successfully meeting accessibility requirements. WCAG 2.1 AA compliance achieved.",
+                    "Integration testing revealed minor issues. Team implementing fixes with automated test coverage.",
+                    "Positive feedback from user testing. Usability scores have improved significantly.",
+                    "Security review recommendations being implemented. Penetration testing scheduled.",
+                    "Performance metrics meeting targets. Response times within acceptable thresholds.",
+                    "API documentation updated to reflect latest changes. Swagger specs generated.",
+                    "Code quality metrics showing improvement. Static analysis tools implemented.",
+                    "Continuous deployment pipeline optimized. Build times reduced by 40%.",
+                    "Monitoring and alerting configured. On-call rotations established.",
+                    "Database optimization complete. Query performance improved by 60%.",
+                    "Mobile responsiveness issues addressed. Testing across multiple devices."
+                };
+
+                for (var i = 180; i >= 0; i -= 10) // Create history every 10 days for past 180 days
                 {
                     var projectHistory = new ProjectHistory
                     {
                         Id = ObjectId.GenerateNewId().ToString(),
                         ProjectId = project.Id,
                         Timestamp = DateTime.UtcNow.AddDays(-i),
-                        ChangedBy = "system",
+                        ChangedBy = new[] {
+                            "DELIVERY MANAGEMENT",
+                            "PRODUCT MANAGEMENT",
+                            "USER CENTRED DESIGN",
+                            "ARCHITECTURE",
+                            "SOFTWARE DEVELOPMENT",
+                            "BUSINESS ANALYSIS"
+                        }[random.Next(6)],
                         Changes = new Changes
                         {
                             Status = new StatusChange
                             {
                                 From = statuses[random.Next(statuses.Length)],
                                 To = i == 0 ? project.Status : statuses[random.Next(statuses.Length)]
+                            },
+                            Commentary = new CommentaryChange
+                            {
+                                From = projectCommentaries[random.Next(projectCommentaries.Length)],
+                                To = projectCommentaries[random.Next(projectCommentaries.Length)]
                             }
                         }
                     };
@@ -213,21 +317,33 @@ public static class ProjectEndpoints
                 // Create historical standard status changes
                 foreach (var standard in project.Standards)
                 {
-                    for (var i = 90; i >= 0; i -= 30) // Create history every 30 days for past 90 days
+                    for (var i = 180; i >= 0; i -= 15) // Create history every 15 days for past 180 days
                     {
                         var standardHistory = new StandardHistory
                         {
-                            Id = ObjectId.GenerateNewId().ToString(),
+                            Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
                             ProjectId = project.Id,
                             StandardId = standard.StandardId,
                             Timestamp = DateTime.UtcNow.AddDays(-i),
-                            ChangedBy = "system",
+                            ChangedBy = new[] {
+                                "DELIVERY MANAGEMENT",
+                                "PRODUCT MANAGEMENT",
+                                "USER CENTRED DESIGN",
+                                "ARCHITECTURE",
+                                "SOFTWARE DEVELOPMENT",
+                                "BUSINESS ANALYSIS"
+                            }[random.Next(6)],
                             Changes = new StandardChanges
                             {
                                 Status = new StatusChange
                                 {
                                     From = statuses[random.Next(statuses.Length)],
                                     To = i == 0 ? standard.Status : statuses[random.Next(statuses.Length)]
+                                },
+                                Commentary = new CommentaryChange
+                                {
+                                    From = standardCommentaries[random.Next(standardCommentaries.Length)],
+                                    To = standardCommentaries[random.Next(standardCommentaries.Length)]
                                 }
                             }
                         };
