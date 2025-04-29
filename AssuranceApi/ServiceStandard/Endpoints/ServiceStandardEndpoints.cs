@@ -1,6 +1,7 @@
 using AssuranceApi.ServiceStandard.Models;
 using AssuranceApi.ServiceStandard.Services;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AssuranceApi.ServiceStandard.Endpoints;
 
@@ -8,7 +9,22 @@ public static class ServiceStandardEndpoints
 {
     public static void UseServiceStandardEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("serviceStandards/seed", SeedStandards);
+        // Protected endpoints that require authentication
+        app.MapPost("serviceStandards/seed", SeedStandards).RequireAuthorization("RequireAuthenticated");
+        app.MapPost("/serviceStandards/deleteAll", async (IServiceStandardPersistence persistence) =>
+        {
+            try
+            {
+                await persistence.DeleteAllAsync();
+                return Results.Ok("All service standards deleted");
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem($"Failed to delete service standards: {ex.Message}");
+            }
+        }).RequireAuthorization("RequireAuthenticated");
+
+        // Read-only endpoints without authentication
         app.MapGet("serviceStandards", GetAll);
         app.MapGet("serviceStandards/{id}", GetById);
         app.MapGet("/serviceStandards/{standardId}/history", async (
@@ -21,18 +37,6 @@ public static class ServiceStandardEndpoints
             logger.LogInformation("Found {Count} history entries for standard {StandardId}", 
                 history.Count(), standardId);
             return Results.Ok(history);
-        });
-        app.MapPost("/serviceStandards/deleteAll", async (IServiceStandardPersistence persistence) =>
-        {
-            try
-            {
-                await persistence.DeleteAllAsync();
-                return Results.Ok("All service standards deleted");
-            }
-            catch (Exception ex)
-            {
-                return Results.Problem($"Failed to delete service standards: {ex.Message}");
-            }
         });
     }
 

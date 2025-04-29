@@ -17,6 +17,13 @@ using FluentValidation;
 using Serilog;
 using Serilog.Core;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Net.Http;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.Extensions.Logging;
 //-------- Configure the WebApplication builder------------------//
 
 var app = CreateWebApplication(args);
@@ -45,6 +52,22 @@ static void ConfigureWebApplication(WebApplicationBuilder _builder)
    // Load certificates into Trust Store - Note must happen before Mongo and Http client connections
    _builder.Services.AddCustomTrustStore(logger);
 
+   // Configure Authentication
+   ConfigureAuthentication(_builder);
+   
+   // Add CORS support
+   _builder.Services.AddCors(options =>
+   {
+       options.AddDefaultPolicy(builder =>
+       {
+           builder
+               .AllowAnyOrigin()
+               .AllowAnyHeader()
+               .AllowAnyMethod()
+               .WithExposedHeaders("Authorization");
+       });
+   });
+   
    ConfigureMongoDb(_builder);
 
    ConfigureEndpoints(_builder);
@@ -104,15 +127,79 @@ static void ConfigureEndpoints(WebApplicationBuilder _builder)
 }
 
 [ExcludeFromCodeCoverage]
+static void ConfigureAuthentication(WebApplicationBuilder _builder)
+{
+   using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+   var logger = loggerFactory.CreateLogger<Program>();
+   
+   // Try to get config from various sources
+   var tenantId = _builder.Configuration["Azure:TenantId"] ?? 
+       _builder.Configuration["AZURE:TENANTID"] ??
+       System.Environment.GetEnvironmentVariable("AZURE__TENANTID");
+   var clientId = _builder.Configuration["Azure:ClientId"] ?? 
+       _builder.Configuration["AZURE:CLIENTID"] ??
+       System.Environment.GetEnvironmentVariable("AZURE__CLIENTID");
+
+   if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientId))
+   {
+       logger.LogWarning("Azure AD configuration is missing. Authentication will be disabled.");
+       return;
+   }
+
+   logger.LogInformation("Configuring Azure AD authentication");
+
+   _builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+       .AddJwtBearer(options =>
+       {
+           options.Authority = $"https://login.microsoftonline.com/{tenantId}/v2.0/";
+           
+           options.TokenValidationParameters = new TokenValidationParameters
+           {
+               ValidateIssuer = true,
+               ValidateAudience = true,
+               ValidateLifetime = true,
+               ValidateIssuerSigningKey = true,
+               ValidIssuer = $"https://login.microsoftonline.com/{tenantId}/v2.0",
+               ValidAudiences = new[]
+               {
+                   clientId,
+                   $"api://{clientId}"
+               },
+               RequireSignedTokens = true
+           };
+           
+           options.Events = new JwtBearerEvents
+           {
+               OnAuthenticationFailed = context =>
+               {
+                   logger.LogError("Authentication failed: {ErrorMessage}", context.Exception.Message);
+                   return Task.CompletedTask;
+               }
+           };
+       });
+
+   _builder.Services.AddAuthorization(options =>
+   {
+       options.AddPolicy("RequireAuthenticated", policy =>
+           policy.RequireAuthenticatedUser());
+   });
+}
+
+[ExcludeFromCodeCoverage]
 static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
 {
    var app = _builder.Build();
 
    app.UseRouting();
+   
+   // Add CORS middleware - must be before auth middleware
+   app.UseCors();
+   
+   // Add authentication and authorization middleware
+   app.UseAuthentication();
+   app.UseAuthorization();
+   
    app.MapHealthChecks("/health");
-
-   // Example module, remove before deploying!
-   app.UseExampleEndpoints();
 
    app.UseServiceStandardEndpoints();
    app.UseProjectEndpoints();

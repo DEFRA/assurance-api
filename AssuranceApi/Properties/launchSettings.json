@@ -8,7 +8,10 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "MONGODB__CONNECTION_STRING": "mongodb://localhost:27017",
-        "MONGODB__DATABASE_NAME": "assurance-api"
+        "MONGODB__DATABASE_NAME": "assurance-api",
+        "AZURE__TENANTID": "6f504113-6b64-43f2-ade9-242e05780007",
+        "AZURE__CLIENTID": "a741690c-cc36-410d-a83a-b64a1bbc635a",
+        "AUTO_GENERATE_HISTORY": "true"
       }
     }
   }
