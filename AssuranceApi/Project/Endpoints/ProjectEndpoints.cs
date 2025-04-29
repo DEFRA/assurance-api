@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Configuration;
 
 namespace AssuranceApi.Project.Endpoints;
 
@@ -12,164 +14,25 @@ public static class ProjectEndpoints
 {
     public static void UseProjectEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("projects", Create);
+        // Protected endpoints that require authentication
+        app.MapPost("projects", Create).RequireAuthorization("RequireAuthenticated");
+        app.MapPost("/projects/seedData", SeedData).RequireAuthorization("RequireAuthenticated");
+        app.MapPost("/projects/deleteAll", DeleteAll).RequireAuthorization("RequireAuthenticated");
+        app.MapDelete("/projects/{id}", Delete).RequireAuthorization("RequireAuthenticated");
+        app.MapPut("/projects/{id}", Update).RequireAuthorization("RequireAuthenticated");
+        
+        // Read-only endpoints without authentication
         app.MapGet("projects", async (IProjectPersistence persistence, string? tag) =>
         {
             var projects = await persistence.GetAllAsync(tag);
             return Results.Ok(projects);
         });
+        
         app.MapGet("projects/{id}", GetById);
-        app.MapPost("/projects/seedData", async (
-            List<ProjectModel> projects, 
-            IProjectPersistence persistence, 
-            IProjectHistoryPersistence projectHistoryPersistence,
-            IStandardHistoryPersistence standardHistoryPersistence,
-            HttpRequest request) =>
-        {
-            bool clearExisting = true;
-            if (request.Query.TryGetValue("clearExisting", out var clearParam))
-            {
-                clearExisting = !string.Equals(clearParam, "false", StringComparison.OrdinalIgnoreCase);
-            }
-            
-            if (clearExisting)
-            {
-                // Clear existing projects
-                await persistence.DeleteAllAsync();
-                await projectHistoryPersistence.DeleteAllAsync();
-                await standardHistoryPersistence.DeleteAllAsync();
-            }
-            
-            // Add new projects
-            await persistence.SeedAsync(projects);
-            
-            // Create historical data for each project
-            foreach (var project in projects)
-            {
-                // Create historical project status changes
-                var statuses = new[] { "RED", "AMBER", "GREEN" };
-                var random = new Random();
-                
-                // Sample project commentaries
-                var projectCommentaries = new[] {
-                    "Project is progressing well with minor delays. Team has identified key bottlenecks and is working on solutions.",
-                    "Some risks identified but mitigation plans in place. Additional resources have been allocated to address critical areas.",
-                    "Major milestone achieved ahead of schedule. User feedback has been overwhelmingly positive on latest features.",
-                    "Resource constraints affecting delivery timeline. Working with stakeholders to reprioritize upcoming sprints.",
-                    "Stakeholder feedback incorporated successfully. New requirements have been documented and prioritized.",
-                    "Technical challenges being addressed. Architecture team reviewing proposed solutions for scalability.",
-                    "Budget constraints requiring reprioritization. Working with finance team to secure additional funding.",
-                    "Integration testing revealed performance issues. Team implementing optimizations.",
-                    "Security review completed successfully. Minor recommendations being implemented.",
-                    "User research highlighting need for accessibility improvements. UCD team leading improvements.",
-                    "Dependencies with external systems causing delays. Technical team engaging with third-party vendors.",
-                    "Sprint velocity improving after team restructure. New working patterns showing positive results."
-                };
+        app.MapGet("/projects/{id}/history", GetHistory);
+        app.MapGet("/projects/tags/summary", GetTagsSummary);
 
-                // Sample standard commentaries
-                var standardCommentaries = new[] {
-                    "Good progress made in implementing requirements. Team has completed all acceptance criteria.",
-                    "Further user research needed to validate approach. Planning sessions with target user groups.",
-                    "Documentation needs improvement. Technical writers being engaged to update materials.",
-                    "Successfully meeting accessibility requirements. WCAG 2.1 AA compliance achieved.",
-                    "Integration testing revealed minor issues. Team implementing fixes with automated test coverage.",
-                    "Positive feedback from user testing. Usability scores have improved significantly.",
-                    "Security review recommendations being implemented. Penetration testing scheduled.",
-                    "Performance metrics meeting targets. Response times within acceptable thresholds.",
-                    "API documentation updated to reflect latest changes. Swagger specs generated.",
-                    "Code quality metrics showing improvement. Static analysis tools implemented.",
-                    "Continuous deployment pipeline optimized. Build times reduced by 40%.",
-                    "Monitoring and alerting configured. On-call rotations established.",
-                    "Database optimization complete. Query performance improved by 60%.",
-                    "Mobile responsiveness issues addressed. Testing across multiple devices."
-                };
-
-                for (var i = 180; i >= 0; i -= 10) // Create history every 10 days for past 180 days
-                {
-                    var projectHistory = new ProjectHistory
-                    {
-                        Id = ObjectId.GenerateNewId().ToString(),
-                        ProjectId = project.Id,
-                        Timestamp = DateTime.UtcNow.AddDays(-i),
-                        ChangedBy = new[] {
-                            "DELIVERY MANAGEMENT",
-                            "PRODUCT MANAGEMENT",
-                            "USER CENTRED DESIGN",
-                            "ARCHITECTURE",
-                            "SOFTWARE DEVELOPMENT",
-                            "BUSINESS ANALYSIS"
-                        }[random.Next(6)],
-                        Changes = new Changes
-                        {
-                            Status = new StatusChange
-                            {
-                                From = statuses[random.Next(statuses.Length)],
-                                To = i == 0 ? project.Status : statuses[random.Next(statuses.Length)]
-                            },
-                            Commentary = new CommentaryChange
-                            {
-                                From = projectCommentaries[random.Next(projectCommentaries.Length)],
-                                To = projectCommentaries[random.Next(projectCommentaries.Length)]
-                            }
-                        }
-                    };
-                    await projectHistoryPersistence.CreateAsync(projectHistory);
-                }
-
-                // Create historical standard status changes
-                foreach (var standard in project.Standards)
-                {
-                    for (var i = 180; i >= 0; i -= 15) // Create history every 15 days for past 180 days
-                    {
-                        var standardHistory = new StandardHistory
-                        {
-                            Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
-                            ProjectId = project.Id,
-                            StandardId = standard.StandardId,
-                            Timestamp = DateTime.UtcNow.AddDays(-i),
-                            ChangedBy = new[] {
-                                "DELIVERY MANAGEMENT",
-                                "PRODUCT MANAGEMENT",
-                                "USER CENTRED DESIGN",
-                                "ARCHITECTURE",
-                                "SOFTWARE DEVELOPMENT",
-                                "BUSINESS ANALYSIS"
-                            }[random.Next(6)],
-                            Changes = new StandardChanges
-                            {
-                                Status = new StatusChange
-                                {
-                                    From = statuses[random.Next(statuses.Length)],
-                                    To = i == 0 ? standard.Status : statuses[random.Next(statuses.Length)]
-                                },
-                                Commentary = new CommentaryChange
-                                {
-                                    From = standardCommentaries[random.Next(standardCommentaries.Length)],
-                                    To = standardCommentaries[random.Next(standardCommentaries.Length)]
-                                }
-                            }
-                        };
-                        await standardHistoryPersistence.CreateAsync(standardHistory);
-                    }
-                }
-            }
-            
-            return Results.Ok();
-        });
-        app.MapPost("/projects/deleteAll", async (IProjectPersistence persistence) =>
-        {
-            try
-            {
-                await persistence.DeleteAllAsync();
-                return Results.Ok("All projects deleted");
-            }
-            catch (Exception ex)
-            {
-                return Results.Problem($"Failed to delete projects: {ex.Message}");
-            }
-        });
-
-        // Get history for a specific standard
+        // Standard history endpoints 
         app.MapGet("/projects/{projectId}/standards/{standardId}/history", async (
             string projectId,
             string standardId,
@@ -179,181 +42,31 @@ public static class ProjectEndpoints
             return Results.Ok(history);
         });
 
-        // Update project and track changes
-        app.MapPut("/projects/{id}", Update);
-
-        app.MapGet("/projects/{id}/history", async (
-            string id,
-            IProjectHistoryPersistence historyPersistence,
-            ILogger<string> logger) =>
-        {
-            logger.LogInformation("Fetching history for project {ProjectId}", id);
-            var history = await historyPersistence.GetHistoryAsync(id);
-            logger.LogInformation("Found {Count} history entries for project {ProjectId}", 
-                history.Count(), id);
-            return Results.Ok(history);
-        });
-
-        app.MapGet("/projects/tags/summary", async (IProjectPersistence persistence) =>
-        {
-            var projects = await persistence.GetAllAsync();
-            var summary = projects
-                .SelectMany(p => p.Tags)
-                .Select(tag => 
-                {
-                    var parts = tag.Split(": ", 2);
-                    return new { Category = parts[0], Value = parts[1] };
-                })
-                .GroupBy(t => t.Category)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.GroupBy(t => t.Value)
-                        .ToDictionary(
-                            sg => sg.Key,
-                            sg => sg.Count()
-                        )
-                );
-            return Results.Ok(summary);
-        });
-
-        app.MapDelete("/projects/{id}", async (string id, IProjectPersistence projectPersistence) =>
-        {
-            var result = await projectPersistence.DeleteAsync(id);
-            
-            if (!result)
-            {
-                return Results.NotFound($"Project with ID {id} not found");
-            }
-            
-            return Results.NoContent();
-        })
-        .WithName("DeleteProject")
-        .Produces(204)
-        .Produces(404);
-
-        // Add a new endpoint for adding sample projects without clearing
+        // Add a new endpoint for adding sample projects without clearing - requires authentication
         app.MapPost("/projects/addSamples", async (
             List<ProjectModel> projects, 
             IProjectPersistence persistence,
             IProjectHistoryPersistence projectHistoryPersistence,
-            IStandardHistoryPersistence standardHistoryPersistence) =>
+            IStandardHistoryPersistence standardHistoryPersistence,
+            IConfiguration configuration) =>
         {
             // Add new projects without clearing existing ones
             await persistence.AddProjectsAsync(projects);
             
-            // Create historical data for each project
-            foreach (var project in projects)
+            // Check if history generation is enabled
+            var shouldGenerateHistory = configuration["AUTO_GENERATE_HISTORY"]?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false;
+            
+            if (shouldGenerateHistory)
             {
-                // Create historical project status changes
-                var statuses = new[] { "RED", "AMBER", "GREEN" };
-                var random = new Random();
-                
-                // Sample project commentaries
-                var projectCommentaries = new[] {
-                    "Project is progressing well with minor delays. Team has identified key bottlenecks and is working on solutions.",
-                    "Some risks identified but mitigation plans in place. Additional resources have been allocated to address critical areas.",
-                    "Major milestone achieved ahead of schedule. User feedback has been overwhelmingly positive on latest features.",
-                    "Resource constraints affecting delivery timeline. Working with stakeholders to reprioritize upcoming sprints.",
-                    "Stakeholder feedback incorporated successfully. New requirements have been documented and prioritized.",
-                    "Technical challenges being addressed. Architecture team reviewing proposed solutions for scalability.",
-                    "Budget constraints requiring reprioritization. Working with finance team to secure additional funding.",
-                    "Integration testing revealed performance issues. Team implementing optimizations.",
-                    "Security review completed successfully. Minor recommendations being implemented.",
-                    "User research highlighting need for accessibility improvements. UCD team leading improvements.",
-                    "Dependencies with external systems causing delays. Technical team engaging with third-party vendors.",
-                    "Sprint velocity improving after team restructure. New working patterns showing positive results."
-                };
-
-                // Sample standard commentaries
-                var standardCommentaries = new[] {
-                    "Good progress made in implementing requirements. Team has completed all acceptance criteria.",
-                    "Further user research needed to validate approach. Planning sessions with target user groups.",
-                    "Documentation needs improvement. Technical writers being engaged to update materials.",
-                    "Successfully meeting accessibility requirements. WCAG 2.1 AA compliance achieved.",
-                    "Integration testing revealed minor issues. Team implementing fixes with automated test coverage.",
-                    "Positive feedback from user testing. Usability scores have improved significantly.",
-                    "Security review recommendations being implemented. Penetration testing scheduled.",
-                    "Performance metrics meeting targets. Response times within acceptable thresholds.",
-                    "API documentation updated to reflect latest changes. Swagger specs generated.",
-                    "Code quality metrics showing improvement. Static analysis tools implemented.",
-                    "Continuous deployment pipeline optimized. Build times reduced by 40%.",
-                    "Monitoring and alerting configured. On-call rotations established.",
-                    "Database optimization complete. Query performance improved by 60%.",
-                    "Mobile responsiveness issues addressed. Testing across multiple devices."
-                };
-
-                for (var i = 180; i >= 0; i -= 10) // Create history every 10 days for past 180 days
+                // Create historical data for each project
+                foreach (var project in projects)
                 {
-                    var projectHistory = new ProjectHistory
-                    {
-                        Id = ObjectId.GenerateNewId().ToString(),
-                        ProjectId = project.Id,
-                        Timestamp = DateTime.UtcNow.AddDays(-i),
-                        ChangedBy = new[] {
-                            "DELIVERY MANAGEMENT",
-                            "PRODUCT MANAGEMENT",
-                            "USER CENTRED DESIGN",
-                            "ARCHITECTURE",
-                            "SOFTWARE DEVELOPMENT",
-                            "BUSINESS ANALYSIS"
-                        }[random.Next(6)],
-                        Changes = new Changes
-                        {
-                            Status = new StatusChange
-                            {
-                                From = statuses[random.Next(statuses.Length)],
-                                To = i == 0 ? project.Status : statuses[random.Next(statuses.Length)]
-                            },
-                            Commentary = new CommentaryChange
-                            {
-                                From = projectCommentaries[random.Next(projectCommentaries.Length)],
-                                To = projectCommentaries[random.Next(projectCommentaries.Length)]
-                            }
-                        }
-                    };
-                    await projectHistoryPersistence.CreateAsync(projectHistory);
-                }
-
-                // Create historical standard status changes
-                foreach (var standard in project.Standards)
-                {
-                    for (var i = 180; i >= 0; i -= 15) // Create history every 15 days for past 180 days
-                    {
-                        var standardHistory = new StandardHistory
-                        {
-                            Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
-                            ProjectId = project.Id,
-                            StandardId = standard.StandardId,
-                            Timestamp = DateTime.UtcNow.AddDays(-i),
-                            ChangedBy = new[] {
-                                "DELIVERY MANAGEMENT",
-                                "PRODUCT MANAGEMENT",
-                                "USER CENTRED DESIGN",
-                                "ARCHITECTURE",
-                                "SOFTWARE DEVELOPMENT",
-                                "BUSINESS ANALYSIS"
-                            }[random.Next(6)],
-                            Changes = new StandardChanges
-                            {
-                                Status = new StatusChange
-                                {
-                                    From = statuses[random.Next(statuses.Length)],
-                                    To = i == 0 ? standard.Status : statuses[random.Next(statuses.Length)]
-                                },
-                                Commentary = new CommentaryChange
-                                {
-                                    From = standardCommentaries[random.Next(standardCommentaries.Length)],
-                                    To = standardCommentaries[random.Next(standardCommentaries.Length)]
-                                }
-                            }
-                        };
-                        await standardHistoryPersistence.CreateAsync(standardHistory);
-                    }
+                    await GenerateProjectHistory(project, projectHistoryPersistence, standardHistoryPersistence);
                 }
             }
             
             return Results.Ok();
-        });
+        }).RequireAuthorization("RequireAuthenticated");
     }
 
     private static async Task<IResult> Create(
@@ -382,7 +95,7 @@ public static class ProjectEndpoints
         IProjectPersistence persistence,
         IProjectHistoryPersistence projectHistoryPersistence,
         IStandardHistoryPersistence standardHistoryPersistence,
-        ILogger<string> logger,
+        ILogger<Program> logger,
         IValidator<ProjectModel> validator)
     {
         var validationResult = await validator.ValidateAsync(updatedProject);
@@ -391,8 +104,6 @@ public static class ProjectEndpoints
         var existingProject = await persistence.GetByIdAsync(id);
         if (existingProject == null) return Results.NotFound();
 
-        logger.LogInformation("Updating project {ProjectId}. Checking for changes...", id);
-
         // Track project-level changes
         var projectChanges = new Changes();
         var hasProjectChanges = false;
@@ -400,8 +111,6 @@ public static class ProjectEndpoints
         // Check for name change
         if (existingProject.Name != updatedProject.Name)
         {
-            logger.LogInformation("Name changed from '{OldName}' to '{NewName}'", 
-                existingProject.Name, updatedProject.Name);
             projectChanges.Name = new NameChange
             {
                 From = existingProject.Name,
@@ -413,8 +122,6 @@ public static class ProjectEndpoints
         // Check for status change
         if (existingProject.Status != updatedProject.Status)
         {
-            logger.LogInformation("Status changed from '{OldStatus}' to '{NewStatus}'", 
-                existingProject.Status, updatedProject.Status);
             projectChanges.Status = new StatusChange
             {
                 From = existingProject.Status,
@@ -426,7 +133,6 @@ public static class ProjectEndpoints
         // Check for commentary change
         if (existingProject.Commentary != updatedProject.Commentary)
         {
-            logger.LogInformation("Commentary changed");
             projectChanges.Commentary = new CommentaryChange
             {
                 From = existingProject.Commentary,
@@ -438,7 +144,6 @@ public static class ProjectEndpoints
         // If there are project-level changes, create history record
         if (hasProjectChanges)
         {
-            logger.LogInformation("Creating history record for project changes");
             var projectHistory = new ProjectHistory
             {
                 Id = ObjectId.GenerateNewId().ToString(),
@@ -448,15 +153,7 @@ public static class ProjectEndpoints
                 Changes = projectChanges
             };
 
-            var historyCreated = await projectHistoryPersistence.CreateAsync(projectHistory);
-            if (!historyCreated)
-            {
-                logger.LogError("Failed to create project history record");
-            }
-        }
-        else 
-        {
-            logger.LogInformation("No project-level changes detected");
+            await projectHistoryPersistence.CreateAsync(projectHistory);
         }
 
         // Track changes for each standard
@@ -497,7 +194,7 @@ public static class ProjectEndpoints
             {
                 var history = new StandardHistory
                 {
-                    Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
+                    Id = ObjectId.GenerateNewId().ToString(),
                     ProjectId = id,
                     StandardId = updatedStandard.StandardId,
                     Timestamp = DateTime.UtcNow,
@@ -513,5 +210,195 @@ public static class ProjectEndpoints
         if (!updated) return Results.NotFound();
 
         return Results.Ok(updatedProject);
+    }
+
+    private static async Task<IResult> Delete(string id, IProjectPersistence persistence)
+    {
+        var result = await persistence.DeleteAsync(id);
+        return result ? Results.NoContent() : Results.NotFound();
+    }
+
+    private static async Task<IResult> DeleteAll(IProjectPersistence persistence)
+    {
+        await persistence.DeleteAllAsync();
+        return Results.Ok();
+    }
+
+    private static async Task<IResult> GetHistory(string id, IProjectHistoryPersistence historyPersistence)
+    {
+        var history = await historyPersistence.GetHistoryAsync(id);
+        return Results.Ok(history);
+    }
+
+    private static async Task<IResult> GetTagsSummary(IProjectPersistence persistence)
+    {
+        var projects = await persistence.GetAllAsync();
+        var summary = projects
+            .SelectMany(p => p.Tags)
+            .Select(tag => 
+            {
+                var parts = tag.Split(": ", 2);
+                return new { Category = parts[0], Value = parts[1] };
+            })
+            .GroupBy(t => t.Category)
+            .ToDictionary(
+                g => g.Key,
+                g => g.GroupBy(t => t.Value)
+                    .ToDictionary(
+                        sg => sg.Key,
+                        sg => sg.Count()
+                    )
+            );
+        return Results.Ok(summary);
+    }
+
+    private static async Task GenerateProjectHistory(
+        ProjectModel project,
+        IProjectHistoryPersistence projectHistoryPersistence,
+        IStandardHistoryPersistence standardHistoryPersistence)
+    {
+        var statuses = new[] { "RED", "AMBER", "GREEN" };
+        var random = new Random();
+        
+        // Sample project commentaries
+        var projectCommentaries = new[] {
+            "Project is progressing well with minor delays. Team has identified key bottlenecks and is working on solutions.",
+            "Some risks identified but mitigation plans in place. Additional resources have been allocated to address critical areas.",
+            "Major milestone achieved ahead of schedule. User feedback has been overwhelmingly positive on latest features.",
+            "Resource constraints affecting delivery timeline. Working with stakeholders to reprioritize upcoming sprints.",
+            "Stakeholder feedback incorporated successfully. New requirements have been documented and prioritized.",
+            "Technical challenges being addressed. Architecture team reviewing proposed solutions for scalability.",
+            "Budget constraints requiring reprioritization. Working with finance team to secure additional funding.",
+            "Integration testing revealed performance issues. Team implementing optimizations.",
+            "Security review completed successfully. Minor recommendations being implemented.",
+            "User research highlighting need for accessibility improvements. UCD team leading improvements.",
+            "Dependencies with external systems causing delays. Technical team engaging with third-party vendors.",
+            "Sprint velocity improving after team restructure. New working patterns showing positive results."
+        };
+
+        // Sample standard commentaries
+        var standardCommentaries = new[] {
+            "Good progress made in implementing requirements. Team has completed all acceptance criteria.",
+            "Further user research needed to validate approach. Planning sessions with target user groups.",
+            "Documentation needs improvement. Technical writers being engaged to update materials.",
+            "Successfully meeting accessibility requirements. WCAG 2.1 AA compliance achieved.",
+            "Integration testing revealed minor issues. Team implementing fixes with automated test coverage.",
+            "Positive feedback from user testing. Usability scores have improved significantly.",
+            "Security review recommendations being implemented. Penetration testing scheduled.",
+            "Performance metrics meeting targets. Response times within acceptable thresholds.",
+            "API documentation updated to reflect latest changes. Swagger specs generated.",
+            "Code quality metrics showing improvement. Static analysis tools implemented.",
+            "Continuous deployment pipeline optimized. Build times reduced by 40%.",
+            "Monitoring and alerting configured. On-call rotations established.",
+            "Database optimization complete. Query performance improved by 60%.",
+            "Mobile responsiveness issues addressed. Testing across multiple devices."
+        };
+
+        // Create historical project status changes
+        for (var i = 180; i >= 0; i -= 10) // Create history every 10 days for past 180 days
+        {
+            var projectHistory = new ProjectHistory
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                ProjectId = project.Id,
+                Timestamp = DateTime.UtcNow.AddDays(-i),
+                ChangedBy = new[] {
+                    "DELIVERY MANAGEMENT",
+                    "PRODUCT MANAGEMENT",
+                    "USER CENTRED DESIGN",
+                    "ARCHITECTURE",
+                    "SOFTWARE DEVELOPMENT",
+                    "BUSINESS ANALYSIS"
+                }[random.Next(6)],
+                Changes = new Changes
+                {
+                    Status = new StatusChange
+                    {
+                        From = statuses[random.Next(statuses.Length)],
+                        To = i == 0 ? project.Status : statuses[random.Next(statuses.Length)]
+                    },
+                    Commentary = new CommentaryChange
+                    {
+                        From = projectCommentaries[random.Next(projectCommentaries.Length)],
+                        To = projectCommentaries[random.Next(projectCommentaries.Length)]
+                    }
+                }
+            };
+            await projectHistoryPersistence.CreateAsync(projectHistory);
+        }
+
+        // Create historical standard status changes
+        foreach (var standard in project.Standards)
+        {
+            for (var i = 180; i >= 0; i -= 15) // Create history every 15 days for past 180 days
+            {
+                var standardHistory = new StandardHistory
+                {
+                    Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
+                    ProjectId = project.Id,
+                    StandardId = standard.StandardId,
+                    Timestamp = DateTime.UtcNow.AddDays(-i),
+                    ChangedBy = new[] {
+                        "DELIVERY MANAGEMENT",
+                        "PRODUCT MANAGEMENT",
+                        "USER CENTRED DESIGN",
+                        "ARCHITECTURE",
+                        "SOFTWARE DEVELOPMENT",
+                        "BUSINESS ANALYSIS"
+                    }[random.Next(6)],
+                    Changes = new StandardChanges
+                    {
+                        Status = new StatusChange
+                        {
+                            From = statuses[random.Next(statuses.Length)],
+                            To = i == 0 ? standard.Status : statuses[random.Next(statuses.Length)]
+                        },
+                        Commentary = new CommentaryChange
+                        {
+                            From = standardCommentaries[random.Next(standardCommentaries.Length)],
+                            To = standardCommentaries[random.Next(standardCommentaries.Length)]
+                        }
+                    }
+                };
+                await standardHistoryPersistence.CreateAsync(standardHistory);
+            }
+        }
+    }
+
+    private static async Task<IResult> SeedData(
+        List<ProjectModel> projects,
+        IProjectPersistence persistence,
+        IProjectHistoryPersistence projectHistoryPersistence,
+        IStandardHistoryPersistence standardHistoryPersistence,
+        HttpRequest request,
+        IConfiguration configuration)
+    {
+        bool clearExisting = true;
+        if (request.Query.TryGetValue("clearExisting", out var clearParam))
+        {
+            clearExisting = !string.Equals(clearParam, "false", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (clearExisting)
+        {
+            await persistence.DeleteAllAsync();
+            await projectHistoryPersistence.DeleteAllAsync();
+            await standardHistoryPersistence.DeleteAllAsync();
+        }
+
+        await persistence.SeedAsync(projects);
+
+        // Check if history generation is enabled
+        var shouldGenerateHistory = configuration["AUTO_GENERATE_HISTORY"]?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false;
+        
+        if (shouldGenerateHistory)
+        {
+            foreach (var project in projects)
+            {
+                await GenerateProjectHistory(project, projectHistoryPersistence, standardHistoryPersistence);
+            }
+        }
+
+        return Results.Ok();
     }
 } 
