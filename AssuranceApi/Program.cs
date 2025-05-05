@@ -163,9 +163,11 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
                ValidAudiences = new[]
                {
                    clientId,
-                   $"api://{clientId}"
+                   $"api://{clientId}",
+                   $"api://{clientId}/access_as_user"
                },
-               RequireSignedTokens = true
+               RequireSignedTokens = true,
+               ClockSkew = TimeSpan.FromMinutes(5)
            };
            
            options.Events = new JwtBearerEvents
@@ -173,6 +175,16 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
                OnAuthenticationFailed = context =>
                {
                    logger.LogError("Authentication failed: {ErrorMessage}", context.Exception.Message);
+                   return Task.CompletedTask;
+               },
+               OnTokenValidated = context =>
+               {
+                   logger.LogInformation("Token successfully validated");
+                   return Task.CompletedTask;
+               },
+               OnChallenge = context =>
+               {
+                   logger.LogWarning("Token challenge: {Error}", context.Error);
                    return Task.CompletedTask;
                }
            };
