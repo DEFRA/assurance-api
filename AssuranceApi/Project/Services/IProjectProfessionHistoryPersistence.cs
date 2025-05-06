@@ -1,0 +1,10 @@
+using AssuranceApi.Project.Models;
+
+namespace AssuranceApi.Project.Services;
+
+public interface IProjectProfessionHistoryPersistence
+{
+    Task<IEnumerable<ProjectProfessionHistory>> GetHistoryAsync(string projectId, string professionId);
+    Task<bool> CreateAsync(ProjectProfessionHistory history);
+    Task<bool> DeleteAllAsync();
+} 

@@ -8,6 +8,9 @@ using AssuranceApi.Project.Endpoints;
 using AssuranceApi.Project.Services;
 using AssuranceApi.Project.Models;
 using AssuranceApi.Project.Validators;
+using AssuranceApi.Profession.Endpoints;
+using AssuranceApi.Profession.Services;
+using AssuranceApi.Profession.Models;
 using AssuranceApi.Utils;
 using AssuranceApi.Utils.Http;
 using AssuranceApi.Utils.Logging;
@@ -116,11 +119,20 @@ static void ConfigureEndpoints(WebApplicationBuilder _builder)
 {
    // our Example service, remove before deploying!
    _builder.Services.AddSingleton<IExamplePersistence, ExamplePersistence>();
+   
+   // Service Standard services
    _builder.Services.AddSingleton<IServiceStandardPersistence, ServiceStandardPersistence>();
-   _builder.Services.AddSingleton<IProjectPersistence, ProjectPersistence>();
-   _builder.Services.AddSingleton<IStandardHistoryPersistence, StandardHistoryPersistence>();
-   _builder.Services.AddSingleton<IProjectHistoryPersistence, ProjectHistoryPersistence>();
    _builder.Services.AddSingleton<IServiceStandardHistoryPersistence, ServiceStandardHistoryPersistence>();
+   
+   // Profession services
+   _builder.Services.AddSingleton<IProfessionPersistence, ProfessionPersistence>();
+   _builder.Services.AddSingleton<IProfessionHistoryPersistence, ProfessionHistoryPersistence>();
+   
+   // Project services
+   _builder.Services.AddSingleton<IProjectPersistence, ProjectPersistence>();
+   _builder.Services.AddSingleton<IProjectHistoryPersistence, ProjectHistoryPersistence>();
+   _builder.Services.AddSingleton<IStandardHistoryPersistence, StandardHistoryPersistence>();
+   _builder.Services.AddSingleton<IProjectProfessionHistoryPersistence, ProjectProfessionHistoryPersistence>();
 
    _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
    _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();
@@ -272,6 +284,7 @@ static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
 
    app.UseServiceStandardEndpoints();
    app.UseProjectEndpoints();
+   app.UseProfessionEndpoints();
 
    return app;
 }
