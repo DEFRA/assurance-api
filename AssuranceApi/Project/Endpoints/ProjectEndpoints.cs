@@ -7,6 +7,7 @@ using MongoDB.Driver;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
+using AssuranceApi.Profession.Services;
 
 namespace AssuranceApi.Project.Endpoints;
 
@@ -42,12 +43,23 @@ public static class ProjectEndpoints
             return Results.Ok(history);
         });
 
+        // Profession history endpoints
+        app.MapGet("/projects/{projectId}/professions/{professionId}/history", async (
+            string projectId,
+            string professionId,
+            IProjectProfessionHistoryPersistence historyPersistence) =>
+        {
+            var history = await historyPersistence.GetHistoryAsync(projectId, professionId);
+            return Results.Ok(history);
+        });
+
         // Add a new endpoint for adding sample projects without clearing - requires authentication
         app.MapPost("/projects/addSamples", async (
             List<ProjectModel> projects, 
             IProjectPersistence persistence,
             IProjectHistoryPersistence projectHistoryPersistence,
             IStandardHistoryPersistence standardHistoryPersistence,
+            IProjectProfessionHistoryPersistence professionHistoryPersistence,
             IConfiguration configuration) =>
         {
             // Add new projects without clearing existing ones
@@ -61,7 +73,7 @@ public static class ProjectEndpoints
                 // Create historical data for each project
                 foreach (var project in projects)
                 {
-                    await GenerateProjectHistory(project, projectHistoryPersistence, standardHistoryPersistence);
+                    await GenerateProjectHistory(project, projectHistoryPersistence, standardHistoryPersistence, professionHistoryPersistence);
                 }
             }
             
@@ -95,7 +107,9 @@ public static class ProjectEndpoints
         IProjectPersistence persistence,
         IProjectHistoryPersistence projectHistoryPersistence,
         IStandardHistoryPersistence standardHistoryPersistence,
+        IProjectProfessionHistoryPersistence professionHistoryPersistence,
         ILogger<Program> logger,
+        IProfessionPersistence professionPersistence,
         IValidator<ProjectModel> validator)
     {
         var validationResult = await validator.ValidateAsync(updatedProject);
@@ -144,18 +158,22 @@ public static class ProjectEndpoints
         // If there are project-level changes, create history record
         if (hasProjectChanges)
         {
+            // Get the user or system making the change
+            // In a real system, this would come from authentication context
+            string changedBy = "Project Admin"; // Default for delivery updates
+            
             var projectHistory = new ProjectHistory
             {
                 Id = ObjectId.GenerateNewId().ToString(),
                 ProjectId = id,
                 Timestamp = DateTime.UtcNow,
-                ChangedBy = "system",
+                ChangedBy = changedBy,
                 Changes = projectChanges
             };
 
             await projectHistoryPersistence.CreateAsync(projectHistory);
         }
-
+        
         // Track changes for each standard
         foreach (var updatedStandard in updatedProject.Standards)
         {
@@ -164,27 +182,127 @@ public static class ProjectEndpoints
 
             if (existingStandard == null) continue;
 
-            var changes = new StandardChanges();
-            var hasChanges = false;
+            var standardChanges = new StandardChanges();
+            var hasStandardChanges = false;
 
             // Check for status change
             if (existingStandard.Status != updatedStandard.Status)
             {
-                changes.Status = new StatusChange
+                standardChanges.Status = new StatusChange
                 {
                     From = existingStandard.Status,
                     To = updatedStandard.Status
                 };
-                hasChanges = true;
+                hasStandardChanges = true;
             }
 
             // Check for commentary change
             if (existingStandard.Commentary != updatedStandard.Commentary)
             {
-                changes.Commentary = new CommentaryChange
+                standardChanges.Commentary = new CommentaryChange
                 {
                     From = existingStandard.Commentary,
                     To = updatedStandard.Commentary
+                };
+                hasStandardChanges = true;
+            }
+
+            // If there are changes, create history record
+            if (hasStandardChanges)
+            {
+                var standardHistory = new StandardHistory
+                {
+                    Id = ObjectId.GenerateNewId().ToString(),
+                    ProjectId = id,
+                    StandardId = updatedStandard.StandardId,
+                    Timestamp = DateTime.UtcNow,
+                    ChangedBy = "Standards Manager", // Use a consistent name for standards updates
+                    Changes = standardChanges
+                };
+
+                await standardHistoryPersistence.CreateAsync(standardHistory);
+            }
+        }
+
+        // Track changes for each profession
+        foreach (var updatedProfession in updatedProject.Professions)
+        {
+            var existingProfession = existingProject.Professions
+                .FirstOrDefault(p => p.ProfessionId == updatedProfession.ProfessionId);
+
+            // Track if this is a new profession or an update to an existing one
+            bool isNewProfession = existingProfession == null;
+            
+            // If this is a new profession, create a history record for its initial state
+            if (isNewProfession)
+            {
+                // Get profession name for changedBy field
+                string professionName = "Unknown Profession";
+                
+                // Try to find the profession in the database
+                if (professionPersistence != null)
+                {
+                    try
+                    {
+                        var profession = await professionPersistence.GetByIdAsync(updatedProfession.ProfessionId);
+                        if (profession != null)
+                        {
+                            professionName = profession.Name;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to get profession name for {ProfessionId}", updatedProfession.ProfessionId);
+                    }
+                }
+                
+                var newProfessionHistory = new ProjectProfessionHistory
+                {
+                    Id = ObjectId.GenerateNewId().ToString(),
+                    ProjectId = id,
+                    ProfessionId = updatedProfession.ProfessionId,
+                    Timestamp = DateTime.UtcNow,
+                    ChangedBy = professionName,
+                    Changes = new ProfessionChanges
+                    {
+                        Status = new StatusChange
+                        {
+                            From = string.Empty,
+                            To = updatedProfession.Status
+                        },
+                        Commentary = new CommentaryChange
+                        {
+                            From = string.Empty,
+                            To = updatedProfession.Commentary ?? string.Empty
+                        }
+                    }
+                };
+                
+                await professionHistoryPersistence.CreateAsync(newProfessionHistory);
+                continue; // Skip the rest of the loop for new professions
+            }
+
+            var changes = new ProfessionChanges();
+            var hasChanges = false;
+
+            // Check for status change
+            if (existingProfession.Status != updatedProfession.Status)
+            {
+                changes.Status = new StatusChange
+                {
+                    From = existingProfession.Status,
+                    To = updatedProfession.Status
+                };
+                hasChanges = true;
+            }
+
+            // Check for commentary change
+            if (existingProfession.Commentary != updatedProfession.Commentary)
+            {
+                changes.Commentary = new CommentaryChange
+                {
+                    From = existingProfession.Commentary ?? string.Empty,
+                    To = updatedProfession.Commentary ?? string.Empty
                 };
                 hasChanges = true;
             }
@@ -192,17 +310,37 @@ public static class ProjectEndpoints
             // If there are changes, create history record
             if (hasChanges)
             {
-                var history = new StandardHistory
+                // Get profession name for changedBy field
+                string professionName = "Unknown Profession";
+                
+                // Try to find the profession in the database
+                if (professionPersistence != null)
+                {
+                    try
+                    {
+                        var profession = await professionPersistence.GetByIdAsync(updatedProfession.ProfessionId);
+                        if (profession != null)
+                        {
+                            professionName = profession.Name;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to get profession name for {ProfessionId}", updatedProfession.ProfessionId);
+                    }
+                }
+                
+                var history = new ProjectProfessionHistory
                 {
                     Id = ObjectId.GenerateNewId().ToString(),
                     ProjectId = id,
-                    StandardId = updatedStandard.StandardId,
+                    ProfessionId = updatedProfession.ProfessionId,
                     Timestamp = DateTime.UtcNow,
-                    ChangedBy = "system",
+                    ChangedBy = professionName,
                     Changes = changes
                 };
 
-                await standardHistoryPersistence.CreateAsync(history);
+                await professionHistoryPersistence.CreateAsync(history);
             }
         }
 
@@ -255,7 +393,9 @@ public static class ProjectEndpoints
     private static async Task GenerateProjectHistory(
         ProjectModel project,
         IProjectHistoryPersistence projectHistoryPersistence,
-        IStandardHistoryPersistence standardHistoryPersistence)
+        IStandardHistoryPersistence standardHistoryPersistence,
+        IProjectProfessionHistoryPersistence professionHistoryPersistence = null,
+        AssuranceApi.Profession.Services.IProfessionPersistence professionPersistence = null)
     {
         var statuses = new[] { "RED", "AMBER", "GREEN" };
         var random = new Random();
@@ -293,6 +433,91 @@ public static class ProjectEndpoints
             "Database optimization complete. Query performance improved by 60%.",
             "Mobile responsiveness issues addressed. Testing across multiple devices."
         };
+        
+        // Get profession data from database if available
+        var professionTypes = new string[] {
+            "DELIVERY MANAGEMENT",
+            "PRODUCT MANAGEMENT",
+            "USER CENTRED DESIGN",
+            "ARCHITECTURE",
+            "SOFTWARE DEVELOPMENT",
+            "BUSINESS ANALYSIS"
+        };
+        
+        // Sample profession commentaries by type
+        var professionTypeCommentaries = new Dictionary<string, string[]> {
+            // Delivery Management commentaries
+            {"DELIVERY MANAGEMENT", new[] {
+                "Sprint planning optimized with better backlog refinement sessions. Team capacity planning improved.",
+                "Risk and dependency management process refined. Clear escalation paths established for blockers.",
+                "Retrospectives yielding actionable improvements. Team implementing continuous improvements.",
+                "Delivery metrics dashboard created to improve transparency. Burndown charts showing consistent progress.",
+                "Team ceremonies restructured to reduce meeting overhead. More time for focused delivery.",
+                "Cross-team dependencies identified and managed. Coordination meetings established with dependent teams.",
+                "Created new process for managing technical debt alongside feature work. Technical debt being reduced.",
+                "Improved estimation accuracy through team workshops. Planning more realistic and achievable."
+            }},
+            
+            // Product Management commentaries
+            {"PRODUCT MANAGEMENT", new[] {
+                "Product vision refined after stakeholder workshop. Clearer direction for team.",
+                "New prioritization framework implemented. Focus on highest business value features.",
+                "User feedback process streamlined. Regular user testing sessions informing roadmap.",
+                "Release planning optimized. More frequent, smaller releases to gather user feedback.",
+                "Feature usage metrics implemented. Data-driven decisions improving user experience.",
+                "Stakeholder management plan developed. Regular engagement sessions established.",
+                "Competitive analysis completed. New market opportunities identified for roadmap.",
+                "User personas updated with latest research. More targeted feature development."
+            }},
+            
+            // User-Centered Design commentaries
+            {"USER CENTRED DESIGN", new[] {
+                "Usability testing revealing positive response to new designs. Iterating based on feedback.",
+                "Design system expanded with new components. Consistent user experience across service.",
+                "Accessibility audit completed. WCAG 2.1 AA compliance improvements implemented.",
+                "User journey mapping workshop completed. Pain points identified for improvement.",
+                "Content design patterns established. Clearer, more consistent guidance for users.",
+                "Mobile-first approach refined. Responsive designs tested across device types.",
+                "Information architecture review completed. Navigation simplified based on user testing.",
+                "Design QA process improved. Better handoffs to development team."
+            }},
+            
+            // Architecture commentaries
+            {"ARCHITECTURE", new[] {
+                "Technical architecture documented. Clear component boundaries established.",
+                "Performance optimization recommendations implemented. Response times improved by 30%.",
+                "Security architecture review completed. Improved authentication and authorization mechanisms.",
+                "Scalability testing results positive. Architecture can handle projected growth.",
+                "Technical debt review completed. Refactoring prioritized for next quarters.",
+                "API design standards established. Consistent patterns across all service endpoints.",
+                "Cloud infrastructure optimized. Cost reductions achieved while maintaining performance.",
+                "Disaster recovery plan tested. Resilience improvements identified and implemented."
+            }},
+            
+            // Software Development commentaries
+            {"SOFTWARE DEVELOPMENT", new[] {
+                "Code quality metrics showing improvement. Static analysis tools implemented.",
+                "Test coverage increased to 85%. Automated test suite expanded.",
+                "Continuous deployment pipeline optimized. Build times reduced by 40%.",
+                "Technical documentation updated. Developer onboarding process streamlined.",
+                "Pair programming sessions yielding knowledge sharing benefits. Team capability increasing.",
+                "Refactoring of legacy components complete. Technical debt reduced in core modules.",
+                "Frontend performance optimizations implemented. Page load times reduced significantly.",
+                "Database query optimizations complete. Transaction times improved across the application."
+            }},
+            
+            // Business Analysis commentaries
+            {"BUSINESS ANALYSIS", new[] {
+                "Requirements workshop yielded clear priorities. Stakeholder agreement on key features.",
+                "Process modeling completed. Efficiency improvements identified and documented.",
+                "User story quality improved. Acceptance criteria more specific and testable.",
+                "Business case updated with latest metrics. ROI projections refined.",
+                "Stakeholder matrix updated. Communication plan adjusted for key decision makers.",
+                "Requirements traceability matrix created. Coverage analysis shows good test coverage.",
+                "Process improvement recommendations presented to leadership. Implementation plan created.",
+                "Data quality assessment completed. Recommendations made for improved validation."
+            }}
+        };
 
         // Create historical project status changes
         for (var i = 180; i >= 0; i -= 10) // Create history every 10 days for past 180 days
@@ -302,21 +527,14 @@ public static class ProjectEndpoints
                 Id = ObjectId.GenerateNewId().ToString(),
                 ProjectId = project.Id,
                 Timestamp = DateTime.UtcNow.AddDays(-i),
-                ChangedBy = new[] {
-                    "DELIVERY MANAGEMENT",
-                    "PRODUCT MANAGEMENT",
-                    "USER CENTRED DESIGN",
-                    "ARCHITECTURE",
-                    "SOFTWARE DEVELOPMENT",
-                    "BUSINESS ANALYSIS"
-                }[random.Next(6)],
+                ChangedBy = professionTypes[random.Next(professionTypes.Length)],
                 Changes = new Changes
                 {
-                    Status = new StatusChange
+                    Status = i % 30 == 0 ? new StatusChange // Only change status occasionally (every 30 days)
                     {
                         From = statuses[random.Next(statuses.Length)],
                         To = i == 0 ? project.Status : statuses[random.Next(statuses.Length)]
-                    },
+                    } : null,
                     Commentary = new CommentaryChange
                     {
                         From = projectCommentaries[random.Next(projectCommentaries.Length)],
@@ -330,7 +548,7 @@ public static class ProjectEndpoints
         // Create historical standard status changes
         foreach (var standard in project.Standards)
         {
-            for (var i = 180; i >= 0; i -= 15) // Create history every 15 days for past 180 days
+            for (var i = 180; i >= 0; i -= 30) // Create history less frequently (every 30 days)
             {
                 var standardHistory = new StandardHistory
                 {
@@ -338,14 +556,7 @@ public static class ProjectEndpoints
                     ProjectId = project.Id,
                     StandardId = standard.StandardId,
                     Timestamp = DateTime.UtcNow.AddDays(-i),
-                    ChangedBy = new[] {
-                        "DELIVERY MANAGEMENT",
-                        "PRODUCT MANAGEMENT",
-                        "USER CENTRED DESIGN",
-                        "ARCHITECTURE",
-                        "SOFTWARE DEVELOPMENT",
-                        "BUSINESS ANALYSIS"
-                    }[random.Next(6)],
+                    ChangedBy = professionTypes[random.Next(professionTypes.Length)],
                     Changes = new StandardChanges
                     {
                         Status = new StatusChange
@@ -363,6 +574,83 @@ public static class ProjectEndpoints
                 await standardHistoryPersistence.CreateAsync(standardHistory);
             }
         }
+        
+        // Create historical profession updates if we have the repository and profession data
+        if (professionHistoryPersistence != null && project.Professions != null && project.Professions.Count > 0)
+        {
+            // Fetch profession data from database if available
+            Dictionary<string, string> professionNames = new Dictionary<string, string>();
+            Dictionary<string, string[]> professionCommentaries = new Dictionary<string, string[]>();
+            
+            // Attempt to get profession data from database
+            if (professionPersistence != null)
+            {
+                var allProfessions = await professionPersistence.GetAllAsync();
+                
+                // Create profession ID to name mapping
+                foreach (var profession in allProfessions)
+                {
+                    professionNames[profession.Id] = profession.Name.ToUpper();
+                    
+                    // Assign commentaries by profession name if available
+                    if (professionTypeCommentaries.ContainsKey(profession.Name.ToUpper()))
+                    {
+                        professionCommentaries[profession.Id] = professionTypeCommentaries[profession.Name.ToUpper()];
+                    }
+                }
+            }
+
+            foreach (var profession in project.Professions)
+            {
+                // Get profession name for changedBy (from database or fallback)
+                string professionName;
+                if (!professionNames.TryGetValue(profession.ProfessionId, out professionName))
+                {
+                    // Fallback to a default profession type if not found
+                    professionName = professionTypes[random.Next(professionTypes.Length)];
+                }
+                
+                // Get profession-specific commentaries
+                string[] commentaries;
+                if (!professionCommentaries.TryGetValue(profession.ProfessionId, out commentaries))
+                {
+                    // Fallback to random profession type commentaries if not found
+                    string randomType = professionTypes[random.Next(professionTypes.Length)];
+                    commentaries = professionTypeCommentaries[randomType];
+                }
+                
+                // Create more frequent updates for professions (every 7-12 days)
+                for (var i = 180; i >= 0; i -= random.Next(7, 13))
+                {
+                    // Determine whether this update includes a status change (about 30% of the time)
+                    bool includeStatusChange = random.Next(10) < 3;
+                    
+                    var professionHistory = new ProjectProfessionHistory
+                    {
+                        Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
+                        ProjectId = project.Id,
+                        ProfessionId = profession.ProfessionId,
+                        Timestamp = DateTime.UtcNow.AddDays(-i - random.Next(3)), // Add some randomness
+                        ChangedBy = professionName, // Use the profession name from database
+                        Changes = new ProfessionChanges
+                        {
+                            // Include status change only sometimes
+                            Status = includeStatusChange ? new StatusChange
+                            {
+                                From = statuses[random.Next(statuses.Length)],
+                                To = i == 0 ? profession.Status : statuses[random.Next(statuses.Length)]
+                            } : null,
+                            Commentary = new CommentaryChange
+                            {
+                                From = i == 0 ? "" : commentaries[random.Next(commentaries.Length)],
+                                To = commentaries[random.Next(commentaries.Length)]
+                            }
+                        }
+                    };
+                    await professionHistoryPersistence.CreateAsync(professionHistory);
+                }
+            }
+        }
     }
 
     private static async Task<IResult> SeedData(
@@ -370,8 +658,10 @@ public static class ProjectEndpoints
         IProjectPersistence persistence,
         IProjectHistoryPersistence projectHistoryPersistence,
         IStandardHistoryPersistence standardHistoryPersistence,
+        IProjectProfessionHistoryPersistence professionHistoryPersistence,
         HttpRequest request,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IProfessionPersistence professionPersistence)
     {
         bool clearExisting = true;
         if (request.Query.TryGetValue("clearExisting", out var clearParam))
@@ -384,6 +674,36 @@ public static class ProjectEndpoints
             await persistence.DeleteAllAsync();
             await projectHistoryPersistence.DeleteAllAsync();
             await standardHistoryPersistence.DeleteAllAsync();
+            await professionHistoryPersistence.DeleteAllAsync();
+        }
+
+        // Get all professions from the database
+        var professions = await professionPersistence.GetAllAsync();
+        
+        // Ensure each project has at least some professions
+        foreach (var project in projects)
+        {
+            // If project doesn't have any professions, add some defaults
+            if (project.Professions == null || project.Professions.Count == 0 && professions.Any())
+            {
+                // Create a list of default professions with random statuses
+                var random = new Random();
+                var statuses = new[] { "RED", "AMBER", "GREEN" };
+                
+                // Use the actual profession IDs from the database
+                project.Professions = new List<ProfessionModel>();
+                
+                // Add up to 3 professions if available
+                foreach (var profession in professions.Take(3))
+                {
+                    project.Professions.Add(new ProfessionModel
+                    {
+                        ProfessionId = profession.Id, // Use actual ID from database
+                        Status = statuses[random.Next(statuses.Length)],
+                        Commentary = $"Initial assessment for {profession.Name}."
+                    });
+                }
+            }
         }
 
         await persistence.SeedAsync(projects);
@@ -395,7 +715,7 @@ public static class ProjectEndpoints
         {
             foreach (var project in projects)
             {
-                await GenerateProjectHistory(project, projectHistoryPersistence, standardHistoryPersistence);
+                await GenerateProjectHistory(project, projectHistoryPersistence, standardHistoryPersistence, professionHistoryPersistence, professionPersistence);
             }
         }
 
