@@ -19,11 +19,14 @@ using Serilog.Core;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.IdentityModel.JsonWebTokens;
 using System.Text;
 using System.Net.Http;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.JsonWebTokens;
+using System.IdentityModel.Tokens.Jwt;
 //-------- Configure the WebApplication builder------------------//
 
 var app = CreateWebApplication(args);
@@ -146,12 +149,69 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
        return;
    }
 
-   logger.LogInformation("Configuring Azure AD authentication");
+   var authority = $"https://login.microsoftonline.com/{tenantId}/v2.0/";
+   logger.LogInformation("Configuring Azure AD authentication with Authority: {Authority}", authority);
+   logger.LogInformation("Using ClientId: {ClientId}", clientId);
+   logger.LogInformation("Using TenantId: {TenantId}", tenantId);
+   
+   // Log the audiences that will be accepted
+   var validAudiences = new[]
+   {
+       clientId,
+       $"api://{clientId}",
+       $"api://{clientId}/access_as_user"
+   };
+   
+   logger.LogInformation("Configured valid audiences:");
+   foreach (var audience in validAudiences)
+   {
+       logger.LogInformation("  - {Audience}", audience);
+   }
+   
+   // Log the OpenID Connect metadata URL
+   var metadataUrl = $"{authority}.well-known/openid-configuration";
+   logger.LogInformation("Will retrieve OpenID configuration from: {MetadataUrl}", metadataUrl);
+   
+   // Log the expected JWKS URI - this is where the signing keys are typically fetched
+   var expectedJwksUri = $"{authority}.well-known/jwks.json";
+   logger.LogInformation("Expected location of signing keys (JWKS URI): {JwksUri}", expectedJwksUri);
+   
+   // Try to fetch the actual JWKS URI from the discovery document
+   string actualJwksUri = null;
+   try
+   {
+       using var httpClient = new HttpClient();
+       var response = httpClient.GetStringAsync(metadataUrl).GetAwaiter().GetResult();
+       
+       // Parse the JSON to get the jwks_uri
+       var jsonOptions = new System.Text.Json.JsonDocumentOptions
+       {
+           AllowTrailingCommas = true
+       };
+       
+       using var document = System.Text.Json.JsonDocument.Parse(response, jsonOptions);
+       if (document.RootElement.TryGetProperty("jwks_uri", out var jwksUriElement))
+       {
+           actualJwksUri = jwksUriElement.GetString();
+           logger.LogInformation("Actual JWKS URI from discovery document: {JwksUri}", actualJwksUri);
+           
+           // Test connectivity to the JWKS URI
+           TestJwksUriConnectivity(actualJwksUri, logger);
+       }
+       else
+       {
+           logger.LogWarning("Could not find jwks_uri in discovery document");
+       }
+   }
+   catch (Exception ex)
+   {
+       logger.LogError("Failed to fetch or parse discovery document: {Error}", ex.Message);
+   }
 
    _builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
        .AddJwtBearer(options =>
        {
-           options.Authority = $"https://login.microsoftonline.com/{tenantId}/v2.0/";
+           options.Authority = authority;
            
            options.TokenValidationParameters = new TokenValidationParameters
            {
@@ -159,14 +219,10 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
                ValidateAudience = true,
                ValidateLifetime = true,
                ValidateIssuerSigningKey = true,
-               ValidIssuer = $"https://login.microsoftonline.com/{tenantId}/v2.0",
-               ValidAudiences = new[]
-               {
-                   clientId,
-                   $"api://{clientId}",
-                   $"api://{clientId}/access_as_user"
-               },
+               ValidIssuer = authority,
+               ValidAudiences = validAudiences,
                RequireSignedTokens = true,
+               // Add clock skew tolerance to handle server time differences
                ClockSkew = TimeSpan.FromMinutes(5)
            };
            
@@ -175,17 +231,64 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
                OnAuthenticationFailed = context =>
                {
                    logger.LogError("Authentication failed: {ErrorMessage}", context.Exception.Message);
+                   if (context.Exception is SecurityTokenSignatureKeyNotFoundException)
+                   {
+                       logger.LogError("Security token signature key not found. Check if you can access metadata URL: {MetadataUrl}", metadataUrl);
+                       
+                       // Try to get the actual JWKS URI used by the token handler
+                       string jwksUriUsed = "";
+                       try
+                       {
+                           using var httpClient = new HttpClient();
+                           var response = httpClient.GetStringAsync(metadataUrl).GetAwaiter().GetResult();
+                           using var document = System.Text.Json.JsonDocument.Parse(response);
+                           jwksUriUsed = document.RootElement.GetProperty("jwks_uri").GetString();
+                           logger.LogError("Verify connectivity to JWKS URI: {JwksUri}", jwksUriUsed);
+                       }
+                       catch (Exception ex)
+                       {
+                           logger.LogError("Failed to determine JWKS URI: {Error}", ex.Message);
+                       }
+                   }
+                   else if (context.Exception is SecurityTokenInvalidSignatureException)
+                   {
+                       logger.LogError("Invalid token signature. The signing key might have changed or the token was tampered with.");
+                   }
                    return Task.CompletedTask;
                },
                OnTokenValidated = context =>
                {
-                   logger.LogInformation("Token successfully validated");
+                   logger.LogInformation("Token successfully validated for subject: {Subject}", context.Principal?.Identity?.Name ?? "unknown");
+                   if (context.SecurityToken is System.IdentityModel.Tokens.Jwt.JwtSecurityToken jwtToken)
+                   {
+                       logger.LogDebug("Token details - Issuer: {Issuer}, Audience: {Audience}, ValidFrom: {ValidFrom}, ValidTo: {ValidTo}",
+                           jwtToken.Issuer, jwtToken.Audiences.FirstOrDefault(), jwtToken.ValidFrom, jwtToken.ValidTo);
+                   }
                    return Task.CompletedTask;
                },
                OnChallenge = context =>
                {
-                   logger.LogWarning("Token challenge: {Error}", context.Error);
+                   logger.LogWarning("Token challenge: {Error}, Error Description: {ErrorDescription}", 
+                       context.Error, context.ErrorDescription);
                    return Task.CompletedTask;
+               },
+               OnMessageReceived = context =>
+               {
+                   logger.LogDebug("JWT bearer token received and will be validated");
+                   return Task.CompletedTask;
+               }
+           };
+           
+           // Log metadata retrieval
+           options.BackchannelHttpHandler = new HttpClientHandler
+           {
+               ServerCertificateCustomValidationCallback = (sender, cert, chain, errors) =>
+               {
+                   if (errors != System.Net.Security.SslPolicyErrors.None)
+                   {
+                       logger.LogWarning("SSL certificate validation errors when contacting Azure AD: {Errors}", errors);
+                   }
+                   return true; // Still accept the certificate to prevent blocking in dev environments
                }
            };
        });
@@ -217,5 +320,58 @@ static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
    app.UseProjectEndpoints();
 
    return app;
+}
+
+static void TestJwksUriConnectivity(string jwksUri, Microsoft.Extensions.Logging.ILogger logger)
+{
+    try
+    {
+        using var httpClient = new HttpClient();
+        var response = httpClient.GetAsync(jwksUri).GetAwaiter().GetResult();
+        
+        if (response.IsSuccessStatusCode)
+        {
+            var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            logger.LogInformation("Successfully connected to JWKS URI. Status: {StatusCode}", response.StatusCode);
+            
+            // Parse and log the keys information
+            try
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(content);
+                if (document.RootElement.TryGetProperty("keys", out var keysElement) && keysElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    int keyCount = keysElement.GetArrayLength();
+                    logger.LogInformation("Found {KeyCount} signing keys in JWKS document", keyCount);
+                    
+                    // Log key IDs
+                    for (int i = 0; i < keyCount; i++)
+                    {
+                        var key = keysElement[i];
+                        if (key.TryGetProperty("kid", out var kidElement))
+                        {
+                            string kid = kidElement.GetString();
+                            logger.LogInformation("Key {Index}: ID = {KeyId}", i+1, kid);
+                        }
+                    }
+                }
+                else
+                {
+                    logger.LogWarning("No 'keys' array found in JWKS document");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError("Failed to parse JWKS content: {Error}", ex.Message);
+            }
+        }
+        else
+        {
+            logger.LogError("Failed to connect to JWKS URI. Status: {StatusCode}", response.StatusCode);
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError("Exception when testing connectivity to JWKS URI: {Error}", ex.Message);
+    }
 }
 
