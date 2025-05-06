@@ -150,11 +150,7 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
    }
 
    var authority = $"https://login.microsoftonline.com/{tenantId}/v2.0/";
-   logger.LogInformation("Configuring Azure AD authentication with Authority: {Authority}", authority);
-   logger.LogInformation("Using ClientId: {ClientId}", clientId);
-   logger.LogInformation("Using TenantId: {TenantId}", tenantId);
    
-   // Log the audiences that will be accepted
    var validAudiences = new[]
    {
        clientId,
@@ -162,56 +158,80 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
        $"api://{clientId}/access_as_user"
    };
    
-   logger.LogInformation("Configured valid audiences:");
-   foreach (var audience in validAudiences)
-   {
-       logger.LogInformation("  - {Audience}", audience);
-   }
-   
    // Log the OpenID Connect metadata URL
    var metadataUrl = $"{authority}.well-known/openid-configuration";
-   logger.LogInformation("Will retrieve OpenID configuration from: {MetadataUrl}", metadataUrl);
    
-   // Log the expected JWKS URI - this is where the signing keys are typically fetched
-   var expectedJwksUri = $"{authority}.well-known/jwks.json";
-   logger.LogInformation("Expected location of signing keys (JWKS URI): {JwksUri}", expectedJwksUri);
-   
-   // Try to fetch the actual JWKS URI from the discovery document
-   string actualJwksUri = null;
-   try
+   // Create HTTP client handler with proxy support
+   HttpClientHandler CreateProxyEnabledHandler()
    {
-       using var httpClient = new HttpClient();
-       var response = httpClient.GetStringAsync(metadataUrl).GetAwaiter().GetResult();
+       // Use the same proxy configuration method as in Proxy.cs
+       var proxyUri = System.Environment.GetEnvironmentVariable("CDP_HTTPS_PROXY");
+       var handler = new HttpClientHandler();
        
-       // Parse the JSON to get the jwks_uri
-       var jsonOptions = new System.Text.Json.JsonDocumentOptions
+       if (!string.IsNullOrEmpty(proxyUri))
        {
-           AllowTrailingCommas = true
-       };
-       
-       using var document = System.Text.Json.JsonDocument.Parse(response, jsonOptions);
-       if (document.RootElement.TryGetProperty("jwks_uri", out var jwksUriElement))
-       {
-           actualJwksUri = jwksUriElement.GetString();
-           logger.LogInformation("Actual JWKS URI from discovery document: {JwksUri}", actualJwksUri);
+           // Mask credentials in proxy URI for logging
+           string maskedProxyUri = proxyUri;
+           if (proxyUri.Contains('@'))
+           {
+               var atIndex = proxyUri.IndexOf('@');
+               var colonIndex = proxyUri.IndexOf(':', 8); // Start after http://
+               if (colonIndex > 0 && colonIndex < atIndex)
+               {
+                   maskedProxyUri = proxyUri.Substring(0, colonIndex) + ":***" + proxyUri.Substring(atIndex);
+               }
+           }
+           logger.LogInformation("Using proxy for Azure AD connections");
            
-           // Test connectivity to the JWKS URI
-           TestJwksUriConnectivity(actualJwksUri, logger);
+           var proxy = new WebProxy
+           {
+               BypassProxyOnLocal = true
+           };
+           
+           var uri = new UriBuilder(proxyUri);
+           
+           // Set credentials if available
+           var username = uri.UserName;
+           var password = uri.Password;
+           if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(password))
+           {
+               proxy.Credentials = new NetworkCredential(username, password);
+           }
+           
+           // Remove credentials from URI for logging safety
+           uri.UserName = "";
+           uri.Password = "";
+           proxy.Address = uri.Uri;
+           
+           handler.Proxy = proxy;
+           handler.UseProxy = true;
        }
        else
        {
-           logger.LogWarning("Could not find jwks_uri in discovery document");
+           logger.LogDebug("No proxy configured for Azure AD connections");
        }
-   }
-   catch (Exception ex)
-   {
-       logger.LogError("Failed to fetch or parse discovery document: {Error}", ex.Message);
+       
+       // Add certificate validation callback for debugging
+       handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, errors) =>
+       {
+           if (errors != System.Net.Security.SslPolicyErrors.None)
+           {
+               logger.LogWarning("SSL certificate validation errors when contacting Azure AD: {Errors}", errors);
+           }
+           return true; // Accept all certificates in this handler
+       };
+       
+       return handler;
    }
 
    _builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
        .AddJwtBearer(options =>
        {
            options.Authority = authority;
+           
+           // Configure backchannel HTTP client with proper proxy settings
+           options.BackchannelHttpHandler = CreateProxyEnabledHandler();
+           options.BackchannelTimeout = TimeSpan.FromSeconds(30); // Reduce from default 60s
            
            options.TokenValidationParameters = new TokenValidationParameters
            {
@@ -222,74 +242,7 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
                ValidIssuer = authority,
                ValidAudiences = validAudiences,
                RequireSignedTokens = true,
-               // Add clock skew tolerance to handle server time differences
                ClockSkew = TimeSpan.FromMinutes(5)
-           };
-           
-           options.Events = new JwtBearerEvents
-           {
-               OnAuthenticationFailed = context =>
-               {
-                   logger.LogError("Authentication failed: {ErrorMessage}", context.Exception.Message);
-                   if (context.Exception is SecurityTokenSignatureKeyNotFoundException)
-                   {
-                       logger.LogError("Security token signature key not found. Check if you can access metadata URL: {MetadataUrl}", metadataUrl);
-                       
-                       // Try to get the actual JWKS URI used by the token handler
-                       string jwksUriUsed = "";
-                       try
-                       {
-                           using var httpClient = new HttpClient();
-                           var response = httpClient.GetStringAsync(metadataUrl).GetAwaiter().GetResult();
-                           using var document = System.Text.Json.JsonDocument.Parse(response);
-                           jwksUriUsed = document.RootElement.GetProperty("jwks_uri").GetString();
-                           logger.LogError("Verify connectivity to JWKS URI: {JwksUri}", jwksUriUsed);
-                       }
-                       catch (Exception ex)
-                       {
-                           logger.LogError("Failed to determine JWKS URI: {Error}", ex.Message);
-                       }
-                   }
-                   else if (context.Exception is SecurityTokenInvalidSignatureException)
-                   {
-                       logger.LogError("Invalid token signature. The signing key might have changed or the token was tampered with.");
-                   }
-                   return Task.CompletedTask;
-               },
-               OnTokenValidated = context =>
-               {
-                   logger.LogInformation("Token successfully validated for subject: {Subject}", context.Principal?.Identity?.Name ?? "unknown");
-                   if (context.SecurityToken is System.IdentityModel.Tokens.Jwt.JwtSecurityToken jwtToken)
-                   {
-                       logger.LogDebug("Token details - Issuer: {Issuer}, Audience: {Audience}, ValidFrom: {ValidFrom}, ValidTo: {ValidTo}",
-                           jwtToken.Issuer, jwtToken.Audiences.FirstOrDefault(), jwtToken.ValidFrom, jwtToken.ValidTo);
-                   }
-                   return Task.CompletedTask;
-               },
-               OnChallenge = context =>
-               {
-                   logger.LogWarning("Token challenge: {Error}, Error Description: {ErrorDescription}", 
-                       context.Error, context.ErrorDescription);
-                   return Task.CompletedTask;
-               },
-               OnMessageReceived = context =>
-               {
-                   logger.LogDebug("JWT bearer token received and will be validated");
-                   return Task.CompletedTask;
-               }
-           };
-           
-           // Log metadata retrieval
-           options.BackchannelHttpHandler = new HttpClientHandler
-           {
-               ServerCertificateCustomValidationCallback = (sender, cert, chain, errors) =>
-               {
-                   if (errors != System.Net.Security.SslPolicyErrors.None)
-                   {
-                       logger.LogWarning("SSL certificate validation errors when contacting Azure AD: {Errors}", errors);
-                   }
-                   return true; // Still accept the certificate to prevent blocking in dev environments
-               }
            };
        });
 
