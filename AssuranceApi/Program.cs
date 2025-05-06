@@ -150,7 +150,9 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
    }
 
    var authority = $"https://login.microsoftonline.com/{tenantId}/v2.0/";
+   logger.LogInformation("Configuring Azure AD authentication");
    
+   // Define valid audiences for token validation
    var validAudiences = new[]
    {
        clientId,
