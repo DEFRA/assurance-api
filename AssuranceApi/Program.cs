@@ -149,11 +149,9 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
    }
 
    var authority = $"https://login.microsoftonline.com/{tenantId}/v2.0/";
-   logger.LogInformation("Configuring Azure AD authentication with Authority: {Authority}", authority);
-   logger.LogInformation("Using ClientId: {ClientId}", clientId);
-   logger.LogInformation("Using TenantId: {TenantId}", tenantId);
+   logger.LogInformation("Configuring Azure AD authentication");
    
-   // Log the audiences that will be accepted
+   // Define valid audiences for token validation
    var validAudiences = new[]
    {
        clientId,
@@ -161,15 +159,8 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
        $"api://{clientId}/access_as_user"
    };
    
-   logger.LogInformation("Configured valid audiences:");
-   foreach (var audience in validAudiences)
-   {
-       logger.LogInformation("  - {Audience}", audience);
-   }
-   
    // Log the OpenID Connect metadata URL
    var metadataUrl = $"{authority}.well-known/openid-configuration";
-   logger.LogInformation("Will retrieve OpenID configuration from: {MetadataUrl}", metadataUrl);
    
    // Create HTTP client handler with proxy support
    HttpClientHandler CreateProxyEnabledHandler()
@@ -180,8 +171,18 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
        
        if (!string.IsNullOrEmpty(proxyUri))
        {
-           logger.LogInformation("Configuring proxy for Azure AD connections: {ProxyUri}", 
-               proxyUri.Contains('@') ? proxyUri.Substring(0, proxyUri.IndexOf('@')) + "***@" + proxyUri.Substring(proxyUri.IndexOf('@')+1) : proxyUri);
+           // Mask credentials in proxy URI for logging
+           string maskedProxyUri = proxyUri;
+           if (proxyUri.Contains('@'))
+           {
+               var atIndex = proxyUri.IndexOf('@');
+               var colonIndex = proxyUri.IndexOf(':', 8); // Start after http://
+               if (colonIndex > 0 && colonIndex < atIndex)
+               {
+                   maskedProxyUri = proxyUri.Substring(0, colonIndex) + ":***" + proxyUri.Substring(atIndex);
+               }
+           }
+           logger.LogInformation("Using proxy for Azure AD connections");
            
            var proxy = new WebProxy
            {
@@ -195,7 +196,6 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
            var password = uri.Password;
            if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(password))
            {
-               logger.LogInformation("Using proxy with authentication");
                proxy.Credentials = new NetworkCredential(username, password);
            }
            
@@ -209,7 +209,7 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
        }
        else
        {
-           logger.LogWarning("CDP_HTTPS_PROXY is not set. Azure AD connections will not use a proxy.");
+           logger.LogDebug("No proxy configured for Azure AD connections");
        }
        
        // Add certificate validation callback for debugging
@@ -234,8 +234,6 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
            options.BackchannelHttpHandler = CreateProxyEnabledHandler();
            options.BackchannelTimeout = TimeSpan.FromSeconds(30); // Reduce from default 60s
            
-           logger.LogInformation("Configured JWT bearer authentication with proxy support");
-           
            options.TokenValidationParameters = new TokenValidationParameters
            {
                ValidateIssuer = true,
@@ -246,44 +244,6 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
                ValidAudiences = validAudiences,
                RequireSignedTokens = true,
                ClockSkew = TimeSpan.FromMinutes(5)
-           };
-           
-           // Add event handlers for better diagnostics
-           options.Events = new JwtBearerEvents
-           {
-               OnAuthenticationFailed = context =>
-               {
-                   logger.LogError("Authentication failed: {ErrorMessage}", context.Exception.Message);
-                   
-                   if (context.Exception is SecurityTokenSignatureKeyNotFoundException)
-                   {
-                       logger.LogError("Security token signature key not found. Check if the API can access Azure AD metadata at: {MetadataUrl}", metadataUrl);
-                       logger.LogError("Ensure the CDP_HTTPS_PROXY environment variable is correctly set if a proxy is required");
-                   }
-                   else if (context.Exception is SecurityTokenInvalidSignatureException)
-                   {
-                       logger.LogError("Invalid token signature. The signing key might have changed or the token was tampered with.");
-                   }
-                   
-                   return Task.CompletedTask;
-               },
-               OnTokenValidated = context =>
-               {
-                   logger.LogInformation("Token successfully validated for subject: {Subject}", 
-                       context.Principal?.Identity?.Name ?? "unknown");
-                   return Task.CompletedTask;
-               },
-               OnChallenge = context =>
-               {
-                   logger.LogWarning("Token challenge: {Error}, {ErrorDescription}", 
-                       context.Error, context.ErrorDescription);
-                   return Task.CompletedTask;
-               },
-               OnMessageReceived = context =>
-               {
-                   logger.LogDebug("JWT bearer token received and will be validated");
-                   return Task.CompletedTask;
-               }
            };
        });
 
