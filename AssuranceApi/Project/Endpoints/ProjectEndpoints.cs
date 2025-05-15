@@ -700,7 +700,7 @@ public static class ProjectEndpoints
                     {
                         ProfessionId = profession.Id, // Use actual ID from database
                         Status = statuses[random.Next(statuses.Length)],
-                        Commentary = $"Initial assessment for {profession.Name}."
+                        Commentary = $"Initial update for {profession.Name}."
                     });
                 }
             }
