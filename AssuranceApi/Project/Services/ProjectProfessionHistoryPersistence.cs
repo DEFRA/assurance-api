@@ -89,4 +89,37 @@ public class ProjectProfessionHistoryPersistence : MongoService<ProjectProfessio
             return false;
         }
     }
+
+    public async Task<bool> ArchiveHistoryEntryAsync(string projectId, string professionId, string historyId)
+    {
+        try
+        {
+            Logger.LogInformation("Archiving history entry {HistoryId} for project {ProjectId}, profession {ProfessionId}", 
+                historyId, projectId, professionId);
+                
+            var filter = Builders<ProjectProfessionHistory>.Filter.And(
+                Builders<ProjectProfessionHistory>.Filter.Eq(x => x.Id, historyId),
+                Builders<ProjectProfessionHistory>.Filter.Eq(x => x.ProjectId, projectId),
+                Builders<ProjectProfessionHistory>.Filter.Eq(x => x.ProfessionId, professionId)
+            );
+            
+            var update = Builders<ProjectProfessionHistory>.Update.Set(x => x.Archived, true);
+            
+            var result = await Collection.UpdateOneAsync(filter, update);
+            
+            if (result.ModifiedCount == 0)
+            {
+                Logger.LogWarning("No history entry found to archive with ID {HistoryId}", historyId);
+                return false;
+            }
+            
+            Logger.LogInformation("Successfully archived history entry {HistoryId}", historyId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to archive profession history entry {HistoryId}", historyId);
+            return false;
+        }
+    }
 } 

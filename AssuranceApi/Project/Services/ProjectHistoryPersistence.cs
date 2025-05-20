@@ -61,7 +61,7 @@ public class ProjectHistoryPersistence : MongoService<ProjectHistory>, IProjectH
         {
             Logger.LogInformation("Getting history for project {ProjectId}", projectId);
             var result = await Collection
-                .Find(x => x.ProjectId == projectId)
+                .Find(x => x.ProjectId == projectId && !x.IsArchived)
                 .SortByDescending(x => x.Timestamp)
                 .ToListAsync();
             Logger.LogInformation("Found {Count} history entries", result.Count);
@@ -77,5 +77,38 @@ public class ProjectHistoryPersistence : MongoService<ProjectHistory>, IProjectH
     public async Task DeleteAllAsync()
     {
         await Collection.DeleteManyAsync(Builders<ProjectHistory>.Filter.Empty);
+    }
+
+    public async Task<bool> ArchiveHistoryEntryAsync(string projectId, string historyId)
+    {
+        try
+        {
+            Logger.LogInformation("Archiving history entry {HistoryId} for project {ProjectId}", 
+                historyId, projectId);
+                
+            var filter = Builders<ProjectHistory>.Filter.And(
+                Builders<ProjectHistory>.Filter.Eq(h => h.Id, historyId),
+                Builders<ProjectHistory>.Filter.Eq(h => h.ProjectId, projectId)
+            );
+            
+            var update = Builders<ProjectHistory>.Update
+                .Set(h => h.IsArchived, true);
+                
+            var result = await Collection.UpdateOneAsync(filter, update);
+            
+            if (result.ModifiedCount > 0)
+            {
+                Logger.LogInformation("Successfully archived history entry");
+                return true;
+            }
+            
+            Logger.LogWarning("No history entry found to archive");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to archive project history entry");
+            return false;
+        }
     }
 } 
