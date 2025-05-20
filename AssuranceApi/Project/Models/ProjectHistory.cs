@@ -12,6 +12,7 @@ public class ProjectHistory
     public DateTime Timestamp { get; set; }
     public string ChangedBy { get; set; } = null!;
     public Changes Changes { get; set; } = null!;
+    public bool IsArchived { get; set; } = false;
 }
 
 public class Changes

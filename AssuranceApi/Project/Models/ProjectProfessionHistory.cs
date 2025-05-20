@@ -13,6 +13,7 @@ public class ProjectProfessionHistory
     public DateTime Timestamp { get; set; }
     public string ChangedBy { get; set; } = null!;
     public ProfessionChanges Changes { get; set; } = null!;
+    public bool Archived { get; set; } = false;
 }
 
 public class ProfessionChanges

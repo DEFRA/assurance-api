@@ -21,6 +21,25 @@ public static class ProjectEndpoints
         app.MapPost("/projects/deleteAll", DeleteAll).RequireAuthorization("RequireAuthenticated");
         app.MapDelete("/projects/{id}", Delete).RequireAuthorization("RequireAuthenticated");
         app.MapPut("/projects/{id}", Update).RequireAuthorization("RequireAuthenticated");
+        app.MapPut("/projects/{projectId}/history/{historyId}/archive", async (
+            string projectId,
+            string historyId,
+            IProjectHistoryPersistence historyPersistence) =>
+        {
+            var success = await historyPersistence.ArchiveHistoryEntryAsync(projectId, historyId);
+            return success ? Results.Ok() : Results.NotFound();
+        }).RequireAuthorization("RequireAuthenticated");
+        
+        // Add endpoint for archiving profession history entries
+        app.MapPut("/projects/{projectId}/professions/{professionId}/history/{historyId}/archive", async (
+            string projectId,
+            string professionId,
+            string historyId,
+            IProjectProfessionHistoryPersistence historyPersistence) =>
+        {
+            var success = await historyPersistence.ArchiveHistoryEntryAsync(projectId, professionId, historyId);
+            return success ? Results.Ok() : Results.NotFound();
+        }).RequireAuthorization("RequireAuthenticated");
         
         // Read-only endpoints without authentication
         app.MapGet("projects", async (IProjectPersistence persistence, string? tag) =>
@@ -110,7 +129,8 @@ public static class ProjectEndpoints
         IProjectProfessionHistoryPersistence professionHistoryPersistence,
         ILogger<Program> logger,
         IProfessionPersistence professionPersistence,
-        IValidator<ProjectModel> validator)
+        IValidator<ProjectModel> validator,
+        HttpRequest request)
     {
         var validationResult = await validator.ValidateAsync(updatedProject);
         if (!validationResult.IsValid) return Results.BadRequest(validationResult.Errors);
@@ -118,230 +138,241 @@ public static class ProjectEndpoints
         var existingProject = await persistence.GetByIdAsync(id);
         if (existingProject == null) return Results.NotFound();
 
-        // Track project-level changes
-        var projectChanges = new Changes();
-        var hasProjectChanges = false;
+        // Check if history creation should be suppressed (used when synchronizing after archive)
+        bool suppressHistory = request.Query.TryGetValue("suppressHistory", out var suppressValue) && 
+                               suppressValue.ToString().Equals("true", StringComparison.OrdinalIgnoreCase);
 
-        // Check for name change
-        if (existingProject.Name != updatedProject.Name)
+        if (!suppressHistory)
         {
-            projectChanges.Name = new NameChange
+            // Track project-level changes
+            var projectChanges = new Changes();
+            var hasProjectChanges = false;
+
+            // Check for name change
+            if (existingProject.Name != updatedProject.Name)
             {
-                From = existingProject.Name,
-                To = updatedProject.Name
-            };
-            hasProjectChanges = true;
-        }
-
-        // Check for status change
-        if (existingProject.Status != updatedProject.Status)
-        {
-            projectChanges.Status = new StatusChange
-            {
-                From = existingProject.Status,
-                To = updatedProject.Status
-            };
-            hasProjectChanges = true;
-        }
-
-        // Check for commentary change
-        if (existingProject.Commentary != updatedProject.Commentary)
-        {
-            projectChanges.Commentary = new CommentaryChange
-            {
-                From = existingProject.Commentary,
-                To = updatedProject.Commentary
-            };
-            hasProjectChanges = true;
-        }
-
-        // If there are project-level changes, create history record
-        if (hasProjectChanges)
-        {
-            // Get the user or system making the change
-            // In a real system, this would come from authentication context
-            string changedBy = "Project Admin"; // Default for delivery updates
-            
-            var projectHistory = new ProjectHistory
-            {
-                Id = ObjectId.GenerateNewId().ToString(),
-                ProjectId = id,
-                Timestamp = DateTime.UtcNow,
-                ChangedBy = changedBy,
-                Changes = projectChanges
-            };
-
-            await projectHistoryPersistence.CreateAsync(projectHistory);
-        }
-        
-        // Track changes for each standard
-        foreach (var updatedStandard in updatedProject.Standards)
-        {
-            var existingStandard = existingProject.Standards
-                .FirstOrDefault(s => s.StandardId == updatedStandard.StandardId);
-
-            if (existingStandard == null) continue;
-
-            var standardChanges = new StandardChanges();
-            var hasStandardChanges = false;
+                projectChanges.Name = new NameChange
+                {
+                    From = existingProject.Name,
+                    To = updatedProject.Name
+                };
+                hasProjectChanges = true;
+            }
 
             // Check for status change
-            if (existingStandard.Status != updatedStandard.Status)
+            if (existingProject.Status != updatedProject.Status)
             {
-                standardChanges.Status = new StatusChange
+                projectChanges.Status = new StatusChange
                 {
-                    From = existingStandard.Status,
-                    To = updatedStandard.Status
+                    From = existingProject.Status,
+                    To = updatedProject.Status
                 };
-                hasStandardChanges = true;
+                hasProjectChanges = true;
             }
 
             // Check for commentary change
-            if (existingStandard.Commentary != updatedStandard.Commentary)
+            if (existingProject.Commentary != updatedProject.Commentary)
             {
-                standardChanges.Commentary = new CommentaryChange
+                projectChanges.Commentary = new CommentaryChange
                 {
-                    From = existingStandard.Commentary,
-                    To = updatedStandard.Commentary
+                    From = existingProject.Commentary,
+                    To = updatedProject.Commentary
                 };
-                hasStandardChanges = true;
+                hasProjectChanges = true;
             }
 
-            // If there are changes, create history record
-            if (hasStandardChanges)
+            // If there are project-level changes, create history record
+            if (hasProjectChanges)
             {
-                var standardHistory = new StandardHistory
+                // Get the user or system making the change
+                // In a real system, this would come from authentication context
+                string changedBy = "Project Admin"; // Default for delivery updates
+                
+                var projectHistory = new ProjectHistory
                 {
                     Id = ObjectId.GenerateNewId().ToString(),
                     ProjectId = id,
-                    StandardId = updatedStandard.StandardId,
                     Timestamp = DateTime.UtcNow,
-                    ChangedBy = "Standards Manager", // Use a consistent name for standards updates
-                    Changes = standardChanges
+                    ChangedBy = changedBy,
+                    Changes = projectChanges
                 };
 
-                await standardHistoryPersistence.CreateAsync(standardHistory);
+                await projectHistoryPersistence.CreateAsync(projectHistory);
+            }
+            
+            // Track changes for each standard
+            foreach (var updatedStandard in updatedProject.Standards)
+            {
+                var existingStandard = existingProject.Standards
+                    .FirstOrDefault(s => s.StandardId == updatedStandard.StandardId);
+
+                if (existingStandard == null) continue;
+
+                var standardChanges = new StandardChanges();
+                var hasStandardChanges = false;
+
+                // Check for status change
+                if (existingStandard.Status != updatedStandard.Status)
+                {
+                    standardChanges.Status = new StatusChange
+                    {
+                        From = existingStandard.Status,
+                        To = updatedStandard.Status
+                    };
+                    hasStandardChanges = true;
+                }
+
+                // Check for commentary change
+                if (existingStandard.Commentary != updatedStandard.Commentary)
+                {
+                    standardChanges.Commentary = new CommentaryChange
+                    {
+                        From = existingStandard.Commentary,
+                        To = updatedStandard.Commentary
+                    };
+                    hasStandardChanges = true;
+                }
+
+                // If there are changes, create history record
+                if (hasStandardChanges)
+                {
+                    var standardHistory = new StandardHistory
+                    {
+                        Id = ObjectId.GenerateNewId().ToString(),
+                        ProjectId = id,
+                        StandardId = updatedStandard.StandardId,
+                        Timestamp = DateTime.UtcNow,
+                        ChangedBy = "Standards Manager", // Use a consistent name for standards updates
+                        Changes = standardChanges
+                    };
+
+                    await standardHistoryPersistence.CreateAsync(standardHistory);
+                }
+            }
+
+            // Track changes for each profession
+            foreach (var updatedProfession in updatedProject.Professions)
+            {
+                var existingProfession = existingProject.Professions
+                    .FirstOrDefault(p => p.ProfessionId == updatedProfession.ProfessionId);
+
+                // Track if this is a new profession or an update to an existing one
+                bool isNewProfession = existingProfession == null;
+                
+                // If this is a new profession, create a history record for its initial state
+                if (isNewProfession)
+                {
+                    // Get profession name for changedBy field
+                    string professionName = "Unknown Profession";
+                    
+                    // Try to find the profession in the database
+                    if (professionPersistence != null)
+                    {
+                        try
+                        {
+                            var profession = await professionPersistence.GetByIdAsync(updatedProfession.ProfessionId);
+                            if (profession != null)
+                            {
+                                professionName = profession.Name;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Failed to get profession name for {ProfessionId}", updatedProfession.ProfessionId);
+                        }
+                    }
+                    
+                    var newProfessionHistory = new ProjectProfessionHistory
+                    {
+                        Id = ObjectId.GenerateNewId().ToString(),
+                        ProjectId = id,
+                        ProfessionId = updatedProfession.ProfessionId,
+                        Timestamp = DateTime.UtcNow,
+                        ChangedBy = professionName,
+                        Changes = new ProfessionChanges
+                        {
+                            Status = new StatusChange
+                            {
+                                From = string.Empty,
+                                To = updatedProfession.Status
+                            },
+                            Commentary = new CommentaryChange
+                            {
+                                From = string.Empty,
+                                To = updatedProfession.Commentary ?? string.Empty
+                            }
+                        }
+                    };
+                    
+                    await professionHistoryPersistence.CreateAsync(newProfessionHistory);
+                    continue; // Skip the rest of the loop for new professions
+                }
+
+                var changes = new ProfessionChanges();
+                var hasChanges = false;
+
+                // Check for status change
+                if (existingProfession.Status != updatedProfession.Status)
+                {
+                    changes.Status = new StatusChange
+                    {
+                        From = existingProfession.Status,
+                        To = updatedProfession.Status
+                    };
+                    hasChanges = true;
+                }
+
+                // Check for commentary change
+                if (existingProfession.Commentary != updatedProfession.Commentary)
+                {
+                    changes.Commentary = new CommentaryChange
+                    {
+                        From = existingProfession.Commentary ?? string.Empty,
+                        To = updatedProfession.Commentary ?? string.Empty
+                    };
+                    hasChanges = true;
+                }
+
+                // If there are changes, create history record
+                if (hasChanges)
+                {
+                    // Get profession name for changedBy field
+                    string professionName = "Unknown Profession";
+                    
+                    // Try to find the profession in the database
+                    if (professionPersistence != null)
+                    {
+                        try
+                        {
+                            var profession = await professionPersistence.GetByIdAsync(updatedProfession.ProfessionId);
+                            if (profession != null)
+                            {
+                                professionName = profession.Name;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Failed to get profession name for {ProfessionId}", updatedProfession.ProfessionId);
+                        }
+                    }
+                    
+                    var history = new ProjectProfessionHistory
+                    {
+                        Id = ObjectId.GenerateNewId().ToString(),
+                        ProjectId = id,
+                        ProfessionId = updatedProfession.ProfessionId,
+                        Timestamp = DateTime.UtcNow,
+                        ChangedBy = professionName,
+                        Changes = changes
+                    };
+
+                    await professionHistoryPersistence.CreateAsync(history);
+                }
             }
         }
-
-        // Track changes for each profession
-        foreach (var updatedProfession in updatedProject.Professions)
+        else
         {
-            var existingProfession = existingProject.Professions
-                .FirstOrDefault(p => p.ProfessionId == updatedProfession.ProfessionId);
-
-            // Track if this is a new profession or an update to an existing one
-            bool isNewProfession = existingProfession == null;
-            
-            // If this is a new profession, create a history record for its initial state
-            if (isNewProfession)
-            {
-                // Get profession name for changedBy field
-                string professionName = "Unknown Profession";
-                
-                // Try to find the profession in the database
-                if (professionPersistence != null)
-                {
-                    try
-                    {
-                        var profession = await professionPersistence.GetByIdAsync(updatedProfession.ProfessionId);
-                        if (profession != null)
-                        {
-                            professionName = profession.Name;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Failed to get profession name for {ProfessionId}", updatedProfession.ProfessionId);
-                    }
-                }
-                
-                var newProfessionHistory = new ProjectProfessionHistory
-                {
-                    Id = ObjectId.GenerateNewId().ToString(),
-                    ProjectId = id,
-                    ProfessionId = updatedProfession.ProfessionId,
-                    Timestamp = DateTime.UtcNow,
-                    ChangedBy = professionName,
-                    Changes = new ProfessionChanges
-                    {
-                        Status = new StatusChange
-                        {
-                            From = string.Empty,
-                            To = updatedProfession.Status
-                        },
-                        Commentary = new CommentaryChange
-                        {
-                            From = string.Empty,
-                            To = updatedProfession.Commentary ?? string.Empty
-                        }
-                    }
-                };
-                
-                await professionHistoryPersistence.CreateAsync(newProfessionHistory);
-                continue; // Skip the rest of the loop for new professions
-            }
-
-            var changes = new ProfessionChanges();
-            var hasChanges = false;
-
-            // Check for status change
-            if (existingProfession.Status != updatedProfession.Status)
-            {
-                changes.Status = new StatusChange
-                {
-                    From = existingProfession.Status,
-                    To = updatedProfession.Status
-                };
-                hasChanges = true;
-            }
-
-            // Check for commentary change
-            if (existingProfession.Commentary != updatedProfession.Commentary)
-            {
-                changes.Commentary = new CommentaryChange
-                {
-                    From = existingProfession.Commentary ?? string.Empty,
-                    To = updatedProfession.Commentary ?? string.Empty
-                };
-                hasChanges = true;
-            }
-
-            // If there are changes, create history record
-            if (hasChanges)
-            {
-                // Get profession name for changedBy field
-                string professionName = "Unknown Profession";
-                
-                // Try to find the profession in the database
-                if (professionPersistence != null)
-                {
-                    try
-                    {
-                        var profession = await professionPersistence.GetByIdAsync(updatedProfession.ProfessionId);
-                        if (profession != null)
-                        {
-                            professionName = profession.Name;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Failed to get profession name for {ProfessionId}", updatedProfession.ProfessionId);
-                    }
-                }
-                
-                var history = new ProjectProfessionHistory
-                {
-                    Id = ObjectId.GenerateNewId().ToString(),
-                    ProjectId = id,
-                    ProfessionId = updatedProfession.ProfessionId,
-                    Timestamp = DateTime.UtcNow,
-                    ChangedBy = professionName,
-                    Changes = changes
-                };
-
-                await professionHistoryPersistence.CreateAsync(history);
-            }
+            logger.LogInformation("History creation suppressed for update of project {ProjectId}", id);
         }
 
         var updated = await persistence.UpdateAsync(id, updatedProject);
