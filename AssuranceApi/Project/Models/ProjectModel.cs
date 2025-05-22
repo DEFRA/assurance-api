@@ -15,6 +15,7 @@ public class ProjectModel
     public List<string> Tags { get; set; } = new();
     public List<StandardModel> Standards { get; set; } = new();
     public List<ProfessionModel> Professions { get; set; } = new();
+    public string? UpdateDate { get; set; }
 }
 
 public class StandardModel
