@@ -122,4 +122,21 @@ public class ProjectProfessionHistoryPersistence : MongoService<ProjectProfessio
             return false;
         }
     }
+
+    public async Task<ProjectProfessionHistory?> GetLatestHistoryAsync(string projectId, string professionId)
+    {
+        try
+        {
+            return await Collection
+                .Find(x => x.ProjectId == projectId && x.ProfessionId == professionId && !x.Archived)
+                .SortByDescending(x => x.Timestamp)
+                .Limit(1)
+                .FirstOrDefaultAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to get latest profession history for project");
+            return null;
+        }
+    }
 } 

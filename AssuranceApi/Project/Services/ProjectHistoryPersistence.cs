@@ -111,4 +111,21 @@ public class ProjectHistoryPersistence : MongoService<ProjectHistory>, IProjectH
             return false;
         }
     }
+
+    public async Task<ProjectHistory?> GetLatestHistoryAsync(string projectId)
+    {
+        try
+        {
+            return await Collection
+                .Find(x => x.ProjectId == projectId && !x.IsArchived)
+                .SortByDescending(x => x.Timestamp)
+                .Limit(1)
+                .FirstOrDefaultAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to get latest project history");
+            return null;
+        }
+    }
 } 

@@ -8,4 +8,5 @@ public interface IProjectHistoryPersistence
     Task<IEnumerable<ProjectHistory>> GetHistoryAsync(string projectId);
     Task DeleteAllAsync();
     Task<bool> ArchiveHistoryEntryAsync(string projectId, string historyId);
+    Task<ProjectHistory?> GetLatestHistoryAsync(string projectId);
 } 
