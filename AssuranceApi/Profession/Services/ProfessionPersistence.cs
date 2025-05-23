@@ -27,13 +27,11 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
     {
         try
         {
-            // Clear existing professions
-            await Collection.DeleteManyAsync(Builders<ProfessionModel>.Filter.Empty);
-            
-            // Insert new professions
-            if (professions.Any())
+            // Upsert each profession by Id (incremental update)
+            foreach (var profession in professions)
             {
-                await Collection.InsertManyAsync(professions);
+                var filter = Builders<ProfessionModel>.Filter.Eq(x => x.Id, profession.Id);
+                await Collection.ReplaceOneAsync(filter, profession, new ReplaceOptions { IsUpsert = true });
             }
             return true;
         }
