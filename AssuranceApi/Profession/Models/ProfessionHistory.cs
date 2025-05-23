@@ -8,6 +8,7 @@ public class ProfessionHistory
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = null!;
+    // This should match ProfessionModel.Id (string, e.g. 'delivery-management')
     public string ProfessionId { get; set; } = null!;
     public DateTime Timestamp { get; set; }
     public string ChangedBy { get; set; } = null!;
