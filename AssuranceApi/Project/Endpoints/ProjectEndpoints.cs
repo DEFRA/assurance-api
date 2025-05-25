@@ -103,6 +103,7 @@ public static class ProjectEndpoints
     private static async Task<IResult> Create(
         ProjectModel project, 
         IProjectPersistence persistence,
+        IProjectHistoryPersistence projectHistoryPersistence,
         IValidator<ProjectModel> validator)
     {
         var validationResult = await validator.ValidateAsync(project);
@@ -110,6 +111,29 @@ public static class ProjectEndpoints
 
         var created = await persistence.CreateAsync(project);
         if (!created) return Results.BadRequest("Failed to create project");
+
+        // Create initial history entry
+        var history = new ProjectHistory
+        {
+            Id = ObjectId.GenerateNewId().ToString(),
+            ProjectId = project.Id,
+            Timestamp = DateTime.UtcNow,
+            ChangedBy = "Project created",
+            Changes = new Changes
+            {
+                Status = new StatusChange
+                {
+                    From = "",
+                    To = project.Status
+                },
+                Commentary = new CommentaryChange
+                {
+                    From = "",
+                    To = project.Commentary
+                }
+            }
+        };
+        await projectHistoryPersistence.CreateAsync(history);
 
         return Results.Created($"/projects/{project.Id}", project);
     }
@@ -202,7 +226,17 @@ public static class ProjectEndpoints
             if (hasProjectChanges)
             {
                 string changedBy = "Project Admin";
-                var historyTimestamp = updateDate ?? DateTime.UtcNow;
+                // Only use updateDate from the incoming update if it was explicitly provided
+                DateTime historyTimestamp;
+                if (!string.IsNullOrEmpty(updatedProject.UpdateDate) && DateTime.TryParse(updatedProject.UpdateDate, out var parsedUpdateDate))
+                {
+                    historyTimestamp = parsedUpdateDate;
+                }
+                else
+                {
+                    historyTimestamp = DateTime.UtcNow;
+                }
+
                 // Always include the current status in the history entry if there is a commentary change but no status change
                 if (projectChanges.Status == null && projectChanges.Commentary != null)
                 {
@@ -442,6 +476,53 @@ public static class ProjectEndpoints
         else
         {
             logger.LogInformation("History creation suppressed for update of project {ProjectId}", id);
+        }
+
+        // Merge professions array to prevent old updates from overwriting current state
+        if (updatedProject.Professions != null && updatedProject.Professions.Count > 0)
+        {
+            var currentProfessions = existingProject.Professions ?? new List<ProfessionModel>();
+            var currentProfessionsDict = currentProfessions.ToDictionary(p => p.ProfessionId, p => p);
+
+            foreach (var updatedProfession in updatedProject.Professions)
+            {
+                var latestProfessionHistory = await professionHistoryPersistence.GetLatestHistoryAsync(id, updatedProfession.ProfessionId);
+                var latestProfessionDate = latestProfessionHistory?.Timestamp ?? DateTime.MinValue;
+                var incomingTimestamp = DateTime.MinValue;
+                if (!string.IsNullOrEmpty(updatedProject.UpdateDate) && DateTime.TryParse(updatedProject.UpdateDate, out var parsedDate))
+                {
+                    incomingTimestamp = parsedDate;
+                }
+                else
+                {
+                    incomingTimestamp = DateTime.UtcNow;
+                }
+                if (incomingTimestamp >= latestProfessionDate)
+                {
+                    currentProfessionsDict[updatedProfession.ProfessionId] = updatedProfession;
+                }
+            }
+            updatedProject.Professions = currentProfessionsDict.Values.ToList();
+        }
+
+        // Always set lastUpdated to now (UTC) when updating the project
+        updatedProject.LastUpdated = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+        // Only set updateDate in the main project record if this update is the latest
+        // (i.e., for delivery updates, compare to latest delivery history)
+        if (!string.IsNullOrEmpty(updatedProject.UpdateDate))
+        {
+            var latestProjectHistoryForUpdateDate = await projectHistoryPersistence.GetLatestHistoryAsync(id);
+            var latestDeliveryDateForUpdateDate = latestProjectHistoryForUpdateDate?.Timestamp ?? DateTime.MinValue;
+            if (DateTime.TryParse(updatedProject.UpdateDate, out var parsedUpdateDate))
+            {
+                if (parsedUpdateDate < latestDeliveryDateForUpdateDate)
+                {
+                    // This is a historic update, do not update updateDate in the main record
+                    updatedProject.UpdateDate = existingProject.UpdateDate;
+                }
+                // else: leave as is (will update if latest)
+            }
         }
 
         var updated = await persistence.UpdateAsync(id, updatedProject);
