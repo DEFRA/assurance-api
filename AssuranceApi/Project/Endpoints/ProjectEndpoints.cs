@@ -35,10 +35,37 @@ public static class ProjectEndpoints
             string projectId,
             string professionId,
             string historyId,
-            IProjectProfessionHistoryPersistence historyPersistence) =>
+            IProjectProfessionHistoryPersistence historyPersistence,
+            IProjectPersistence projectPersistence) =>
         {
             var success = await historyPersistence.ArchiveHistoryEntryAsync(projectId, professionId, historyId);
-            return success ? Results.Ok() : Results.NotFound();
+            if (!success) return Results.NotFound();
+
+            // Fetch the project
+            var project = await projectPersistence.GetByIdAsync(projectId);
+            if (project == null) return Results.NotFound();
+
+            // Find the latest non-archived profession history entry for this profession
+            var latestNonArchived = await historyPersistence.GetLatestHistoryAsync(projectId, professionId);
+
+            // Find the profession in the main project document
+            var profession = project.Professions?.FirstOrDefault(p => p.ProfessionId == professionId);
+            if (profession != null)
+            {
+                if (latestNonArchived != null)
+                {
+                    // Update the profession in the main document
+                    profession.Status = latestNonArchived.Changes.Status?.To;
+                    profession.Commentary = latestNonArchived.Changes.Commentary?.To;
+                }
+                else
+                {
+                    // Remove the profession if no non-archived history remains
+                    project.Professions = project.Professions.Where(p => p.ProfessionId != professionId).ToList();
+                }
+                await projectPersistence.UpdateAsync(projectId, project);
+            }
+            return Results.Ok();
         }).RequireAuthorization("RequireAuthenticated");
         
         // Read-only endpoints without authentication
