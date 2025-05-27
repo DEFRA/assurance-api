@@ -23,6 +23,28 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
         };
     }
 
+    public async Task<bool> CreateAsync(ProfessionModel profession)
+    {
+        try
+        {
+            // Check if profession with same ID already exists
+            var existing = await GetByIdAsync(profession.Id);
+            if (existing != null)
+            {
+                Logger.LogWarning("Profession with ID {Id} already exists", profession.Id);
+                return false;
+            }
+
+            await Collection.InsertOneAsync(profession);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to create profession");
+            return false;
+        }
+    }
+
     public async Task<bool> SeedProfessionsAsync(IEnumerable<ProfessionModel> professions)
     {
         try

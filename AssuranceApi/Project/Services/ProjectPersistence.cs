@@ -62,9 +62,36 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
                 project.Standards?.Count ?? 0
             );
 
-            var result = await Collection.ReplaceOneAsync(
+            // Create update definition for each non-null property
+            var updateDef = Builders<ProjectModel>.Update;
+            var updates = new List<UpdateDefinition<ProjectModel>>();
+
+            if (project.Name != null)
+                updates.Add(updateDef.Set(x => x.Name, project.Name));
+            if (project.Status != null)
+                updates.Add(updateDef.Set(x => x.Status, project.Status));
+            if (project.Commentary != null)
+                updates.Add(updateDef.Set(x => x.Commentary, project.Commentary));
+            if (project.Tags != null)
+                updates.Add(updateDef.Set(x => x.Tags, project.Tags));
+            if (project.Standards != null)
+                updates.Add(updateDef.Set(x => x.Standards, project.Standards));
+            if (project.Professions != null)
+                updates.Add(updateDef.Set(x => x.Professions, project.Professions));
+            if (project.LastUpdated != null)
+                updates.Add(updateDef.Set(x => x.LastUpdated, project.LastUpdated));
+            if (project.UpdateDate != null)
+                updates.Add(updateDef.Set(x => x.UpdateDate, project.UpdateDate));
+
+            if (!updates.Any())
+            {
+                Logger.LogWarning("No fields to update for project {ProjectId}", id);
+                return false;
+            }
+
+            var result = await Collection.UpdateOneAsync(
                 x => x.Id == id,
-                project);
+                updateDef.Combine(updates));
 
             if (result.ModifiedCount == 0)
             {

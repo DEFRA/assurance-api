@@ -6,6 +6,7 @@ public interface IProfessionPersistence
 {
     Task<IEnumerable<ProfessionModel>> GetAllAsync();
     Task<ProfessionModel?> GetByIdAsync(string id);
-    Task<bool> DeleteAllAsync();
+    Task<bool> CreateAsync(ProfessionModel profession);
     Task<bool> SeedProfessionsAsync(IEnumerable<ProfessionModel> professions);
+    Task<bool> DeleteAllAsync();
 } 
