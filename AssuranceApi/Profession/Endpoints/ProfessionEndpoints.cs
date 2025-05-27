@@ -1,6 +1,8 @@
 using AssuranceApi.Profession.Models;
 using AssuranceApi.Profession.Services;
+using AssuranceApi.Profession.Validators;
 using Microsoft.AspNetCore.Authorization;
+using FluentValidation;
 
 namespace AssuranceApi.Profession.Endpoints;
 
@@ -9,7 +11,7 @@ public static class ProfessionEndpoints
     public static void UseProfessionEndpoints(this IEndpointRouteBuilder app)
     {
         // Protected endpoints that require authentication
-        app.MapPost("/professions/seed", SeedProfessions).RequireAuthorization("RequireAuthenticated");
+        app.MapPost("/professions", Create).RequireAuthorization("RequireAuthenticated");
         app.MapPost("/professions/deleteAll", async (IProfessionPersistence persistence) =>
         {
             try
@@ -39,18 +41,24 @@ public static class ProfessionEndpoints
         });
     }
 
-    private static async Task<IResult> SeedProfessions(
-        List<ProfessionModel> professions, 
-        IProfessionPersistence persistence)
+    private static async Task<IResult> Create(
+        ProfessionModel profession,
+        IProfessionPersistence persistence,
+        IValidator<ProfessionModel> validator)
     {
-        if (!professions.Any())
+        var validationResult = await validator.ValidateAsync(profession);
+        if (!validationResult.IsValid)
         {
-            await persistence.DeleteAllAsync();
-            return Results.Ok();
+            return Results.BadRequest(validationResult.Errors);
         }
 
-        var created = await persistence.SeedProfessionsAsync(professions);
-        return created ? Results.Ok() : Results.BadRequest("Failed to seed professions");
+        var created = await persistence.CreateAsync(profession);
+        if (!created)
+        {
+            return Results.BadRequest("Failed to create profession");
+        }
+
+        return Results.Created($"/professions/{profession.Id}", profession);
     }
 
     private static async Task<IResult> GetAll(IProfessionPersistence persistence)
