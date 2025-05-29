@@ -179,12 +179,22 @@ public static class ProjectEndpoints
         }
         await MergeProfessions(existingProject, updatedProject, professionHistoryPersistence, id, updateDate);
         updatedProject.LastUpdated = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
-        // --- FIX: Always set updateDate to today if not provided ---
         if (string.IsNullOrEmpty(updatedProject.UpdateDate))
         {
             updatedProject.UpdateDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
         }
         await UpdateProjectUpdateDate(existingProject, updatedProject, projectHistoryPersistence, id);
+        // --- NEW: Always set main status/commentary to latest by date ---
+        var allHistory = await projectHistoryPersistence.GetHistoryAsync(id);
+        var latestDelivery = allHistory
+            .Where(h => h.Changes?.Status != null)
+            .OrderByDescending(h => h.Timestamp)
+            .FirstOrDefault();
+        if (latestDelivery != null)
+        {
+            updatedProject.Status = latestDelivery.Changes.Status.To;
+            updatedProject.Commentary = latestDelivery.Changes.Commentary?.To;
+        }
         var updated = await persistence.UpdateAsync(id, updatedProject);
         if (!updated) return Results.NotFound();
         return Results.Ok(updatedProject);
