@@ -9,7 +9,7 @@ public class ProjectValidator : AbstractValidator<ProjectModel>
     {
         RuleFor(x => x.Name).NotEmpty();
         RuleFor(x => x.Status).NotEmpty().Must(x => 
-            x == "RED" || x == "AMBER" || x == "GREEN");
+            x == "RED" || x == "AMBER_RED" || x == "AMBER" || x == "GREEN_AMBER" || x == "GREEN");
         RuleFor(x => x.Commentary).NotEmpty();
         RuleFor(x => x.LastUpdated).NotEmpty();
         RuleFor(x => x.Standards).NotNull();
@@ -23,7 +23,7 @@ public class StandardValidator : AbstractValidator<StandardModel>
     {
         RuleFor(x => x.StandardId).NotEmpty();
         RuleFor(x => x.Status).NotEmpty().Must(x => 
-            x == "RED" || x == "AMBER" || x == "GREEN");
+            x == "RED" || x == "AMBER_RED" || x == "AMBER" || x == "GREEN_AMBER" || x == "GREEN");
         RuleFor(x => x.Commentary).NotEmpty();
     }
-} 
+}

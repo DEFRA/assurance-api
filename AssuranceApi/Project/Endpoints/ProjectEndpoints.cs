@@ -14,6 +14,9 @@ namespace AssuranceApi.Project.Endpoints;
 
 public static class ProjectEndpoints
 {
+    private static readonly string[] ValidStatuses = new[] { "RED", "AMBER_RED", "AMBER", "GREEN_AMBER", "GREEN" };
+    private static bool IsValidStatus(string? status) => !string.IsNullOrEmpty(status) && ValidStatuses.Contains(status);
+
     public static void UseProjectEndpoints(this IEndpointRouteBuilder app)
     {
         // Protected endpoints that require authentication
@@ -105,6 +108,9 @@ public static class ProjectEndpoints
         IProjectHistoryPersistence projectHistoryPersistence,
         IValidator<ProjectModel> validator)
     {
+        // Validate status
+        if (!IsValidStatus(project.Status))
+            return Results.BadRequest($"Invalid status: {project.Status}");
         var validationResult = await validator.ValidateAsync(project);
         if (!validationResult.IsValid) return Results.BadRequest(validationResult.Errors);
 
@@ -155,6 +161,9 @@ public static class ProjectEndpoints
         IValidator<ProjectModel> validator,
         HttpRequest request)
     {
+        // Validate status
+        if (!IsValidStatus(updatedProject.Status))
+            return Results.BadRequest($"Invalid status: {updatedProject.Status}");
         var validationResult = await validator.ValidateAsync(updatedProject);
         if (!validationResult.IsValid) return Results.BadRequest(validationResult.Errors);
         var existingProject = await persistence.GetByIdAsync(id);
@@ -170,6 +179,11 @@ public static class ProjectEndpoints
         }
         await MergeProfessions(existingProject, updatedProject, professionHistoryPersistence, id, updateDate);
         updatedProject.LastUpdated = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
+        // --- FIX: Always set updateDate to today if not provided ---
+        if (string.IsNullOrEmpty(updatedProject.UpdateDate))
+        {
+            updatedProject.UpdateDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        }
         await UpdateProjectUpdateDate(existingProject, updatedProject, projectHistoryPersistence, id);
         var updated = await persistence.UpdateAsync(id, updatedProject);
         if (!updated) return Results.NotFound();
