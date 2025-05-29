@@ -254,64 +254,77 @@ public static class ProjectEndpoints
         }
     }
 
-    private static async Task TrackProfessionChanges(string id, ProjectModel existing, ProjectModel updated, IProjectProfessionHistoryPersistence historyPersistence, IProfessionPersistence professionPersistence, ILogger logger, DateTime? updateDate)
+    private static async Task TrackProfessionChanges(
+        string id,
+        ProjectModel existing,
+        ProjectModel updated,
+        IProjectProfessionHistoryPersistence historyPersistence,
+        IProfessionPersistence professionPersistence,
+        ILogger logger,
+        DateTime? updateDate)
     {
         foreach (var updatedProfession in updated.Professions)
         {
             var existingProfession = existing.Professions.FirstOrDefault(p => p.ProfessionId == updatedProfession.ProfessionId);
-            bool isNew = existingProfession == null;
-            var changes = new ProfessionChanges();
-            var hasChanges = false;
-            if (isNew)
+            var (changes, hasChanges) = GetProfessionChanges(existingProfession, updatedProfession);
+            if (!hasChanges) continue;
+            string professionName = await ResolveProfessionName(professionPersistence, updatedProfession.ProfessionId, logger);
+            var history = new ProjectProfessionHistory
             {
-                changes.Status = new StatusChange { From = string.Empty, To = updatedProfession.Status };
-                changes.Commentary = new CommentaryChange { From = string.Empty, To = updatedProfession.Commentary ?? string.Empty };
+                Id = ObjectId.GenerateNewId().ToString(),
+                ProjectId = id,
+                ProfessionId = updatedProfession.ProfessionId,
+                Timestamp = updateDate ?? DateTime.UtcNow,
+                ChangedBy = professionName,
+                Changes = changes
+            };
+            await historyPersistence.CreateAsync(history);
+        }
+    }
+
+    private static (ProfessionChanges changes, bool hasChanges) GetProfessionChanges(ProfessionModel existingProfession, ProfessionModel updatedProfession)
+    {
+        var changes = new ProfessionChanges();
+        bool hasChanges = false;
+        if (existingProfession == null)
+        {
+            changes.Status = new StatusChange { From = string.Empty, To = updatedProfession.Status };
+            changes.Commentary = new CommentaryChange { From = string.Empty, To = updatedProfession.Commentary ?? string.Empty };
+            hasChanges = true;
+        }
+        else
+        {
+            if (existingProfession.Status != updatedProfession.Status)
+            {
+                changes.Status = new StatusChange { From = existingProfession.Status, To = updatedProfession.Status };
                 hasChanges = true;
             }
-            else
+            if (existingProfession.Commentary != updatedProfession.Commentary)
             {
-                if (existingProfession.Status != updatedProfession.Status)
-                {
-                    changes.Status = new StatusChange { From = existingProfession.Status, To = updatedProfession.Status };
-                    hasChanges = true;
-                }
-                if (existingProfession.Commentary != updatedProfession.Commentary)
-                {
-                    changes.Commentary = new CommentaryChange { From = existingProfession.Commentary ?? string.Empty, To = updatedProfession.Commentary ?? string.Empty };
-                    hasChanges = true;
-                }
-                if (hasChanges && changes.Status == null)
-                {
-                    changes.Status = new StatusChange { From = existingProfession.Status, To = existingProfession.Status };
-                }
+                changes.Commentary = new CommentaryChange { From = existingProfession.Commentary ?? string.Empty, To = updatedProfession.Commentary ?? string.Empty };
+                hasChanges = true;
             }
-            if (hasChanges)
+            if (hasChanges && changes.Status == null)
             {
-                string professionName = "Unknown Profession";
-                if (professionPersistence != null)
-                {
-                    try
-                    {
-                        var profession = await professionPersistence.GetByIdAsync(updatedProfession.ProfessionId);
-                        if (profession != null) professionName = profession.Name;
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Failed to get profession name for {ProfessionId}", updatedProfession.ProfessionId);
-                    }
-                }
-                var history = new ProjectProfessionHistory
-                {
-                    Id = ObjectId.GenerateNewId().ToString(),
-                    ProjectId = id,
-                    ProfessionId = updatedProfession.ProfessionId,
-                    Timestamp = updateDate ?? DateTime.UtcNow,
-                    ChangedBy = professionName,
-                    Changes = changes
-                };
-                await historyPersistence.CreateAsync(history);
+                changes.Status = new StatusChange { From = existingProfession.Status, To = existingProfession.Status };
             }
         }
+        return (changes, hasChanges);
+    }
+
+    private static async Task<string> ResolveProfessionName(IProfessionPersistence professionPersistence, string professionId, ILogger logger)
+    {
+        if (professionPersistence == null) return "Unknown Profession";
+        try
+        {
+            var profession = await professionPersistence.GetByIdAsync(professionId);
+            if (profession != null) return profession.Name;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get profession name for {ProfessionId}", professionId);
+        }
+        return "Unknown Profession";
     }
 
     private static async Task MergeProfessions(ProjectModel existing, ProjectModel updated, IProjectProfessionHistoryPersistence historyPersistence, string id, DateTime? updateDate)
