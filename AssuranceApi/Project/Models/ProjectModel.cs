@@ -9,7 +9,7 @@ public class ProjectModel
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = null!;
     public string Name { get; set; } = null!;
-    public string Status { get; set; } = null!;  // RED, AMBER, GREEN
+    public string Status { get; set; } = null!;  // RED, AMBER_RED, AMBER, GREEN_AMBER, GREEN
     public string LastUpdated { get; set; } = null!;
     public string Commentary { get; set; } = null!;
     public List<string> Tags { get; set; } = new();
@@ -21,13 +21,13 @@ public class ProjectModel
 public class StandardModel
 {
     public string StandardId { get; set; } = null!;
-    public string Status { get; set; } = null!;  // RED, AMBER, GREEN
+    public string Status { get; set; } = null!;  // RED, AMBER_RED, AMBER, GREEN_AMBER, GREEN
     public string Commentary { get; set; } = null!;
 }
 
 public class ProfessionModel
 {
     public string ProfessionId { get; set; } = null!;
-    public string Status { get; set; } = null!;  // RED, AMBER, GREEN
+    public string Status { get; set; } = null!;  // RED, AMBER_RED, AMBER, GREEN_AMBER, GREEN
     public string Commentary { get; set; } = null!;
-} 
+}
