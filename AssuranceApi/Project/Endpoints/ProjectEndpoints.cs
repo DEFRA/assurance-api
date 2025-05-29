@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using AssuranceApi.Profession.Services;
+using System.Globalization;
 
 namespace AssuranceApi.Project.Endpoints;
 
@@ -178,7 +179,7 @@ public static class ProjectEndpoints
     // --- Helper Methods ---
     private static DateTime? ParseUpdateDate(string updateDateStr)
     {
-        if (!string.IsNullOrEmpty(updateDateStr) && DateTime.TryParse(updateDateStr, out var parsedDate) && parsedDate <= DateTime.UtcNow)
+        if (!string.IsNullOrEmpty(updateDateStr) && DateTime.TryParse(updateDateStr, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsedDate) && parsedDate <= DateTime.UtcNow)
             return parsedDate;
         return null;
     }
@@ -351,7 +352,7 @@ public static class ProjectEndpoints
         {
             var latestHistory = await historyPersistence.GetLatestHistoryAsync(id);
             var latestDate = latestHistory?.Timestamp ?? DateTime.MinValue;
-            if (DateTime.TryParse(updated.UpdateDate, out var parsedUpdateDate))
+            if (DateTime.TryParse(updated.UpdateDate, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsedUpdateDate))
             {
                 // Only allow UpdateDate if it is not before the latest history entry
                 if (parsedUpdateDate < latestDate)
