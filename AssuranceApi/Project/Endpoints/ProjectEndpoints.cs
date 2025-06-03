@@ -13,7 +13,7 @@ namespace AssuranceApi.Project.Endpoints;
 
 public static class ProjectEndpoints
 {
-    private static readonly string[] ValidStatuses = new[] { "RED", "AMBER_RED", "AMBER", "GREEN_AMBER", "GREEN" };
+    private static readonly string[] ValidStatuses = new[] { "RED", "AMBER_RED", "AMBER", "GREEN_AMBER", "GREEN", "TBC" };
     private static bool IsValidStatus(string? status) => !string.IsNullOrEmpty(status) && ValidStatuses.Contains(status);
 
     public static void UseProjectEndpoints(this IEndpointRouteBuilder app)
@@ -454,10 +454,10 @@ public static class ProjectEndpoints
         }
     }
 
-    // Simple aggregation: RED > AMBER_RED > AMBER > GREEN_AMBER > GREEN
+    // Simple aggregation: RED > AMBER_RED > AMBER > GREEN_AMBER > GREEN > TBC
     private static string AggregateStatus(IEnumerable<string> statuses)
     {
-        var order = new[] { "RED", "AMBER_RED", "AMBER", "GREEN_AMBER", "GREEN" };
+        var order = new[] { "RED", "AMBER_RED", "AMBER", "GREEN_AMBER", "GREEN", "TBC" };
         return statuses.OrderBy(s => Array.IndexOf(order, s)).FirstOrDefault() ?? "NOT_UPDATED";
     }
 }

@@ -11,7 +11,7 @@ public class ProjectProfessionStandardAssessment
     public string ProjectId { get; set; } = null!;
     public string ProfessionId { get; set; } = null!;
     public string StandardId { get; set; } = null!;
-    public string Status { get; set; } = null!; // RED, AMBER_RED, AMBER, GREEN_AMBER, GREEN
+    public string Status { get; set; } = null!; // RED, AMBER_RED, AMBER, GREEN_AMBER, GREEN, TBC
     public string Commentary { get; set; } = null!;
     public DateTime LastUpdated { get; set; }
     public string ChangedBy { get; set; } = null!;

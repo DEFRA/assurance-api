@@ -9,7 +9,7 @@ public class ProjectValidator : AbstractValidator<ProjectModel>
     {
         RuleFor(x => x.Name).NotEmpty();
         RuleFor(x => x.Status).NotEmpty().Must(x => 
-            x == "RED" || x == "AMBER_RED" || x == "AMBER" || x == "GREEN_AMBER" || x == "GREEN");
+            x == "RED" || x == "AMBER_RED" || x == "AMBER" || x == "GREEN_AMBER" || x == "GREEN" || x == "TBC");
         RuleFor(x => x.Commentary).NotNull();
         RuleFor(x => x.Phase).NotEmpty().Must(x => 
             x == "Discovery" || x == "Alpha" || x == "Private Beta" || x == "Public Beta" || x == "Live");
