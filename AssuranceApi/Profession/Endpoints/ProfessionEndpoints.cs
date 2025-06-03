@@ -3,6 +3,7 @@ using AssuranceApi.Profession.Services;
 using AssuranceApi.Profession.Validators;
 using Microsoft.AspNetCore.Authorization;
 using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AssuranceApi.Profession.Endpoints;
 
@@ -11,7 +12,11 @@ public static class ProfessionEndpoints
     public static void UseProfessionEndpoints(this IEndpointRouteBuilder app)
     {
         // Protected endpoints that require authentication
-        app.MapPost("/professions", Create).RequireAuthorization("RequireAuthenticated");
+        app.MapPost("/professions", async (
+            [FromBody] ProfessionModel profession,
+            IProfessionPersistence persistence,
+            IValidator<ProfessionModel> validator
+        ) => await Create(profession, persistence, validator)).RequireAuthorization("RequireAuthenticated");
         app.MapPost("/professions/deleteAll", async (IProfessionPersistence persistence) =>
         {
             try
@@ -72,4 +77,4 @@ public static class ProfessionEndpoints
         var profession = await persistence.GetByIdAsync(id);
         return profession is not null ? Results.Ok(profession) : Results.NotFound();
     }
-} 
+}

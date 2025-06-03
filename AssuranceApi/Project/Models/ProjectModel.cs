@@ -12,22 +12,9 @@ public class ProjectModel
     public string Status { get; set; } = null!;  // RED, AMBER_RED, AMBER, GREEN_AMBER, GREEN
     public string LastUpdated { get; set; } = null!;
     public string Commentary { get; set; } = null!;
+    public string? Phase { get; set; }  // GDS phase (e.g., Discovery, Alpha, Beta, Live) - optional
+    public string? DefCode { get; set; }  // DEFRA project identifier - optional
     public List<string> Tags { get; set; } = new();
-    public List<StandardModel> Standards { get; set; } = new();
-    public List<ProfessionModel> Professions { get; set; } = new();
     public string? UpdateDate { get; set; }
-}
-
-public class StandardModel
-{
-    public string StandardId { get; set; } = null!;
-    public string Status { get; set; } = null!;  // RED, AMBER_RED, AMBER, GREEN_AMBER, GREEN
-    public string Commentary { get; set; } = null!;
-}
-
-public class ProfessionModel
-{
-    public string ProfessionId { get; set; } = null!;
-    public string Status { get; set; } = null!;  // RED, AMBER_RED, AMBER, GREEN_AMBER, GREEN
-    public string Commentary { get; set; } = null!;
+    public List<StandardSummaryModel> StandardsSummary { get; set; } = new();
 }
