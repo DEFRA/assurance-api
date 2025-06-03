@@ -12,18 +12,8 @@ public class ProjectValidator : AbstractValidator<ProjectModel>
             x == "RED" || x == "AMBER_RED" || x == "AMBER" || x == "GREEN_AMBER" || x == "GREEN");
         RuleFor(x => x.Commentary).NotEmpty();
         RuleFor(x => x.LastUpdated).NotEmpty();
-        RuleFor(x => x.Standards).NotNull();
-        RuleForEach(x => x.Standards).SetValidator(new StandardValidator());
-    }
-}
-
-public class StandardValidator : AbstractValidator<StandardModel>
-{
-    public StandardValidator()
-    {
-        RuleFor(x => x.StandardId).NotEmpty();
-        RuleFor(x => x.Status).NotEmpty().Must(x => 
-            x == "RED" || x == "AMBER_RED" || x == "AMBER" || x == "GREEN_AMBER" || x == "GREEN");
-        RuleFor(x => x.Commentary).NotEmpty();
+        RuleFor(x => x.Phase).NotEmpty().Must(x => 
+            x == "Discovery" || x == "Alpha" || x == "Private Beta" || x == "Public Beta" || x == "Live");
+        // DefCode is optional - no validation required
     }
 }

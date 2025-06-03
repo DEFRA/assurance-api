@@ -2,6 +2,7 @@ using AssuranceApi.ServiceStandard.Models;
 using AssuranceApi.ServiceStandard.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AssuranceApi.ServiceStandard.Endpoints;
 
@@ -10,7 +11,10 @@ public static class ServiceStandardEndpoints
     public static void UseServiceStandardEndpoints(this IEndpointRouteBuilder app)
     {
         // Protected endpoints that require authentication
-        app.MapPost("serviceStandards/seed", SeedStandards).RequireAuthorization("RequireAuthenticated");
+        app.MapPost("serviceStandards/seed", async (
+            [FromBody] List<ServiceStandardModel> standards,
+            IServiceStandardPersistence persistence
+        ) => await SeedStandards(standards, persistence)).RequireAuthorization("RequireAuthenticated");
         app.MapPost("/serviceStandards/deleteAll", async (IServiceStandardPersistence persistence) =>
         {
             try
@@ -75,4 +79,4 @@ public static class ServiceStandardEndpoints
             // ... add all standards
         };
     }
-} 
+}

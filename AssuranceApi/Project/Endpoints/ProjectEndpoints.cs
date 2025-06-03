@@ -7,7 +7,6 @@ using MongoDB.Driver;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
-using AssuranceApi.Profession.Services;
 using System.Globalization;
 
 namespace AssuranceApi.Project.Endpoints;
@@ -32,44 +31,6 @@ public static class ProjectEndpoints
             return success ? Results.Ok() : Results.NotFound();
         }).RequireAuthorization("RequireAuthenticated");
         
-        // Add endpoint for archiving profession history entries
-        app.MapPut("/projects/{projectId}/professions/{professionId}/history/{historyId}/archive", async (
-            string projectId,
-            string professionId,
-            string historyId,
-            IProjectProfessionHistoryPersistence historyPersistence,
-            IProjectPersistence projectPersistence) =>
-        {
-            var success = await historyPersistence.ArchiveHistoryEntryAsync(projectId, professionId, historyId);
-            if (!success) return Results.NotFound();
-
-            // Fetch the project
-            var project = await projectPersistence.GetByIdAsync(projectId);
-            if (project == null) return Results.NotFound();
-
-            // Find the latest non-archived profession history entry for this profession
-            var latestNonArchived = await historyPersistence.GetLatestHistoryAsync(projectId, professionId);
-
-            // Find the profession in the main project document
-            var profession = project.Professions?.FirstOrDefault(p => p.ProfessionId == professionId);
-            if (profession != null)
-            {
-                if (latestNonArchived != null)
-                {
-                    // Update the profession in the main document
-                    profession.Status = latestNonArchived.Changes.Status?.To;
-                    profession.Commentary = latestNonArchived.Changes.Commentary?.To;
-                }
-                else
-                {
-                    // Remove the profession if no non-archived history remains
-                    project.Professions = project.Professions.Where(p => p.ProfessionId != professionId).ToList();
-                }
-                await projectPersistence.UpdateAsync(projectId, project);
-            }
-            return Results.Ok();
-        }).RequireAuthorization("RequireAuthenticated");
-        
         // Read-only endpoints without authentication
         app.MapGet("projects", async (IProjectPersistence persistence, string? tag) =>
         {
@@ -81,25 +42,189 @@ public static class ProjectEndpoints
         app.MapGet("/projects/{id}/history", GetHistory);
         app.MapGet("/projects/tags/summary", GetTagsSummary);
 
-        // Standard history endpoints 
-        app.MapGet("/projects/{projectId}/standards/{standardId}/history", async (
+        // --- New endpoints for per-standard, per-profession assessment CRUD ---
+        app.MapGet("/projects/{projectId}/standards/{standardId}/professions/{professionId}/assessment", async (
             string projectId,
             string standardId,
-            IStandardHistoryPersistence historyPersistence) =>
+            string professionId,
+            [FromServices] IProjectProfessionStandardAssessmentPersistence assessmentPersistence) =>
         {
-            var history = await historyPersistence.GetHistoryAsync(projectId, standardId);
+            var assessment = await assessmentPersistence.GetAsync(projectId, standardId, professionId);
+            return assessment is not null ? Results.Ok(assessment) : Results.NotFound();
+        });
+
+        app.MapPost("/projects/{projectId}/standards/{standardId}/professions/{professionId}/assessment", async (
+            string projectId,
+            string standardId,
+            string professionId,
+            [FromBody] ProjectProfessionStandardAssessment assessment,
+            [FromServices] IProjectProfessionStandardAssessmentPersistence assessmentPersistence,
+            [FromServices] IProjectProfessionStandardAssessmentHistoryPersistence historyPersistence,
+            [FromServices] IProjectPersistence projectPersistence,
+            ILogger<string> logger) =>
+        {
+            try
+            {
+                logger.LogInformation("Processing assessment update for project {ProjectId}, standard {StandardId}, profession {ProfessionId}", 
+                    projectId, standardId, professionId);
+
+                // Validate required fields
+                if (string.IsNullOrEmpty(assessment.Status))
+                {
+                    logger.LogWarning("Assessment status is required");
+                    return Results.BadRequest("Assessment status is required");
+                }
+
+                // Check if assessment already exists
+                var existingAssessment = await assessmentPersistence.GetAsync(projectId, standardId, professionId);
+                
+                // Set the IDs from URL parameters
+                assessment.ProjectId = projectId;
+                assessment.StandardId = standardId;
+                assessment.ProfessionId = professionId;
+                assessment.LastUpdated = DateTime.UtcNow;
+                
+                // For existing assessments, preserve the existing ID and set ChangedBy if not provided
+                if (existingAssessment != null)
+                {
+                    assessment.Id = existingAssessment.Id;
+                    if (string.IsNullOrEmpty(assessment.ChangedBy))
+                    {
+                        assessment.ChangedBy = existingAssessment.ChangedBy ?? "Unknown";
+                    }
+                    logger.LogInformation("Updating existing assessment with ID {AssessmentId}", assessment.Id);
+                }
+                else
+                {
+                    // Generate ID for new assessment
+                    if (string.IsNullOrEmpty(assessment.Id))
+                    {
+                        assessment.Id = ObjectId.GenerateNewId().ToString();
+                    }
+                    if (string.IsNullOrEmpty(assessment.ChangedBy))
+                    {
+                        assessment.ChangedBy = "Unknown";
+                    }
+                    logger.LogInformation("Creating new assessment with ID {AssessmentId}", assessment.Id);
+                }
+                
+                // Upsert assessment
+                await assessmentPersistence.UpsertAsync(assessment);
+                logger.LogInformation("Assessment upserted successfully");
+                
+                // Create history entry with proper change tracking
+                var history = new ProjectProfessionStandardAssessmentHistory
+                {
+                    Id = ObjectId.GenerateNewId().ToString(),
+                    ProjectId = projectId,
+                    StandardId = standardId,
+                    ProfessionId = professionId,
+                    Timestamp = DateTime.UtcNow,
+                    ChangedBy = assessment.ChangedBy,
+                    Changes = new AssessmentChanges
+                    {
+                        Status = new StatusChange 
+                        { 
+                            From = existingAssessment?.Status ?? "",
+                            To = assessment.Status 
+                        },
+                        Commentary = new CommentaryChange 
+                        { 
+                            From = existingAssessment?.Commentary ?? "",
+                            To = assessment.Commentary ?? ""
+                        }
+                    },
+                    Archived = false
+                };
+                
+                await historyPersistence.AddAsync(history);
+                logger.LogInformation("Assessment history entry created successfully");
+                
+                // Update standards summary aggregation
+                await UpdateStandardsSummaryCache(projectId, projectPersistence, assessmentPersistence);
+                logger.LogInformation("Standards summary cache updated successfully");
+                
+                return Results.Ok();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error processing assessment update for project {ProjectId}, standard {StandardId}, profession {ProfessionId}", 
+                    projectId, standardId, professionId);
+                return Results.Problem($"Failed to process assessment: {ex.Message}");
+            }
+        });
+
+        // Assessment history endpoints
+        app.MapGet("/projects/{projectId}/standards/{standardId}/professions/{professionId}/history", async (
+            string projectId,
+            string standardId,
+            string professionId,
+            [FromServices] IProjectProfessionStandardAssessmentHistoryPersistence historyPersistence,
+            ILogger<string> logger) =>
+        {
+            logger.LogInformation("Fetching assessment history for project {ProjectId}, standard {StandardId}, profession {ProfessionId}", 
+                projectId, standardId, professionId);
+            var history = await historyPersistence.GetHistoryAsync(projectId, standardId, professionId);
+            logger.LogInformation("Found {Count} assessment history entries", history.Count);
             return Results.Ok(history);
         });
 
-        // Profession history endpoints
-        app.MapGet("/projects/{projectId}/professions/{professionId}/history", async (
+        app.MapPost("/projects/{projectId}/standards/{standardId}/professions/{professionId}/history/{historyId}/archive", async (
             string projectId,
+            string standardId,
             string professionId,
-            IProjectProfessionHistoryPersistence historyPersistence) =>
+            string historyId,
+            [FromServices] IProjectProfessionStandardAssessmentHistoryPersistence historyPersistence,
+            [FromServices] IProjectProfessionStandardAssessmentPersistence assessmentPersistence,
+            [FromServices] IProjectPersistence projectPersistence,
+            ILogger<string> logger) =>
         {
-            var history = await historyPersistence.GetHistoryAsync(projectId, professionId);
-            return Results.Ok(history);
-        });
+            logger.LogInformation("Archiving assessment history entry {HistoryId} for project {ProjectId}, standard {StandardId}, profession {ProfessionId}", 
+                historyId, projectId, standardId, professionId);
+            var success = await historyPersistence.ArchiveAsync(projectId, standardId, professionId, historyId);
+            if (success)
+            {
+                logger.LogInformation("Successfully archived assessment history entry, updating current assessment");
+                
+                // Get the most recent non-archived history entry for this profession/standard
+                var remainingHistory = await historyPersistence.GetHistoryAsync(projectId, standardId, professionId);
+                
+                if (remainingHistory.Any())
+                {
+                    // Update the current assessment to reflect the most recent non-archived entry
+                    var mostRecentEntry = remainingHistory.First(); // Already sorted by timestamp desc
+                    var currentAssessment = await assessmentPersistence.GetAsync(projectId, standardId, professionId);
+                    
+                    if (currentAssessment != null)
+                    {
+                        currentAssessment.Status = mostRecentEntry.Changes.Status?.To ?? currentAssessment.Status;
+                        currentAssessment.Commentary = mostRecentEntry.Changes.Commentary?.To ?? currentAssessment.Commentary;
+                        currentAssessment.LastUpdated = mostRecentEntry.Timestamp;
+                        currentAssessment.ChangedBy = mostRecentEntry.ChangedBy;
+                        
+                        await assessmentPersistence.UpsertAsync(currentAssessment);
+                        logger.LogInformation("Updated current assessment to reflect most recent non-archived entry");
+                    }
+                }
+                else
+                {
+                    // No remaining history - this was the only assessment, remove the current assessment
+                    logger.LogInformation("No remaining history entries, removing current assessment");
+                    await assessmentPersistence.DeleteAsync(projectId, standardId, professionId);
+                }
+                
+                // Update standards summary aggregation to reflect the changes
+                await UpdateStandardsSummaryCache(projectId, projectPersistence, assessmentPersistence);
+                logger.LogInformation("Standards summary cache updated after archiving");
+                
+                return Results.Ok();
+            }
+            else
+            {
+                logger.LogWarning("Failed to archive assessment history entry - entry not found");
+                return Results.NotFound();
+            }
+        }).RequireAuthorization("RequireAuthenticated");
     }
 
     private static async Task<IResult> Create(
@@ -154,10 +279,7 @@ public static class ProjectEndpoints
         ProjectModel updatedProject,
         IProjectPersistence persistence,
         IProjectHistoryPersistence projectHistoryPersistence,
-        IStandardHistoryPersistence standardHistoryPersistence,
-        IProjectProfessionHistoryPersistence professionHistoryPersistence,
         ILogger<Program> logger,
-        IProfessionPersistence professionPersistence,
         IValidator<ProjectModel> validator,
         HttpRequest request)
     {
@@ -174,10 +296,7 @@ public static class ProjectEndpoints
         if (!suppressHistory)
         {
             await TrackProjectChanges(id, existingProject, updatedProject, projectHistoryPersistence, updateDate);
-            await TrackStandardChanges(id, existingProject, updatedProject, standardHistoryPersistence, updateDate);
-            await TrackProfessionChanges(id, existingProject, updatedProject, professionHistoryPersistence, professionPersistence, logger, updateDate);
         }
-        await MergeProfessions(existingProject, updatedProject, professionHistoryPersistence, id, updateDate);
         updatedProject.LastUpdated = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
         if (string.IsNullOrEmpty(updatedProject.UpdateDate))
         {
@@ -245,131 +364,6 @@ public static class ProjectEndpoints
         }
     }
 
-    private static async Task TrackStandardChanges(string id, ProjectModel existing, ProjectModel updated, IStandardHistoryPersistence historyPersistence, DateTime? updateDate)
-    {
-        foreach (var updatedStandard in updated.Standards)
-        {
-            var existingStandard = existing.Standards.FirstOrDefault(s => s.StandardId == updatedStandard.StandardId);
-            if (existingStandard == null) continue;
-            var changes = new StandardChanges();
-            var hasChanges = false;
-            if (existingStandard.Status != updatedStandard.Status)
-            {
-                changes.Status = new StatusChange { From = existingStandard.Status, To = updatedStandard.Status };
-                hasChanges = true;
-            }
-            if (existingStandard.Commentary != updatedStandard.Commentary)
-            {
-                changes.Commentary = new CommentaryChange { From = existingStandard.Commentary, To = updatedStandard.Commentary };
-                hasChanges = true;
-            }
-            if (hasChanges)
-            {
-                var history = new StandardHistory
-                {
-                    Id = ObjectId.GenerateNewId().ToString(),
-                    ProjectId = id,
-                    StandardId = updatedStandard.StandardId,
-                    Timestamp = updateDate ?? DateTime.UtcNow,
-                    ChangedBy = "Standards Manager",
-                    Changes = changes
-                };
-                await historyPersistence.CreateAsync(history);
-            }
-        }
-    }
-
-    private static async Task TrackProfessionChanges(
-        string id,
-        ProjectModel existing,
-        ProjectModel updated,
-        IProjectProfessionHistoryPersistence historyPersistence,
-        IProfessionPersistence professionPersistence,
-        ILogger logger,
-        DateTime? updateDate)
-    {
-        foreach (var updatedProfession in updated.Professions)
-        {
-            var existingProfession = existing.Professions.FirstOrDefault(p => p.ProfessionId == updatedProfession.ProfessionId);
-            var (changes, hasChanges) = GetProfessionChanges(existingProfession, updatedProfession);
-            if (!hasChanges) continue;
-            string professionName = await ResolveProfessionName(professionPersistence, updatedProfession.ProfessionId, logger);
-            var history = new ProjectProfessionHistory
-            {
-                Id = ObjectId.GenerateNewId().ToString(),
-                ProjectId = id,
-                ProfessionId = updatedProfession.ProfessionId,
-                Timestamp = updateDate ?? DateTime.UtcNow,
-                ChangedBy = professionName,
-                Changes = changes
-            };
-            await historyPersistence.CreateAsync(history);
-        }
-    }
-
-    private static (ProfessionChanges changes, bool hasChanges) GetProfessionChanges(ProfessionModel existingProfession, ProfessionModel updatedProfession)
-    {
-        var changes = new ProfessionChanges();
-        bool hasChanges = false;
-        if (existingProfession == null)
-        {
-            changes.Status = new StatusChange { From = string.Empty, To = updatedProfession.Status };
-            changes.Commentary = new CommentaryChange { From = string.Empty, To = updatedProfession.Commentary ?? string.Empty };
-            hasChanges = true;
-        }
-        else
-        {
-            if (existingProfession.Status != updatedProfession.Status)
-            {
-                changes.Status = new StatusChange { From = existingProfession.Status, To = updatedProfession.Status };
-                hasChanges = true;
-            }
-            if (existingProfession.Commentary != updatedProfession.Commentary)
-            {
-                changes.Commentary = new CommentaryChange { From = existingProfession.Commentary ?? string.Empty, To = updatedProfession.Commentary ?? string.Empty };
-                hasChanges = true;
-            }
-            if (hasChanges && changes.Status == null)
-            {
-                changes.Status = new StatusChange { From = existingProfession.Status, To = existingProfession.Status };
-            }
-        }
-        return (changes, hasChanges);
-    }
-
-    private static async Task<string> ResolveProfessionName(IProfessionPersistence professionPersistence, string professionId, ILogger logger)
-    {
-        if (professionPersistence == null) return "Unknown Profession";
-        try
-        {
-            var profession = await professionPersistence.GetByIdAsync(professionId);
-            if (profession != null) return profession.Name;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get profession name for {ProfessionId}", professionId);
-        }
-        return "Unknown Profession";
-    }
-
-    private static async Task MergeProfessions(ProjectModel existing, ProjectModel updated, IProjectProfessionHistoryPersistence historyPersistence, string id, DateTime? updateDate)
-    {
-        if (updated.Professions == null || updated.Professions.Count == 0) return;
-        var currentProfessions = existing.Professions ?? new List<ProfessionModel>();
-        var currentDict = currentProfessions.ToDictionary(p => p.ProfessionId, p => p);
-        foreach (var updatedProfession in updated.Professions)
-        {
-            var latestHistory = await historyPersistence.GetLatestHistoryAsync(id, updatedProfession.ProfessionId);
-            var latestDate = latestHistory?.Timestamp ?? DateTime.MinValue;
-            var incomingTimestamp = updateDate ?? DateTime.UtcNow;
-            if (incomingTimestamp >= latestDate)
-            {
-                currentDict[updatedProfession.ProfessionId] = updatedProfession;
-            }
-        }
-        updated.Professions = currentDict.Values.ToList();
-    }
-
     private static async Task UpdateProjectUpdateDate(ProjectModel existing, ProjectModel updated, IProjectHistoryPersistence historyPersistence, string id)
     {
         if (!string.IsNullOrEmpty(updated.UpdateDate))
@@ -419,5 +413,43 @@ public static class ProjectEndpoints
                     )
             );
         return Results.Ok(summary);
+    }
+
+    // --- Aggregation logic for standards summary cache ---
+    private static async Task UpdateStandardsSummaryCache(
+        string projectId,
+        IProjectPersistence projectPersistence,
+        IProjectProfessionStandardAssessmentPersistence assessmentPersistence)
+    {
+        var assessments = await assessmentPersistence.GetByProjectAsync(projectId);
+        var grouped = assessments
+            .GroupBy(a => a.StandardId)
+            .Select(g => new StandardSummaryModel
+            {
+                StandardId = g.Key,
+                AggregatedStatus = AggregateStatus(g.Select(x => x.Status)),
+                AggregatedCommentary = string.Join("; ", g.Select(x => x.Commentary).Where(c => !string.IsNullOrWhiteSpace(c))),
+                LastUpdated = g.Max(x => x.LastUpdated),
+                Professions = g.Select(x => new StandardSummaryProfessionModel
+                {
+                    ProfessionId = x.ProfessionId,
+                    Status = x.Status,
+                    Commentary = x.Commentary,
+                    LastUpdated = x.LastUpdated
+                }).ToList()
+            }).ToList();
+        var project = await projectPersistence.GetByIdAsync(projectId);
+        if (project != null)
+        {
+            project.StandardsSummary = grouped;
+            await projectPersistence.UpdateAsync(projectId, project);
+        }
+    }
+
+    // Simple aggregation: RED > AMBER_RED > AMBER > GREEN_AMBER > GREEN
+    private static string AggregateStatus(IEnumerable<string> statuses)
+    {
+        var order = new[] { "RED", "AMBER_RED", "AMBER", "GREEN_AMBER", "GREEN" };
+        return statuses.OrderBy(s => Array.IndexOf(order, s)).FirstOrDefault() ?? "NOT_UPDATED";
     }
 }

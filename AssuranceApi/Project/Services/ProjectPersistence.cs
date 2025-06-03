@@ -57,31 +57,31 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
         try
         {
             Logger.LogInformation(
-                "Updating project {ProjectId} with {StandardCount} standards",
-                id,
-                project.Standards?.Count ?? 0
+                "Updating project {ProjectId}",
+                id
             );
 
-            // Create update definition for each non-null property
             var updateDef = Builders<ProjectModel>.Update;
             var updates = new List<UpdateDefinition<ProjectModel>>();
 
             if (project.Name != null)
                 updates.Add(updateDef.Set(x => x.Name, project.Name));
+            if (project.Phase != null)
+                updates.Add(updateDef.Set(x => x.Phase, project.Phase));
+            if (project.DefCode != null)
+                updates.Add(updateDef.Set(x => x.DefCode, project.DefCode));
             if (project.Status != null)
                 updates.Add(updateDef.Set(x => x.Status, project.Status));
             if (project.Commentary != null)
                 updates.Add(updateDef.Set(x => x.Commentary, project.Commentary));
             if (project.Tags != null)
                 updates.Add(updateDef.Set(x => x.Tags, project.Tags));
-            if (project.Standards != null)
-                updates.Add(updateDef.Set(x => x.Standards, project.Standards));
-            if (project.Professions != null)
-                updates.Add(updateDef.Set(x => x.Professions, project.Professions));
             if (project.LastUpdated != null)
                 updates.Add(updateDef.Set(x => x.LastUpdated, project.LastUpdated));
             if (project.UpdateDate != null)
                 updates.Add(updateDef.Set(x => x.UpdateDate, project.UpdateDate));
+            if (project.StandardsSummary != null)
+                updates.Add(updateDef.Set(x => x.StandardsSummary, project.StandardsSummary));
 
             if (!updates.Any())
             {
@@ -97,7 +97,6 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
             {
                 Logger.LogWarning("No project was updated for ID {ProjectId}", id);
             }
-
             return result.ModifiedCount > 0;
         }
         catch (Exception ex)
@@ -172,4 +171,4 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
             return false;
         }
     }
-} 
+}
