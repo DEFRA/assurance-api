@@ -297,6 +297,9 @@ public static class ProjectEndpoints
         {
             await TrackProjectChanges(id, existingProject, updatedProject, projectHistoryPersistence, updateDate);
         }
+        
+        // Preserve existing StandardsSummary and other backend-managed fields
+        updatedProject.StandardsSummary = existingProject.StandardsSummary;
         updatedProject.LastUpdated = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
         if (string.IsNullOrEmpty(updatedProject.UpdateDate))
         {
@@ -334,6 +337,11 @@ public static class ProjectEndpoints
         if (existing.Name != updated.Name)
         {
             changes.Name = new NameChange { From = existing.Name, To = updated.Name };
+            hasChanges = true;
+        }
+        if (existing.Phase != updated.Phase)
+        {
+            changes.Phase = new PhaseChange { From = existing.Phase ?? "", To = updated.Phase ?? "" };
             hasChanges = true;
         }
         if (existing.Status != updated.Status)

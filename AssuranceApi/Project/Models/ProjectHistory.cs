@@ -18,12 +18,19 @@ public class ProjectHistory
 public class Changes
 {
     public NameChange? Name { get; set; }
+    public PhaseChange? Phase { get; set; }
     public StatusChange? Status { get; set; }
     public CommentaryChange? Commentary { get; set; }
     public TagsChange? Tags { get; set; }
 }
 
 public class NameChange
+{
+    public string From { get; set; } = null!;
+    public string To { get; set; } = null!;
+}
+
+public class PhaseChange
 {
     public string From { get; set; } = null!;
     public string To { get; set; } = null!;
