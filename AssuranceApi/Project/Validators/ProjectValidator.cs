@@ -10,8 +10,7 @@ public class ProjectValidator : AbstractValidator<ProjectModel>
         RuleFor(x => x.Name).NotEmpty();
         RuleFor(x => x.Status).NotEmpty().Must(x => 
             x == "RED" || x == "AMBER_RED" || x == "AMBER" || x == "GREEN_AMBER" || x == "GREEN");
-        RuleFor(x => x.Commentary).NotEmpty();
-        RuleFor(x => x.LastUpdated).NotEmpty();
+        RuleFor(x => x.Commentary).NotNull();
         RuleFor(x => x.Phase).NotEmpty().Must(x => 
             x == "Discovery" || x == "Alpha" || x == "Private Beta" || x == "Public Beta" || x == "Live");
         // DefCode is optional - no validation required
