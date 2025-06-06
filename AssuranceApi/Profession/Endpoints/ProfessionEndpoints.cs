@@ -36,49 +36,7 @@ public static class ProfessionEndpoints
             IProfessionPersistence persistence,
             IValidator<ProfessionModel> validator,
             ILogger<string> logger
-        ) => {
-            try
-            {
-                logger.LogInformation("Seeding {Count} professions", professions.Length);
-                
-                // Validate each profession
-                var validationErrors = new List<string>();
-                foreach (var profession in professions)
-                {
-                    var validationResult = await validator.ValidateAsync(profession);
-                    if (!validationResult.IsValid)
-                    {
-                        validationErrors.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-                    }
-                }
-                
-                if (validationErrors.Any())
-                {
-                    return Results.BadRequest(new { Errors = validationErrors });
-                }
-                
-                // Create each profession
-                var createdCount = 0;
-                foreach (var profession in professions)
-                {
-                    var created = await persistence.CreateAsync(profession);
-                    if (created)
-                    {
-                        createdCount++;
-                    }
-                }
-                
-                logger.LogInformation("Successfully seeded {CreatedCount} out of {TotalCount} professions", 
-                    createdCount, professions.Length);
-                
-                return Results.Ok(new { Message = $"Seeded {createdCount} professions successfully" });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to seed professions");
-                return Results.Problem($"Failed to seed professions: {ex.Message}");
-            }
-        }).RequireAuthorization("RequireAuthenticated");
+        ) => await SeedProfessions(professions, persistence, validator, logger)).RequireAuthorization("RequireAuthenticated");
 
         app.MapDelete("/professions/{id}", async (
             string id,
@@ -151,5 +109,71 @@ public static class ProfessionEndpoints
             ? await persistence.GetByIdAsync(id)
             : await persistence.GetActiveByIdAsync(id);
         return profession is not null ? Results.Ok(profession) : Results.NotFound();
+    }
+
+    private static async Task<IResult> SeedProfessions(
+        ProfessionModel[] professions,
+        IProfessionPersistence persistence,
+        IValidator<ProfessionModel> validator,
+        ILogger<string> logger)
+    {
+        try
+        {
+            logger.LogInformation("Seeding {Count} professions", professions.Length);
+            
+            var validationErrors = await ValidateProfessions(professions, validator);
+            if (validationErrors.Any())
+            {
+                return Results.BadRequest(new { Errors = validationErrors });
+            }
+            
+            var createdCount = await CreateProfessions(professions, persistence);
+            
+            logger.LogInformation("Successfully seeded {CreatedCount} out of {TotalCount} professions", 
+                createdCount, professions.Length);
+            
+            return Results.Ok(new { Message = $"Seeded {createdCount} professions successfully" });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to seed professions");
+            return Results.Problem($"Failed to seed professions: {ex.Message}");
+        }
+    }
+
+    private static async Task<List<string>> ValidateProfessions(
+        ProfessionModel[] professions, 
+        IValidator<ProfessionModel> validator)
+    {
+        var validationErrors = new List<string>();
+        
+        foreach (var profession in professions)
+        {
+            var validationResult = await validator.ValidateAsync(profession);
+            if (!validationResult.IsValid)
+            {
+                validationErrors.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+            }
+        }
+        
+        return validationErrors;
+    }
+
+    private static async Task<int> CreateProfessions(
+        ProfessionModel[] professions, 
+        IProfessionPersistence persistence)
+    {
+        var createdCount = 0;
+        
+        foreach (var profession in professions)
+        {
+            var created = await persistence.CreateAsync(profession);
+            if (created)
+            {
+                createdCount++;
+            }
+        }
+        
+        return createdCount;
     }
 }
