@@ -31,6 +31,55 @@ public static class ProfessionEndpoints
             }
         }).RequireAuthorization("RequireAuthenticated");
 
+        app.MapPost("/professions/seed", async (
+            [FromBody] ProfessionModel[] professions,
+            IProfessionPersistence persistence,
+            IValidator<ProfessionModel> validator,
+            ILogger<string> logger
+        ) => {
+            try
+            {
+                logger.LogInformation("Seeding {Count} professions", professions.Length);
+                
+                // Validate each profession
+                var validationErrors = new List<string>();
+                foreach (var profession in professions)
+                {
+                    var validationResult = await validator.ValidateAsync(profession);
+                    if (!validationResult.IsValid)
+                    {
+                        validationErrors.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+                    }
+                }
+                
+                if (validationErrors.Any())
+                {
+                    return Results.BadRequest(new { Errors = validationErrors });
+                }
+                
+                // Create each profession
+                var createdCount = 0;
+                foreach (var profession in professions)
+                {
+                    var created = await persistence.CreateAsync(profession);
+                    if (created)
+                    {
+                        createdCount++;
+                    }
+                }
+                
+                logger.LogInformation("Successfully seeded {CreatedCount} out of {TotalCount} professions", 
+                    createdCount, professions.Length);
+                
+                return Results.Ok(new { Message = $"Seeded {createdCount} professions successfully" });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to seed professions");
+                return Results.Problem($"Failed to seed professions: {ex.Message}");
+            }
+        }).RequireAuthorization("RequireAuthenticated");
+
         app.MapDelete("/professions/{id}", async (
             string id,
             IProfessionPersistence persistence) =>
