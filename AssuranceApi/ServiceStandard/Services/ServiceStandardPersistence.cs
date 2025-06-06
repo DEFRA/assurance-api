@@ -19,7 +19,9 @@ public class ServiceStandardPersistence : MongoService<ServiceStandardModel>, IS
         {
             new CreateIndexModel<ServiceStandardModel>(
                 builder.Ascending(x => x.Number),
-                new CreateIndexOptions { Unique = true })
+                new CreateIndexOptions { Unique = true }),
+            new CreateIndexModel<ServiceStandardModel>(
+                builder.Ascending(x => x.IsActive))
         };
     }
 
@@ -29,6 +31,14 @@ public class ServiceStandardPersistence : MongoService<ServiceStandardModel>, IS
         {
             // Clear existing standards
             await Collection.DeleteManyAsync(Builders<ServiceStandardModel>.Filter.Empty);
+            
+            // Set audit fields for seeded standards
+            foreach (var standard in standards)
+            {
+                standard.IsActive = true;
+                standard.CreatedAt = DateTime.UtcNow;
+                standard.UpdatedAt = DateTime.UtcNow;
+            }
             
             // Insert new standards
             await Collection.InsertManyAsync(standards);
@@ -48,9 +58,21 @@ public class ServiceStandardPersistence : MongoService<ServiceStandardModel>, IS
             .ToListAsync();
     }
 
+    public async Task<List<ServiceStandardModel>> GetAllActiveAsync()
+    {
+        return await Collection.Find(s => s.IsActive)
+            .SortBy(s => s.Number)
+            .ToListAsync();
+    }
+
     public async Task<ServiceStandardModel?> GetByIdAsync(string id)
     {
         return await Collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+    }
+
+    public async Task<ServiceStandardModel?> GetActiveByIdAsync(string id)
+    {
+        return await Collection.Find(x => x.Id == id && x.IsActive).FirstOrDefaultAsync();
     }
 
     public async Task DeleteAllAsync()
@@ -60,13 +82,31 @@ public class ServiceStandardPersistence : MongoService<ServiceStandardModel>, IS
 
     public async Task<bool> DeleteAsync(string id)
     {
-        var standard = await Collection.Find(s => s.Id == id).FirstOrDefaultAsync();
-        if (standard == null)
-        {
-            return false;
-        }
-        
-        await Collection.DeleteOneAsync(s => s.Id == id);
-        return true;
+        // Now performs soft delete instead of hard delete
+        return await SoftDeleteAsync(id, "System");
+    }
+
+    public async Task<bool> SoftDeleteAsync(string id, string deletedBy)
+    {
+        var update = Builders<ServiceStandardModel>.Update
+            .Set(x => x.IsActive, false)
+            .Set(x => x.DeletedAt, DateTime.UtcNow)
+            .Set(x => x.DeletedBy, deletedBy)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
+
+        var result = await Collection.UpdateOneAsync(s => s.Id == id && s.IsActive, update);
+        return result.ModifiedCount > 0;
+    }
+
+    public async Task<bool> RestoreAsync(string id)
+    {
+        var update = Builders<ServiceStandardModel>.Update
+            .Set(x => x.IsActive, true)
+            .Unset(x => x.DeletedAt)
+            .Unset(x => x.DeletedBy)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
+
+        var result = await Collection.UpdateOneAsync(s => s.Id == id && !s.IsActive, update);
+        return result.ModifiedCount > 0;
     }
 } 
