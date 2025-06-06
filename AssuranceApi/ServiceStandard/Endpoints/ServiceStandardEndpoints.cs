@@ -15,6 +15,7 @@ public static class ServiceStandardEndpoints
             [FromBody] List<ServiceStandardModel> standards,
             IServiceStandardPersistence persistence
         ) => await SeedStandards(standards, persistence)).RequireAuthorization("RequireAuthenticated");
+        
         app.MapPost("/serviceStandards/deleteAll", async (IServiceStandardPersistence persistence) =>
         {
             try
@@ -26,6 +27,22 @@ public static class ServiceStandardEndpoints
             {
                 return Results.Problem($"Failed to delete service standards: {ex.Message}");
             }
+        }).RequireAuthorization("RequireAuthenticated");
+
+        app.MapDelete("/serviceStandards/{id}", async (
+            string id,
+            IServiceStandardPersistence persistence) =>
+        {
+            var success = await persistence.SoftDeleteAsync(id, "System");
+            return success ? Results.Ok() : Results.NotFound();
+        }).RequireAuthorization("RequireAuthenticated");
+
+        app.MapPost("/serviceStandards/{id}/restore", async (
+            string id,
+            IServiceStandardPersistence persistence) =>
+        {
+            var success = await persistence.RestoreAsync(id);
+            return success ? Results.Ok() : Results.NotFound();
         }).RequireAuthorization("RequireAuthenticated");
 
         // Read-only endpoints without authentication
@@ -58,15 +75,24 @@ public static class ServiceStandardEndpoints
         return created ? Results.Ok() : Results.BadRequest("Failed to seed standards");
     }
 
-    private static async Task<IResult> GetAll(IServiceStandardPersistence persistence)
+    private static async Task<IResult> GetAll(
+        IServiceStandardPersistence persistence,
+        bool includeInactive = false)
     {
-        var standards = await persistence.GetAllAsync();
+        var standards = includeInactive 
+            ? await persistence.GetAllAsync() 
+            : await persistence.GetAllActiveAsync();
         return Results.Ok(standards);
     }
 
-    private static async Task<IResult> GetById(string id, IServiceStandardPersistence persistence)
+    private static async Task<IResult> GetById(
+        string id, 
+        IServiceStandardPersistence persistence,
+        bool includeInactive = false)
     {
-        var standard = await persistence.GetByIdAsync(id);
+        var standard = includeInactive
+            ? await persistence.GetByIdAsync(id)
+            : await persistence.GetActiveByIdAsync(id);
         return standard is not null ? Results.Ok(standard) : Results.NotFound();
     }
 

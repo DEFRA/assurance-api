@@ -1,5 +1,7 @@
 using AssuranceApi.Project.Models;
 using AssuranceApi.Project.Services;
+using AssuranceApi.ServiceStandard.Services;
+using AssuranceApi.Profession.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
@@ -61,6 +63,8 @@ public static class ProjectEndpoints
             [FromServices] IProjectProfessionStandardAssessmentPersistence assessmentPersistence,
             [FromServices] IProjectProfessionStandardAssessmentHistoryPersistence historyPersistence,
             [FromServices] IProjectPersistence projectPersistence,
+            [FromServices] IServiceStandardPersistence standardPersistence,
+            [FromServices] IProfessionPersistence professionPersistence,
             ILogger<string> logger) =>
         {
             try
@@ -74,6 +78,34 @@ public static class ProjectEndpoints
                     logger.LogWarning("Assessment status is required");
                     return Results.BadRequest("Assessment status is required");
                 }
+
+                // **NEW: Basic referential integrity validation**
+                
+                // Check if project exists
+                var project = await projectPersistence.GetByIdAsync(projectId);
+                if (project == null)
+                {
+                    logger.LogWarning("Project {ProjectId} not found", projectId);
+                    return Results.BadRequest("Referenced project does not exist");
+                }
+
+                // Check if standard exists and is active
+                var standard = await standardPersistence.GetActiveByIdAsync(standardId);
+                if (standard == null)
+                {
+                    logger.LogWarning("Active standard {StandardId} not found", standardId);
+                    return Results.BadRequest("Referenced service standard does not exist or is inactive");
+                }
+
+                // Check if profession exists and is active
+                var profession = await professionPersistence.GetActiveByIdAsync(professionId);
+                if (profession == null)
+                {
+                    logger.LogWarning("Active profession {ProfessionId} not found", professionId);
+                    return Results.BadRequest("Referenced profession does not exist or is inactive");
+                }
+
+                logger.LogInformation("Referential integrity validation passed for assessment");
 
                 // Check if assessment already exists
                 var existingAssessment = await assessmentPersistence.GetAsync(projectId, standardId, professionId);

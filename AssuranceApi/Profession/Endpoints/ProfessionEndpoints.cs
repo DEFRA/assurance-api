@@ -17,6 +17,7 @@ public static class ProfessionEndpoints
             IProfessionPersistence persistence,
             IValidator<ProfessionModel> validator
         ) => await Create(profession, persistence, validator)).RequireAuthorization("RequireAuthenticated");
+        
         app.MapPost("/professions/deleteAll", async (IProfessionPersistence persistence) =>
         {
             try
@@ -28,6 +29,22 @@ public static class ProfessionEndpoints
             {
                 return Results.Problem($"Failed to delete professions: {ex.Message}");
             }
+        }).RequireAuthorization("RequireAuthenticated");
+
+        app.MapDelete("/professions/{id}", async (
+            string id,
+            IProfessionPersistence persistence) =>
+        {
+            var success = await persistence.SoftDeleteAsync(id, "System");
+            return success ? Results.Ok() : Results.NotFound();
+        }).RequireAuthorization("RequireAuthenticated");
+
+        app.MapPost("/professions/{id}/restore", async (
+            string id,
+            IProfessionPersistence persistence) =>
+        {
+            var success = await persistence.RestoreAsync(id);
+            return success ? Results.Ok() : Results.NotFound();
         }).RequireAuthorization("RequireAuthenticated");
 
         // Read-only endpoints without authentication
@@ -66,15 +83,24 @@ public static class ProfessionEndpoints
         return Results.Created($"/professions/{profession.Id}", profession);
     }
 
-    private static async Task<IResult> GetAll(IProfessionPersistence persistence)
+    private static async Task<IResult> GetAll(
+        IProfessionPersistence persistence,
+        bool includeInactive = false)
     {
-        var professions = await persistence.GetAllAsync();
+        var professions = includeInactive
+            ? await persistence.GetAllAsync()
+            : await persistence.GetAllActiveAsync();
         return Results.Ok(professions);
     }
 
-    private static async Task<IResult> GetById(string id, IProfessionPersistence persistence)
+    private static async Task<IResult> GetById(
+        string id, 
+        IProfessionPersistence persistence,
+        bool includeInactive = false)
     {
-        var profession = await persistence.GetByIdAsync(id);
+        var profession = includeInactive
+            ? await persistence.GetByIdAsync(id)
+            : await persistence.GetActiveByIdAsync(id);
         return profession is not null ? Results.Ok(profession) : Results.NotFound();
     }
 }
