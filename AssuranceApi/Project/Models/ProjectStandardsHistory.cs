@@ -3,7 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace AssuranceApi.Project.Models;
 
-public class ProjectProfessionStandardAssessmentHistory
+public class ProjectStandardsHistory
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
