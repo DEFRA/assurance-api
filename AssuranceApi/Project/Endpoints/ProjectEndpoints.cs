@@ -49,7 +49,7 @@ public static class ProjectEndpoints
             string projectId,
             string standardId,
             string professionId,
-            [FromServices] IProjectProfessionStandardAssessmentPersistence assessmentPersistence) =>
+            [FromServices] IProjectStandardsPersistence assessmentPersistence) =>
         {
             var assessment = await assessmentPersistence.GetAsync(projectId, standardId, professionId);
             return assessment is not null ? Results.Ok(assessment) : Results.NotFound();
@@ -59,9 +59,9 @@ public static class ProjectEndpoints
             string projectId,
             string standardId,
             string professionId,
-            [FromBody] ProjectProfessionStandardAssessment assessment,
-            [FromServices] IProjectProfessionStandardAssessmentPersistence assessmentPersistence,
-            [FromServices] IProjectProfessionStandardAssessmentHistoryPersistence historyPersistence,
+            [FromBody] ProjectStandards assessment,
+            [FromServices] IProjectStandardsPersistence assessmentPersistence,
+            [FromServices] IProjectStandardsHistoryPersistence historyPersistence,
             [FromServices] IProjectPersistence projectPersistence,
             [FromServices] IServiceStandardPersistence standardPersistence,
             [FromServices] IProfessionPersistence professionPersistence,
@@ -145,7 +145,7 @@ public static class ProjectEndpoints
                 logger.LogInformation("Assessment upserted successfully");
                 
                 // Create history entry with proper change tracking
-                var history = new ProjectProfessionStandardAssessmentHistory
+                var history = new ProjectStandardsHistory
                 {
                     Id = ObjectId.GenerateNewId().ToString(),
                     ProjectId = projectId,
@@ -191,7 +191,7 @@ public static class ProjectEndpoints
             string projectId,
             string standardId,
             string professionId,
-            [FromServices] IProjectProfessionStandardAssessmentHistoryPersistence historyPersistence,
+            [FromServices] IProjectStandardsHistoryPersistence historyPersistence,
             ILogger<string> logger) =>
         {
             logger.LogInformation("Fetching assessment history for project {ProjectId}, standard {StandardId}, profession {ProfessionId}", 
@@ -206,8 +206,8 @@ public static class ProjectEndpoints
             string standardId,
             string professionId,
             string historyId,
-            [FromServices] IProjectProfessionStandardAssessmentHistoryPersistence historyPersistence,
-            [FromServices] IProjectProfessionStandardAssessmentPersistence assessmentPersistence,
+            [FromServices] IProjectStandardsHistoryPersistence historyPersistence,
+            [FromServices] IProjectStandardsPersistence assessmentPersistence,
             [FromServices] IProjectPersistence projectPersistence,
             ILogger<string> logger) =>
         {
@@ -459,7 +459,7 @@ public static class ProjectEndpoints
     private static async Task UpdateStandardsSummaryCache(
         string projectId,
         IProjectPersistence projectPersistence,
-        IProjectProfessionStandardAssessmentPersistence assessmentPersistence)
+        IProjectStandardsPersistence assessmentPersistence)
     {
         var assessments = await assessmentPersistence.GetByProjectAsync(projectId);
         var grouped = assessments
