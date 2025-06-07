@@ -15,8 +15,13 @@ namespace AssuranceApi.Project.Endpoints;
 
 public static class ProjectEndpoints
 {
-    private static readonly string[] ValidStatuses = new[] { "RED", "AMBER_RED", "AMBER", "GREEN_AMBER", "GREEN", "TBC" };
-    private static bool IsValidStatus(string? status) => !string.IsNullOrEmpty(status) && ValidStatuses.Contains(status);
+    // Project status validation - 5 RAG system + TBC
+    private static readonly string[] ValidProjectStatuses = new[] { "RED", "AMBER_RED", "AMBER", "GREEN_AMBER", "GREEN", "TBC" };
+    private static bool IsValidProjectStatus(string? status) => !string.IsNullOrEmpty(status) && ValidProjectStatuses.Contains(status);
+    
+    // Service standard status validation - 3 RAG system + TBC
+    private static readonly string[] ValidServiceStandardStatuses = new[] { "RED", "AMBER", "GREEN", "TBC" };
+    private static bool IsValidServiceStandardStatus(string? status) => !string.IsNullOrEmpty(status) && ValidServiceStandardStatuses.Contains(status);
 
     public static void UseProjectEndpoints(this IEndpointRouteBuilder app)
     {
@@ -77,6 +82,13 @@ public static class ProjectEndpoints
                 {
                     logger.LogWarning("Assessment status is required");
                     return Results.BadRequest("Assessment status is required");
+                }
+
+                // Validate service standard status (3 RAG + TBC system)
+                if (!IsValidServiceStandardStatus(assessment.Status))
+                {
+                    logger.LogWarning("Invalid service standard status: {Status}. Valid statuses are: RED, AMBER, GREEN, TBC", assessment.Status);
+                    return Results.BadRequest($"Invalid status: {assessment.Status}. Valid statuses are: RED, AMBER, GREEN, TBC");
                 }
 
                 // **NEW: Basic referential integrity validation**
@@ -266,7 +278,7 @@ public static class ProjectEndpoints
         IValidator<ProjectModel> validator)
     {
         // Validate status
-        if (!IsValidStatus(project.Status))
+        if (!IsValidProjectStatus(project.Status))
             return Results.BadRequest($"Invalid status: {project.Status}");
         var validationResult = await validator.ValidateAsync(project);
         if (!validationResult.IsValid) return Results.BadRequest(validationResult.Errors);
@@ -316,7 +328,7 @@ public static class ProjectEndpoints
         HttpRequest request)
     {
         // Validate status
-        if (!IsValidStatus(updatedProject.Status))
+        if (!IsValidProjectStatus(updatedProject.Status))
             return Results.BadRequest($"Invalid status: {updatedProject.Status}");
         var validationResult = await validator.ValidateAsync(updatedProject);
         if (!validationResult.IsValid) return Results.BadRequest(validationResult.Errors);
@@ -486,10 +498,19 @@ public static class ProjectEndpoints
         }
     }
 
-    // Simple aggregation: RED > AMBER_RED > AMBER > GREEN_AMBER > GREEN > TBC
+    // Aggregation logic that maps 5 RAG to 3 RAG for service standards
+    // Maps: AMBER_RED -> AMBER, GREEN_AMBER -> AMBER
+    // Priority: RED > AMBER > GREEN > TBC
     private static string AggregateStatus(IEnumerable<string> statuses)
     {
-        var order = new[] { "RED", "AMBER_RED", "AMBER", "GREEN_AMBER", "GREEN", "TBC" };
-        return statuses.OrderBy(s => Array.IndexOf(order, s)).FirstOrDefault() ?? "NOT_UPDATED";
+        var mappedStatuses = statuses.Select(status => status switch
+        {
+            "AMBER_RED" => "AMBER",
+            "GREEN_AMBER" => "AMBER", 
+            _ => status
+        });
+        
+        var order = new[] { "RED", "AMBER", "GREEN", "TBC" };
+        return mappedStatuses.OrderBy(s => Array.IndexOf(order, s)).FirstOrDefault() ?? "NOT_UPDATED";
     }
 }
