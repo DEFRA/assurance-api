@@ -1,5 +1,4 @@
-using AssuranceApi.Example.Endpoints;
-using AssuranceApi.Example.Services;
+
 using AssuranceApi.ServiceStandard.Endpoints;
 using AssuranceApi.ServiceStandard.Services;
 using AssuranceApi.ServiceStandard.Models;
@@ -117,9 +116,6 @@ static void ConfigureMongoDb(WebApplicationBuilder _builder)
 [ExcludeFromCodeCoverage]
 static void ConfigureEndpoints(WebApplicationBuilder _builder)
 {
-   // our Example service, remove before deploying!
-   _builder.Services.AddSingleton<IExamplePersistence, ExamplePersistence>();
-   
    // Service Standard services
    _builder.Services.AddSingleton<IServiceStandardPersistence, ServiceStandardPersistence>();
    _builder.Services.AddSingleton<IServiceStandardHistoryPersistence, ServiceStandardHistoryPersistence>();
@@ -297,4 +293,8 @@ static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
 
    return app;
 }
+
+
+// Make Program class accessible for integration testing
+public static partial class Program { }
 
