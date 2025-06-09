@@ -196,7 +196,7 @@ public static class ProjectEndpoints
                     projectId, standardId, professionId);
                 return Results.Problem($"Failed to process assessment: {ex.Message}");
             }
-        });
+        }).RequireAuthorization("RequireAdmin");
 
         // Assessment history endpoints
         app.MapGet("/projects/{projectId}/standards/{standardId}/professions/{professionId}/history", async (
@@ -453,7 +453,10 @@ public static class ProjectEndpoints
             .Select(tag => 
             {
                 var parts = tag.Split(": ", 2);
-                return new { Category = parts[0], Value = parts[1] };
+                return new { 
+                    Category = parts[0], 
+                    Value = parts.Length > 1 ? parts[1] : "No Value" 
+                };
             })
             .GroupBy(t => t.Category)
             .ToDictionary(
