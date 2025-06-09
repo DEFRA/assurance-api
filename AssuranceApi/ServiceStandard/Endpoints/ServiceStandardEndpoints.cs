@@ -14,7 +14,7 @@ public static class ServiceStandardEndpoints
         app.MapPost("serviceStandards/seed", async (
             [FromBody] List<ServiceStandardModel> standards,
             IServiceStandardPersistence persistence
-        ) => await SeedStandards(standards, persistence)).RequireAuthorization("RequireAuthenticated");
+        ) => await SeedStandards(standards, persistence)).RequireAuthorization("RequireAdmin");
         
         app.MapPost("/serviceStandards/deleteAll", async (IServiceStandardPersistence persistence) =>
         {
@@ -27,7 +27,7 @@ public static class ServiceStandardEndpoints
             {
                 return Results.Problem($"Failed to delete service standards: {ex.Message}");
             }
-        }).RequireAuthorization("RequireAuthenticated");
+        }).RequireAuthorization("RequireAdmin");
 
         app.MapDelete("/serviceStandards/{id}", async (
             string id,
@@ -35,7 +35,7 @@ public static class ServiceStandardEndpoints
         {
             var success = await persistence.SoftDeleteAsync(id, "System");
             return success ? Results.Ok() : Results.NotFound();
-        }).RequireAuthorization("RequireAuthenticated");
+        }).RequireAuthorization("RequireAdmin");
 
         app.MapPost("/serviceStandards/{id}/restore", async (
             string id,
@@ -43,7 +43,7 @@ public static class ServiceStandardEndpoints
         {
             var success = await persistence.RestoreAsync(id);
             return success ? Results.Ok() : Results.NotFound();
-        }).RequireAuthorization("RequireAuthenticated");
+        }).RequireAuthorization("RequireAdmin");
 
         // Read-only endpoints without authentication
         app.MapGet("serviceStandards", GetAll);
