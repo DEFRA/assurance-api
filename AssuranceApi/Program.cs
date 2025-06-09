@@ -267,6 +267,11 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
    {
        options.AddPolicy("RequireAuthenticated", policy =>
            policy.RequireAuthenticatedUser());
+           
+       // Add admin role policy
+       options.AddPolicy("RequireAdmin", policy =>
+           policy.RequireAuthenticatedUser()
+                 .RequireClaim("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", "Admin", "admin"));
    });
 }
 

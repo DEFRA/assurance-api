@@ -26,9 +26,9 @@ public static class ProjectEndpoints
     public static void UseProjectEndpoints(this IEndpointRouteBuilder app)
     {
         // Protected endpoints that require authentication
-        app.MapPost("projects", Create).RequireAuthorization("RequireAuthenticated");
-        app.MapDelete("/projects/{id}", Delete).RequireAuthorization("RequireAuthenticated");
-        app.MapPut("/projects/{id}", Update).RequireAuthorization("RequireAuthenticated");
+        app.MapPost("projects", Create).RequireAuthorization("RequireAdmin");
+        app.MapDelete("/projects/{id}", Delete).RequireAuthorization("RequireAdmin");
+        app.MapPut("/projects/{id}", Update).RequireAuthorization("RequireAdmin");
         app.MapPut("/projects/{projectId}/history/{historyId}/archive", async (
             string projectId,
             string historyId,
@@ -36,7 +36,7 @@ public static class ProjectEndpoints
         {
             var success = await historyPersistence.ArchiveHistoryEntryAsync(projectId, historyId);
             return success ? Results.Ok() : Results.NotFound();
-        }).RequireAuthorization("RequireAuthenticated");
+        }).RequireAuthorization("RequireAdmin");
         
         // Read-only endpoints without authentication
         app.MapGet("projects", async (IProjectPersistence persistence, string? tag) =>
@@ -268,7 +268,7 @@ public static class ProjectEndpoints
                 logger.LogWarning("Failed to archive assessment history entry - entry not found");
                 return Results.NotFound();
             }
-        }).RequireAuthorization("RequireAuthenticated");
+        }).RequireAuthorization("RequireAdmin");
     }
 
     private static async Task<IResult> Create(

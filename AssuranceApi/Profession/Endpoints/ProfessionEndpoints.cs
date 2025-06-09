@@ -16,7 +16,7 @@ public static class ProfessionEndpoints
             [FromBody] ProfessionModel profession,
             IProfessionPersistence persistence,
             IValidator<ProfessionModel> validator
-        ) => await Create(profession, persistence, validator)).RequireAuthorization("RequireAuthenticated");
+        ) => await Create(profession, persistence, validator)).RequireAuthorization("RequireAdmin");
         
         app.MapPost("/professions/deleteAll", async (IProfessionPersistence persistence) =>
         {
@@ -29,14 +29,14 @@ public static class ProfessionEndpoints
             {
                 return Results.Problem($"Failed to delete professions: {ex.Message}");
             }
-        }).RequireAuthorization("RequireAuthenticated");
+        }).RequireAuthorization("RequireAdmin");
 
         app.MapPost("/professions/seed", async (
             [FromBody] ProfessionModel[] professions,
             IProfessionPersistence persistence,
             IValidator<ProfessionModel> validator,
             ILogger<string> logger
-        ) => await SeedProfessions(professions, persistence, validator, logger)).RequireAuthorization("RequireAuthenticated");
+        ) => await SeedProfessions(professions, persistence, validator, logger)).RequireAuthorization("RequireAdmin");
 
         app.MapDelete("/professions/{id}", async (
             string id,
@@ -44,7 +44,7 @@ public static class ProfessionEndpoints
         {
             var success = await persistence.SoftDeleteAsync(id, "System");
             return success ? Results.Ok() : Results.NotFound();
-        }).RequireAuthorization("RequireAuthenticated");
+        }).RequireAuthorization("RequireAdmin");
 
         app.MapPost("/professions/{id}/restore", async (
             string id,
@@ -52,7 +52,7 @@ public static class ProfessionEndpoints
         {
             var success = await persistence.RestoreAsync(id);
             return success ? Results.Ok() : Results.NotFound();
-        }).RequireAuthorization("RequireAuthenticated");
+        }).RequireAuthorization("RequireAdmin");
 
         // Read-only endpoints without authentication
         app.MapGet("/professions", GetAll);
