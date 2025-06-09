@@ -296,5 +296,8 @@ static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
 
 
 // Make Program class accessible for integration testing
-public static partial class Program { }
+public partial class Program 
+{
+    protected Program() { }
+}
 
