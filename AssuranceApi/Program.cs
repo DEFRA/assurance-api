@@ -296,5 +296,5 @@ static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
 
 
 // Make Program class accessible for integration testing
-public partial class Program { }
+public static partial class Program { }
 
