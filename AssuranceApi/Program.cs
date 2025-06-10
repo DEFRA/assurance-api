@@ -204,19 +204,6 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
 
         if (!string.IsNullOrEmpty(proxyUri))
         {
-            // Mask credentials in proxy URI for logging
-            string maskedProxyUri = proxyUri;
-            if (proxyUri.Contains('@'))
-            {
-                var atIndex = proxyUri.IndexOf('@');
-                var colonIndex = proxyUri.IndexOf(':', 8); // Start after http://
-                if (colonIndex > 0 && colonIndex < atIndex)
-                {
-                    maskedProxyUri =
-                        proxyUri.Substring(0, colonIndex) + ":***" + proxyUri.Substring(atIndex);
-                }
-            }
-            logger.LogInformation("Using proxy for Azure AD connections");
 
             var proxy = new WebProxy { BypassProxyOnLocal = true };
 
