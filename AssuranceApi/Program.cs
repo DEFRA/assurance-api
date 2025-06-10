@@ -56,7 +56,7 @@ static void ConfigureWebApplication(WebApplicationBuilder _builder)
     _builder.Services.AddCustomTrustStore(logger);
 
     // Configure Authentication
-    ConfigureAuthentication(_builder);
+    ConfigureAuthentication(_builder, logger);
 
     // Add CORS support
     _builder.Services.AddCors(options =>
@@ -160,11 +160,8 @@ static void ConfigureEndpoints(WebApplicationBuilder _builder)
 }
 
 [ExcludeFromCodeCoverage]
-static void ConfigureAuthentication(WebApplicationBuilder _builder)
+static void ConfigureAuthentication(WebApplicationBuilder _builder, Logger logger)
 {
-    using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-    var logger = loggerFactory.CreateLogger<Program>();
-
     // Try to get config from various sources
     var tenantId =
         _builder.Configuration["Azure:TenantId"]
@@ -177,12 +174,12 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
 
     if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientId))
     {
-        logger.LogWarning("Azure AD configuration is missing. Authentication will be disabled.");
+        logger.Warning("Azure AD configuration is missing. Authentication will be disabled.");
         return;
     }
 
     var authority = $"https://login.microsoftonline.com/{tenantId}/v2.0/";
-    logger.LogInformation("Configuring Azure AD authentication");
+    logger.Information("Configuring Azure AD authentication");
 
     // Define valid audiences for token validation
     var validAudiences = new[]
@@ -199,8 +196,8 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
             options.Authority = authority;
 
             // Use existing proxy configuration from Utils.Http.Proxy
-            var handler = new HttpClientHandler();
-            Proxy.ConfigureProxy(handler);
+            var proxyUri = System.Environment.GetEnvironmentVariable("CDP_HTTPS_PROXY");
+            var handler = Proxy.CreateHttpClientHandler(proxyUri, logger);
 
             options.BackchannelHttpHandler = handler;
             options.BackchannelTimeout = TimeSpan.FromSeconds(30); // Reduce from default 60s
