@@ -11,13 +11,12 @@ public static class Environment
 
     public static string GetMongoConnectionString(IConfiguration configuration)
     {
-        return configuration.GetValue<string>("Mongo:DatabaseUri") 
+        return configuration.GetValue<string>("Mongo:DatabaseUri")
             ?? throw new InvalidOperationException("Mongo:DatabaseUri configuration is not set");
     }
 
     public static string GetMongoDatabaseName(IConfiguration configuration)
     {
-        return configuration.GetValue<string>("Mongo:DatabaseName") 
-            ?? DEFAULT_DATABASE_NAME;
+        return configuration.GetValue<string>("Mongo:DatabaseName") ?? DEFAULT_DATABASE_NAME;
     }
 }

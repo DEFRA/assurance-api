@@ -79,7 +79,7 @@ public class ExamplePersistenceTests
 
     #endregion
 
-    // NOTE: Complex query tests (GetByExampleName, GetAllAsync, SearchByValueAsync) removed 
+    // NOTE: Complex query tests (GetByExampleName, GetAllAsync, SearchByValueAsync) removed
     // due to MongoDB IFindFluent mocking complexity. Business logic is covered by service layer tests.
 
     #region UpdateAsync Tests

@@ -8,6 +8,7 @@ public class ProfessionHistory
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = null!;
+
     // This should match ProfessionModel.Id (string, e.g. 'delivery-management')
     public string ProfessionId { get; set; } = null!;
     public DateTime Timestamp { get; set; }
@@ -31,4 +32,4 @@ public class DescriptionChange
 {
     public string From { get; set; } = null!;
     public string To { get; set; } = null!;
-} 
+}

@@ -27,4 +27,4 @@ public static class ProjectConstants
 
     public static bool IsValidServiceStandardStatus(string? status) =>
         !string.IsNullOrEmpty(status) && ValidServiceStandardStatuses.Contains(status);
-} 
+}

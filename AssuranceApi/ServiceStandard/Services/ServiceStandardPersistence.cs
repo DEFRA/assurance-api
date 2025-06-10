@@ -5,23 +5,27 @@ using MongoDB.Driver;
 
 namespace AssuranceApi.ServiceStandard.Services;
 
-public class ServiceStandardPersistence : MongoService<ServiceStandardModel>, IServiceStandardPersistence
+public class ServiceStandardPersistence
+    : MongoService<ServiceStandardModel>,
+        IServiceStandardPersistence
 {
-    public ServiceStandardPersistence(IMongoDbClientFactory connectionFactory, ILoggerFactory loggerFactory)
-        : base(connectionFactory, "serviceStandards", loggerFactory)
-    {
-    }
+    public ServiceStandardPersistence(
+        IMongoDbClientFactory connectionFactory,
+        ILoggerFactory loggerFactory
+    )
+        : base(connectionFactory, "serviceStandards", loggerFactory) { }
 
     protected override List<CreateIndexModel<ServiceStandardModel>> DefineIndexes(
-        IndexKeysDefinitionBuilder<ServiceStandardModel> builder)
+        IndexKeysDefinitionBuilder<ServiceStandardModel> builder
+    )
     {
         return new List<CreateIndexModel<ServiceStandardModel>>
         {
             new CreateIndexModel<ServiceStandardModel>(
                 builder.Ascending(x => x.Number),
-                new CreateIndexOptions { Unique = true }),
-            new CreateIndexModel<ServiceStandardModel>(
-                builder.Ascending(x => x.IsActive))
+                new CreateIndexOptions { Unique = true }
+            ),
+            new CreateIndexModel<ServiceStandardModel>(builder.Ascending(x => x.IsActive)),
         };
     }
 
@@ -31,7 +35,7 @@ public class ServiceStandardPersistence : MongoService<ServiceStandardModel>, IS
         {
             // Clear existing standards
             await Collection.DeleteManyAsync(Builders<ServiceStandardModel>.Filter.Empty);
-            
+
             // Set audit fields for seeded standards
             foreach (var standard in standards)
             {
@@ -39,7 +43,7 @@ public class ServiceStandardPersistence : MongoService<ServiceStandardModel>, IS
                 standard.CreatedAt = DateTime.UtcNow;
                 standard.UpdatedAt = DateTime.UtcNow;
             }
-            
+
             // Insert new standards
             await Collection.InsertManyAsync(standards);
             return true;
@@ -53,16 +57,15 @@ public class ServiceStandardPersistence : MongoService<ServiceStandardModel>, IS
 
     public async Task<List<ServiceStandardModel>> GetAllAsync()
     {
-        return await Collection.Find(Builders<ServiceStandardModel>.Filter.Empty)
+        return await Collection
+            .Find(Builders<ServiceStandardModel>.Filter.Empty)
             .SortBy(s => s.Number)
             .ToListAsync();
     }
 
     public async Task<List<ServiceStandardModel>> GetAllActiveAsync()
     {
-        return await Collection.Find(s => s.IsActive)
-            .SortBy(s => s.Number)
-            .ToListAsync();
+        return await Collection.Find(s => s.IsActive).SortBy(s => s.Number).ToListAsync();
     }
 
     public async Task<ServiceStandardModel?> GetByIdAsync(string id)
@@ -88,8 +91,8 @@ public class ServiceStandardPersistence : MongoService<ServiceStandardModel>, IS
 
     public async Task<bool> SoftDeleteAsync(string id, string deletedBy)
     {
-        var update = Builders<ServiceStandardModel>.Update
-            .Set(x => x.IsActive, false)
+        var update = Builders<ServiceStandardModel>
+            .Update.Set(x => x.IsActive, false)
             .Set(x => x.DeletedAt, DateTime.UtcNow)
             .Set(x => x.DeletedBy, deletedBy)
             .Set(x => x.UpdatedAt, DateTime.UtcNow);
@@ -100,8 +103,8 @@ public class ServiceStandardPersistence : MongoService<ServiceStandardModel>, IS
 
     public async Task<bool> RestoreAsync(string id)
     {
-        var update = Builders<ServiceStandardModel>.Update
-            .Set(x => x.IsActive, true)
+        var update = Builders<ServiceStandardModel>
+            .Update.Set(x => x.IsActive, true)
             .Unset(x => x.DeletedAt)
             .Unset(x => x.DeletedBy)
             .Set(x => x.UpdatedAt, DateTime.UtcNow);
@@ -109,4 +112,4 @@ public class ServiceStandardPersistence : MongoService<ServiceStandardModel>, IS
         var result = await Collection.UpdateOneAsync(s => s.Id == id && !s.IsActive, update);
         return result.ModifiedCount > 0;
     }
-} 
+}

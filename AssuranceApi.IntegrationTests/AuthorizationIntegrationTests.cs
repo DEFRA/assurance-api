@@ -1,9 +1,9 @@
-using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using System.Net.Http.Json;
-using Xunit;
 using AssuranceApi.Profession.Models;
+using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Xunit;
 
 namespace AssuranceApi.IntegrationTests;
 
@@ -43,7 +43,7 @@ public class AuthorizationIntegrationTests : IClassFixture<TestApplicationFactor
     [InlineData("POST", "/projects")]
     public async Task ProtectedEndpoints_RequireAuthentication(string method, string endpoint)
     {
-        // Arrange - Clear database and create client WITHOUT authentication  
+        // Arrange - Clear database and create client WITHOUT authentication
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateUnauthenticatedClient();
 
@@ -51,11 +51,11 @@ public class AuthorizationIntegrationTests : IClassFixture<TestApplicationFactor
         HttpResponseMessage response;
         if (method == "POST")
         {
-            var dummyData = new ProfessionModel 
-            { 
-                Id = "test", 
-                Name = "Test", 
-                Description = "Test" 
+            var dummyData = new ProfessionModel
+            {
+                Id = "test",
+                Name = "Test",
+                Description = "Test",
             };
             response = await client.PostAsJsonAsync(endpoint, dummyData);
         }
@@ -69,7 +69,9 @@ public class AuthorizationIntegrationTests : IClassFixture<TestApplicationFactor
         }
 
         // Assert
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response
+            .StatusCode.Should()
+            .BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -82,8 +84,8 @@ public class AuthorizationIntegrationTests : IClassFixture<TestApplicationFactor
         var profession = new ProfessionModel
         {
             Id = "auth-test-profession",
-            Name = "Auth Test Profession", 
-            Description = "Testing authenticated access"
+            Name = "Auth Test Profession",
+            Description = "Testing authenticated access",
         };
 
         // Act
@@ -99,15 +101,15 @@ public class AuthorizationIntegrationTests : IClassFixture<TestApplicationFactor
         // Arrange - Clear database
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateAuthenticatedClient();
-        
+
         // Create a profession first
         var profession = new ProfessionModel
         {
             Id = "delete-test-profession",
             Name = "Delete Test Profession",
-            Description = "Testing authenticated deletion"
+            Description = "Testing authenticated deletion",
         };
-        
+
         await client.PostAsJsonAsync("/professions", profession);
 
         // Act
@@ -128,6 +130,8 @@ public class AuthorizationIntegrationTests : IClassFixture<TestApplicationFactor
         var response = await client.PostAsync("/professions/deleteAll", null);
 
         // Assert
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response
+            .StatusCode.Should()
+            .BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
     }
-} 
+}

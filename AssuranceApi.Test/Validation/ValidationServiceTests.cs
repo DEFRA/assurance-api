@@ -9,13 +9,20 @@ namespace AssuranceApi.Test.Validation;
 
 public class ValidationServiceTests
 {
-    private readonly IProjectPersistence _projectPersistence = Substitute.For<IProjectPersistence>();
-    private readonly IServiceStandardPersistence _serviceStandardPersistence = Substitute.For<IServiceStandardPersistence>();
-    private readonly IProjectStandardsPersistence _projectStandardsPersistence = Substitute.For<IProjectStandardsPersistence>();
+    private readonly IProjectPersistence _projectPersistence =
+        Substitute.For<IProjectPersistence>();
+    private readonly IServiceStandardPersistence _serviceStandardPersistence =
+        Substitute.For<IServiceStandardPersistence>();
+    private readonly IProjectStandardsPersistence _projectStandardsPersistence =
+        Substitute.For<IProjectStandardsPersistence>();
 
     private ValidationService CreateService()
     {
-        return new ValidationService(_projectPersistence, _serviceStandardPersistence, _projectStandardsPersistence);
+        return new ValidationService(
+            _projectPersistence,
+            _serviceStandardPersistence,
+            _projectStandardsPersistence
+        );
     }
 
     [Fact]
@@ -61,7 +68,12 @@ public class ValidationServiceTests
         // Arrange
         var service = CreateService();
         var standardId = "standard-1";
-        var standard = new ServiceStandardModel { Id = standardId, Name = "Test Standard", IsActive = true };
+        var standard = new ServiceStandardModel
+        {
+            Id = standardId,
+            Name = "Test Standard",
+            IsActive = true,
+        };
 
         _serviceStandardPersistence.GetActiveByIdAsync(standardId).Returns(standard);
 
@@ -81,7 +93,9 @@ public class ValidationServiceTests
         var service = CreateService();
         var standardId = "inactive-standard";
 
-        _serviceStandardPersistence.GetActiveByIdAsync(standardId).Returns((ServiceStandardModel?)null);
+        _serviceStandardPersistence
+            .GetActiveByIdAsync(standardId)
+            .Returns((ServiceStandardModel?)null);
 
         // Act
         var result = await service.ValidateStandardExistsAsync(standardId);
@@ -102,7 +116,12 @@ public class ValidationServiceTests
         var professionId = "profession-1";
 
         var project = new ProjectModel { Id = projectId, Name = "Test Project" };
-        var standard = new ServiceStandardModel { Id = standardId, Name = "Test Standard", IsActive = true };
+        var standard = new ServiceStandardModel
+        {
+            Id = standardId,
+            Name = "Test Standard",
+            IsActive = true,
+        };
 
         _projectPersistence.GetByIdAsync(projectId).Returns(project);
         _serviceStandardPersistence.GetActiveByIdAsync(standardId).Returns(standard);
@@ -147,16 +166,46 @@ public class ValidationServiceTests
 
         var allStandards = new List<ServiceStandardModel>
         {
-            new() { Id = "1", Name = "Standard 1", IsActive = true },
-            new() { Id = "2", Name = "Standard 2", IsActive = true },
-            new() { Id = "3", Name = "Standard 3", IsActive = true },
-            new() { Id = "4", Name = "Standard 4", IsActive = true }
+            new()
+            {
+                Id = "1",
+                Name = "Standard 1",
+                IsActive = true,
+            },
+            new()
+            {
+                Id = "2",
+                Name = "Standard 2",
+                IsActive = true,
+            },
+            new()
+            {
+                Id = "3",
+                Name = "Standard 3",
+                IsActive = true,
+            },
+            new()
+            {
+                Id = "4",
+                Name = "Standard 4",
+                IsActive = true,
+            },
         };
 
         var assessments = new List<ProjectStandards>
         {
-            new() { ProjectId = projectId, StandardId = "1", Status = "GREEN" },
-            new() { ProjectId = projectId, StandardId = "2", Status = "AMBER" }
+            new()
+            {
+                ProjectId = projectId,
+                StandardId = "1",
+                Status = "GREEN",
+            },
+            new()
+            {
+                ProjectId = projectId,
+                StandardId = "2",
+                Status = "AMBER",
+            },
             // Standards 3 and 4 not assessed
         };
 
@@ -180,7 +229,7 @@ public class ValidationServiceTests
     {
         // Arrange
         var service = CreateService();
-        
+
         // Act & Assert
         var validTransitions = new[]
         {
@@ -190,13 +239,15 @@ public class ValidationServiceTests
             ("AMBER", "GREEN"),
             ("AMBER", "RED"),
             ("RED", "GREEN"),
-            ("RED", "AMBER")
+            ("RED", "AMBER"),
         };
 
         foreach (var (currentStatus, newStatus) in validTransitions)
         {
             var result = service.ValidateStatusTransition(currentStatus, newStatus);
-            result.IsValid.Should().BeTrue($"Transition from '{currentStatus}' to '{newStatus}' should be valid");
+            result
+                .IsValid.Should()
+                .BeTrue($"Transition from '{currentStatus}' to '{newStatus}' should be valid");
         }
     }
 
@@ -205,20 +256,22 @@ public class ValidationServiceTests
     {
         // Arrange
         var service = CreateService();
-        
+
         // Act & Assert
         var invalidTransitions = new[]
         {
             ("GREEN", "INVALID"),
             ("AMBER", "PURPLE"),
             ("RED", "BLUE"),
-            ("UNKNOWN", "GREEN")
+            ("UNKNOWN", "GREEN"),
         };
 
         foreach (var (currentStatus, newStatus) in invalidTransitions)
         {
             var result = service.ValidateStatusTransition(currentStatus, newStatus);
-            result.IsValid.Should().BeFalse($"Transition from '{currentStatus}' to '{newStatus}' should be invalid");
+            result
+                .IsValid.Should()
+                .BeFalse($"Transition from '{currentStatus}' to '{newStatus}' should be invalid");
         }
     }
 }
@@ -235,7 +288,8 @@ public class ValidationService
     public ValidationService(
         IProjectPersistence projectPersistence,
         IServiceStandardPersistence serviceStandardPersistence,
-        IProjectStandardsPersistence projectStandardsPersistence)
+        IProjectStandardsPersistence projectStandardsPersistence
+    )
     {
         _projectPersistence = projectPersistence;
         _serviceStandardPersistence = serviceStandardPersistence;
@@ -245,7 +299,7 @@ public class ValidationService
     public async Task<ValidationResult> ValidateProjectExistsAsync(string projectId)
     {
         var project = await _projectPersistence.GetByIdAsync(projectId);
-        
+
         return project != null
             ? ValidationResult.Success()
             : ValidationResult.Failure($"Project with ID '{projectId}' not found");
@@ -254,13 +308,17 @@ public class ValidationService
     public async Task<ValidationResult> ValidateStandardExistsAsync(string standardId)
     {
         var standard = await _serviceStandardPersistence.GetActiveByIdAsync(standardId);
-        
+
         return standard != null
             ? ValidationResult.Success()
             : ValidationResult.Failure($"Active standard with ID '{standardId}' not found");
     }
 
-    public async Task<ValidationResult> ValidateAssessmentDataAsync(string projectId, string standardId, string professionId)
+    public async Task<ValidationResult> ValidateAssessmentDataAsync(
+        string projectId,
+        string standardId,
+        string professionId
+    )
     {
         var projectValidation = await ValidateProjectExistsAsync(projectId);
         if (!projectValidation.IsValid)
@@ -279,11 +337,15 @@ public class ValidationService
     public ValidationResult ValidateStatusTransition(string? currentStatus, string newStatus)
     {
         if (!ValidStatuses.Contains(newStatus))
-            return ValidationResult.Failure($"Invalid status: {newStatus}. Valid statuses are: {string.Join(", ", ValidStatuses)}");
+            return ValidationResult.Failure(
+                $"Invalid status: {newStatus}. Valid statuses are: {string.Join(", ", ValidStatuses)}"
+            );
 
         // Check if currentStatus is valid when it's not null
         if (currentStatus != null && !ValidStatuses.Contains(currentStatus))
-            return ValidationResult.Failure($"Invalid current status: {currentStatus}. Valid statuses are: {string.Join(", ", ValidStatuses)}");
+            return ValidationResult.Failure(
+                $"Invalid current status: {currentStatus}. Valid statuses are: {string.Join(", ", ValidStatuses)}"
+            );
 
         // For now, allow all transitions between valid statuses
         // Could add more complex business rules here
@@ -296,11 +358,12 @@ public class ValidationService
         var assessments = await _projectStandardsPersistence.GetByProjectAsync(projectId);
 
         var assessedStandardIds = assessments.Select(a => a.StandardId).ToHashSet();
-        var pendingStandards = allStandards.Where(s => !assessedStandardIds.Contains(s.Id)).ToList();
+        var pendingStandards = allStandards
+            .Where(s => !assessedStandardIds.Contains(s.Id))
+            .ToList();
 
-        var completionPercentage = allStandards.Count > 0 
-            ? (assessments.Count * 100) / allStandards.Count 
-            : 0;
+        var completionPercentage =
+            allStandards.Count > 0 ? (assessments.Count * 100) / allStandards.Count : 0;
 
         return new ProjectCompletionStatus
         {
@@ -308,7 +371,7 @@ public class ValidationService
             TotalStandards = allStandards.Count,
             AssessedStandards = assessments.Count,
             CompletionPercentage = completionPercentage,
-            PendingStandards = pendingStandards
+            PendingStandards = pendingStandards,
         };
     }
 }
@@ -326,6 +389,7 @@ public class ValidationResult
     }
 
     public static ValidationResult Success() => new(true);
+
     public static ValidationResult Failure(string errorMessage) => new(false, errorMessage);
 }
 
@@ -336,4 +400,4 @@ public class ProjectCompletionStatus
     public int AssessedStandards { get; set; }
     public int CompletionPercentage { get; set; }
     public List<ServiceStandardModel> PendingStandards { get; set; } = new();
-} 
+}

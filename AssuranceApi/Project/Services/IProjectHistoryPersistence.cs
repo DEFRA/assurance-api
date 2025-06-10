@@ -9,4 +9,4 @@ public interface IProjectHistoryPersistence
     Task DeleteAllAsync();
     Task<bool> ArchiveHistoryEntryAsync(string projectId, string historyId);
     Task<ProjectHistory?> GetLatestHistoryAsync(string projectId);
-} 
+}

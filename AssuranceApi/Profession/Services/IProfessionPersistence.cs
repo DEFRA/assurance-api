@@ -14,4 +14,4 @@ public interface IProfessionPersistence
     Task<bool> DeleteAsync(string id);
     Task<bool> SoftDeleteAsync(string id, string deletedBy);
     Task<bool> RestoreAsync(string id);
-} 
+}

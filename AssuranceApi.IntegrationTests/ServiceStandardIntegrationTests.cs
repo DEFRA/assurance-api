@@ -1,10 +1,10 @@
-using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Xunit;
 using AssuranceApi.ServiceStandard.Models;
+using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Xunit;
 
 namespace AssuranceApi.IntegrationTests;
 
@@ -30,10 +30,10 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        var standards = JsonSerializer.Deserialize<List<ServiceStandardModel>>(content, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
+        var standards = JsonSerializer.Deserialize<List<ServiceStandardModel>>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
         standards.Should().BeEmpty();
     }
 
@@ -43,7 +43,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         // Arrange - Clear database and use authenticated client
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateAuthenticatedClient(); // Protected endpoint
-        
+
         var standards = new List<ServiceStandardModel>
         {
             new ServiceStandardModel
@@ -52,16 +52,17 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
                 Number = 1,
                 Name = "Understand users and their needs",
                 Description = "Understand user needs and the problem you're trying to solve.",
-                IsActive = true
+                IsActive = true,
             },
             new ServiceStandardModel
             {
-                Id = "2", 
+                Id = "2",
                 Number = 2,
                 Name = "Solve a whole problem for users",
-                Description = "Work towards creating a service that solves a whole problem for users.",
-                IsActive = true
-            }
+                Description =
+                    "Work towards creating a service that solves a whole problem for users.",
+                IsActive = true,
+            },
         };
 
         // Act
@@ -77,7 +78,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         // Arrange - Clear database and use unauthenticated client
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateUnauthenticatedClient();
-        
+
         var standards = new List<ServiceStandardModel>
         {
             new ServiceStandardModel
@@ -86,8 +87,8 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
                 Number = 1,
                 Name = "Test Standard",
                 Description = "Test Description",
-                IsActive = true
-            }
+                IsActive = true,
+            },
         };
 
         // Act
@@ -104,7 +105,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         await _factory.ClearDatabaseAsync();
         var authenticatedClient = _factory.CreateAuthenticatedClient();
         var publicClient = _factory.CreateUnauthenticatedClient();
-        
+
         var standards = new List<ServiceStandardModel>
         {
             new ServiceStandardModel
@@ -113,16 +114,16 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
                 Number = 1,
                 Name = "Test Standard 1",
                 Description = "First test standard",
-                IsActive = true
+                IsActive = true,
             },
             new ServiceStandardModel
             {
                 Id = "test-standard-2",
                 Number = 2,
-                Name = "Test Standard 2", 
+                Name = "Test Standard 2",
                 Description = "Second test standard",
-                IsActive = true
-            }
+                IsActive = true,
+            },
         };
 
         // Seed the standards
@@ -134,11 +135,11 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        var returnedStandards = JsonSerializer.Deserialize<List<ServiceStandardModel>>(content, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
-        
+        var returnedStandards = JsonSerializer.Deserialize<List<ServiceStandardModel>>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
         returnedStandards.Should().NotBeNull();
         returnedStandards!.Should().HaveCount(2);
         returnedStandards.Should().Contain(s => s.Id == "test-standard-1");
@@ -151,7 +152,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         // Arrange - Clear database and seed a standard
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateAuthenticatedClient(); // Protected endpoint
-        
+
         var standards = new List<ServiceStandardModel>
         {
             new ServiceStandardModel
@@ -160,8 +161,8 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
                 Number = 99,
                 Name = "Delete Test Standard",
                 Description = "A standard for testing deletion",
-                IsActive = true
-            }
+                IsActive = true,
+            },
         };
 
         // Seed the standard first
@@ -194,13 +195,27 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         // Arrange - Clear database and seed some standards
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateAuthenticatedClient(); // Protected endpoint
-        
+
         var standards = new List<ServiceStandardModel>
         {
-            new ServiceStandardModel { Id = "std1", Number = 1, Name = "Standard 1", Description = "Test 1", IsActive = true },
-            new ServiceStandardModel { Id = "std2", Number = 2, Name = "Standard 2", Description = "Test 2", IsActive = true }
+            new ServiceStandardModel
+            {
+                Id = "std1",
+                Number = 1,
+                Name = "Standard 1",
+                Description = "Test 1",
+                IsActive = true,
+            },
+            new ServiceStandardModel
+            {
+                Id = "std2",
+                Number = 2,
+                Name = "Standard 2",
+                Description = "Test 2",
+                IsActive = true,
+            },
         };
-        
+
         await client.PostAsJsonAsync("/serviceStandards/seed", standards);
 
         // Act
@@ -208,15 +223,15 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         // Verify all standards are deleted
         var publicClient = _factory.CreateUnauthenticatedClient();
         var getResponse = await publicClient.GetAsync("/serviceStandards");
         var content = await getResponse.Content.ReadAsStringAsync();
-        var remainingStandards = JsonSerializer.Deserialize<List<ServiceStandardModel>>(content, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
+        var remainingStandards = JsonSerializer.Deserialize<List<ServiceStandardModel>>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
         remainingStandards.Should().BeEmpty();
     }
 
@@ -240,7 +255,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         // Arrange - Clear database, seed and delete a standard
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateAuthenticatedClient();
-        
+
         var standards = new List<ServiceStandardModel>
         {
             new ServiceStandardModel
@@ -249,8 +264,8 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
                 Number = 88,
                 Name = "Restore Test Standard",
                 Description = "A standard for testing restoration",
-                IsActive = true
-            }
+                IsActive = true,
+            },
         };
 
         // Seed and then delete the standard
@@ -258,7 +273,10 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         await client.DeleteAsync("/serviceStandards/restore-test-standard");
 
         // Act - Restore the standard
-        var response = await client.PostAsync("/serviceStandards/restore-test-standard/restore", null);
+        var response = await client.PostAsync(
+            "/serviceStandards/restore-test-standard/restore",
+            null
+        );
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -277,4 +295,4 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
-} 
+}

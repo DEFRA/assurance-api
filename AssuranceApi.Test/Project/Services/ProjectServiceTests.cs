@@ -7,7 +7,8 @@ namespace AssuranceApi.Test.Project.Services;
 
 public class ProjectServiceTests
 {
-    private readonly IProjectPersistence _projectPersistence = Substitute.For<IProjectPersistence>();
+    private readonly IProjectPersistence _projectPersistence =
+        Substitute.For<IProjectPersistence>();
 
     private ProjectService CreateService()
     {
@@ -25,7 +26,7 @@ public class ProjectServiceTests
             Name = "Test Project",
             Status = "GREEN",
             Commentary = "Test commentary",
-            Tags = new List<string> { "web", "api" }
+            Tags = new List<string> { "web", "api" },
         };
 
         _projectPersistence.CreateAsync(newProject).Returns(true);
@@ -46,8 +47,18 @@ public class ProjectServiceTests
         var tag = "web";
         var expectedProjects = new List<ProjectModel>
         {
-            new() { Id = "1", Name = "Web Project", Tags = new List<string> { "web" } },
-            new() { Id = "2", Name = "Another Web Project", Tags = new List<string> { "web", "api" } }
+            new()
+            {
+                Id = "1",
+                Name = "Web Project",
+                Tags = new List<string> { "web" },
+            },
+            new()
+            {
+                Id = "2",
+                Name = "Another Web Project",
+                Tags = new List<string> { "web", "api" },
+            },
         };
 
         _projectPersistence.GetAllAsync(tag).Returns(expectedProjects);
@@ -68,9 +79,24 @@ public class ProjectServiceTests
         var service = CreateService();
         var expectedProjects = new List<ProjectModel>
         {
-            new() { Id = "1", Name = "Project 1", Status = "GREEN" },
-            new() { Id = "2", Name = "Project 2", Status = "AMBER" },
-            new() { Id = "3", Name = "Project 3", Status = "RED" }
+            new()
+            {
+                Id = "1",
+                Name = "Project 1",
+                Status = "GREEN",
+            },
+            new()
+            {
+                Id = "2",
+                Name = "Project 2",
+                Status = "AMBER",
+            },
+            new()
+            {
+                Id = "3",
+                Name = "Project 3",
+                Status = "RED",
+            },
         };
 
         _projectPersistence.GetAllAsync(null).Returns(expectedProjects);
@@ -95,7 +121,7 @@ public class ProjectServiceTests
             Id = projectId,
             Name = "Test Project",
             Status = "GREEN",
-            Commentary = "Test commentary"
+            Commentary = "Test commentary",
         };
 
         _projectPersistence.GetByIdAsync(projectId).Returns(expectedProject);
@@ -137,7 +163,7 @@ public class ProjectServiceTests
         {
             Name = "Updated Project",
             Status = "AMBER",
-            Commentary = "Updated commentary"
+            Commentary = "Updated commentary",
         };
 
         _projectPersistence.UpdateAsync(projectId, updatedProject).Returns(true);
@@ -193,7 +219,7 @@ public class ProjectServiceTests
         var projects = new List<ProjectModel>
         {
             new() { Id = "1", Name = "Project 1" },
-            new() { Id = "2", Name = "Project 2" }
+            new() { Id = "2", Name = "Project 2" },
         };
 
         _projectPersistence.AddProjectsAsync(projects).Returns(true);
@@ -256,4 +282,4 @@ public class ProjectService
     {
         return await _projectPersistence.SeedAsync(projects);
     }
-} 
+}

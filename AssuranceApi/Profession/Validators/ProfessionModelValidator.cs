@@ -1,5 +1,5 @@
-using FluentValidation;
 using AssuranceApi.Profession.Models;
+using FluentValidation;
 
 namespace AssuranceApi.Profession.Validators;
 
@@ -18,8 +18,6 @@ public class ProfessionModelValidator : AbstractValidator<ProfessionModel>
             .Matches("^[A-Za-z0-9\\s-]+$")
             .WithMessage("Name must contain only letters, numbers, spaces, and hyphens");
 
-        RuleFor(x => x.Description)
-            .NotEmpty()
-            .MaximumLength(500);
+        RuleFor(x => x.Description).NotEmpty().MaximumLength(500);
     }
-} 
+}

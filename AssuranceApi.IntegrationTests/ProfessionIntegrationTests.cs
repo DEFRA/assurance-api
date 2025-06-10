@@ -1,10 +1,10 @@
-using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Xunit;
 using AssuranceApi.Profession.Models;
+using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Xunit;
 
 namespace AssuranceApi.IntegrationTests;
 
@@ -30,10 +30,10 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        var professions = JsonSerializer.Deserialize<List<ProfessionModel>>(content, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
+        var professions = JsonSerializer.Deserialize<List<ProfessionModel>>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
         professions.Should().BeEmpty();
     }
 
@@ -43,12 +43,12 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
         // Arrange - Clear database and use authenticated client
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateAuthenticatedClient(); // Protected endpoint
-        
+
         var profession = new ProfessionModel
         {
             Id = "test-profession",
             Name = "Test Profession",
-            Description = "A test profession for integration testing"
+            Description = "A test profession for integration testing",
         };
 
         // Act
@@ -81,12 +81,12 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
         await _factory.ClearDatabaseAsync();
         var authenticatedClient = _factory.CreateAuthenticatedClient();
         var publicClient = _factory.CreateUnauthenticatedClient();
-        
+
         var profession = new ProfessionModel
         {
             Id = "test-get-profession",
             Name = "Test Get Profession",
-            Description = "A profession for testing GET by ID"
+            Description = "A profession for testing GET by ID",
         };
 
         // Create the profession first
@@ -98,11 +98,11 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        var returnedProfession = JsonSerializer.Deserialize<ProfessionModel>(content, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
-        
+        var returnedProfession = JsonSerializer.Deserialize<ProfessionModel>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
         returnedProfession.Should().NotBeNull();
         returnedProfession!.Id.Should().Be("test-get-profession");
         returnedProfession.Name.Should().Be("Test Get Profession");
@@ -114,12 +114,12 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
         // Arrange - Clear database and create profession
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateAuthenticatedClient(); // Protected endpoint
-        
+
         var profession = new ProfessionModel
         {
             Id = "delete-test-profession",
             Name = "Delete Test Profession",
-            Description = "A profession for testing deletion"
+            Description = "A profession for testing deletion",
         };
 
         // Create the profession first
@@ -138,10 +138,20 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
         // Arrange - Clear database and create some professions
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateAuthenticatedClient(); // Protected endpoint
-        
-        var profession1 = new ProfessionModel { Id = "prof1", Name = "Profession 1", Description = "Test 1" };
-        var profession2 = new ProfessionModel { Id = "prof2", Name = "Profession 2", Description = "Test 2" };
-        
+
+        var profession1 = new ProfessionModel
+        {
+            Id = "prof1",
+            Name = "Profession 1",
+            Description = "Test 1",
+        };
+        var profession2 = new ProfessionModel
+        {
+            Id = "prof2",
+            Name = "Profession 2",
+            Description = "Test 2",
+        };
+
         await client.PostAsJsonAsync("/professions", profession1);
         await client.PostAsJsonAsync("/professions", profession2);
 
@@ -150,15 +160,15 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         // Verify all professions are deleted
         var publicClient = _factory.CreateUnauthenticatedClient();
         var getResponse = await publicClient.GetAsync("/professions");
         var content = await getResponse.Content.ReadAsStringAsync();
-        var professions = JsonSerializer.Deserialize<List<ProfessionModel>>(content, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
+        var professions = JsonSerializer.Deserialize<List<ProfessionModel>>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
         professions.Should().BeEmpty();
     }
-} 
+}

@@ -10,7 +10,8 @@ public class StandardsSummaryHelper
 
     public StandardsSummaryHelper(
         IProjectPersistence projectPersistence,
-        IProjectStandardsPersistence assessmentPersistence)
+        IProjectStandardsPersistence assessmentPersistence
+    )
     {
         _projectPersistence = projectPersistence;
         _assessmentPersistence = assessmentPersistence;
@@ -31,13 +32,13 @@ public class StandardsSummaryHelper
                 ),
                 LastUpdated = g.Max(x => x.LastUpdated),
                 Professions = g.Select(x => new StandardSummaryProfessionModel
-                {
-                    ProfessionId = x.ProfessionId,
-                    Status = x.Status,
-                    Commentary = x.Commentary,
-                    LastUpdated = x.LastUpdated,
-                })
-                .ToList(),
+                    {
+                        ProfessionId = x.ProfessionId,
+                        Status = x.Status,
+                        Commentary = x.Commentary,
+                        LastUpdated = x.LastUpdated,
+                    })
+                    .ToList(),
             })
             .ToList();
 
@@ -67,4 +68,4 @@ public class StandardsSummaryHelper
         return mappedStatuses.OrderBy(s => Array.IndexOf(order, s)).FirstOrDefault()
             ?? "NOT_UPDATED";
     }
-} 
+}

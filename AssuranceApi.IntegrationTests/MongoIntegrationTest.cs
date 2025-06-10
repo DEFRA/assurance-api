@@ -15,9 +15,7 @@ public class MongoIntegrationTest : IAsyncDisposable
         }
 
         // Initialize MongoDB container with a specific version
-        _mongoDbContainer = new MongoDbBuilder()
-            .WithImage("mongo:6.0")
-            .Build();
+        _mongoDbContainer = new MongoDbBuilder().WithImage("mongo:6.0").Build();
 
         // Start the container
         await _mongoDbContainer.StartAsync();
@@ -32,4 +30,4 @@ public class MongoIntegrationTest : IAsyncDisposable
             await _mongoDbContainer.StopAsync();
         }
     }
-} 
+}

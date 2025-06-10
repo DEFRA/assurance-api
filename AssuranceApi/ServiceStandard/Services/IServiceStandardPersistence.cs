@@ -13,4 +13,4 @@ public interface IServiceStandardPersistence
     Task<bool> DeleteAsync(string id);
     Task<bool> SoftDeleteAsync(string id, string deletedBy);
     Task<bool> RestoreAsync(string id);
-} 
+}

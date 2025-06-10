@@ -7,4 +7,4 @@ public interface IProfessionHistoryPersistence
     Task<IEnumerable<ProfessionHistory>> GetHistoryAsync(string professionId);
     Task<bool> CreateAsync(ProfessionHistory history);
     Task<bool> DeleteAllAsync();
-} 
+}

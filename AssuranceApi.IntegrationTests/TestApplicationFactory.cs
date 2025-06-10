@@ -19,10 +19,8 @@ public class TestApplicationFactory : WebApplicationFactory<Program>, IAsyncDisp
 
     private async Task InitializeMongoDbAsync()
     {
-        _mongoDbContainer = new MongoDbBuilder()
-            .WithImage("mongo:6.0")
-            .Build();
-            
+        _mongoDbContainer = new MongoDbBuilder().WithImage("mongo:6.0").Build();
+
         await _mongoDbContainer.StartAsync();
     }
 
@@ -31,32 +29,38 @@ public class TestApplicationFactory : WebApplicationFactory<Program>, IAsyncDisp
         // Ensure MongoDB container is started before configuration
         _mongoDbContainerInitializer.Value.GetAwaiter().GetResult();
 
-        builder.ConfigureAppConfiguration((context, config) =>
-        {
-            // Override MongoDB configuration for testing
-            var testConfiguration = new Dictionary<string, string?>
+        builder.ConfigureAppConfiguration(
+            (context, config) =>
             {
-                ["Mongo:DatabaseUri"] = _mongoDbContainer!.GetConnectionString(),
-                ["Mongo:DatabaseName"] = "test-assurance-api",
-                ["Azure:TenantId"] = "test-tenant-id",
-                ["Azure:ClientId"] = "test-client-id"
-            };
+                // Override MongoDB configuration for testing
+                var testConfiguration = new Dictionary<string, string?>
+                {
+                    ["Mongo:DatabaseUri"] = _mongoDbContainer!.GetConnectionString(),
+                    ["Mongo:DatabaseName"] = "test-assurance-api",
+                    ["Azure:TenantId"] = "test-tenant-id",
+                    ["Azure:ClientId"] = "test-client-id",
+                };
 
-            config.AddInMemoryCollection(testConfiguration);
-        });
+                config.AddInMemoryCollection(testConfiguration);
+            }
+        );
 
         builder.ConfigureServices(services =>
         {
             // Add authorization services for testing
             services.AddAuthorization(options =>
             {
-                options.AddPolicy("RequireAdmin", policy =>
-                    policy.RequireAuthenticatedUser()
-                          .RequireClaim("role", "admin"));
+                options.AddPolicy(
+                    "RequireAdmin",
+                    policy => policy.RequireAuthenticatedUser().RequireClaim("role", "admin")
+                );
             });
-            services.AddAuthentication("Test")
-                .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestAuthenticationHandler>(
-                    "Test", options => { });
+            services
+                .AddAuthentication("Test")
+                .AddScheme<
+                    Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
+                    TestAuthenticationHandler
+                >("Test", options => { });
         });
 
         builder.UseEnvironment("Testing");
@@ -84,7 +88,8 @@ public class TestApplicationFactory : WebApplicationFactory<Program>, IAsyncDisp
     public string GetMongoConnectionString()
     {
         _mongoDbContainerInitializer.Value.GetAwaiter().GetResult();
-        return _mongoDbContainer?.GetConnectionString() ?? throw new InvalidOperationException("MongoDB container not initialized");
+        return _mongoDbContainer?.GetConnectionString()
+            ?? throw new InvalidOperationException("MongoDB container not initialized");
     }
 
     /// <summary>
@@ -93,11 +98,12 @@ public class TestApplicationFactory : WebApplicationFactory<Program>, IAsyncDisp
     public async Task ClearDatabaseAsync()
     {
         await _mongoDbContainerInitializer.Value;
-        if (_mongoDbContainer == null) return;
+        if (_mongoDbContainer == null)
+            return;
 
         var client = new MongoClient(_mongoDbContainer.GetConnectionString());
         var database = client.GetDatabase("test-assurance-api");
-        
+
         // Get all collection names and drop them
         var collectionNames = await database.ListCollectionNamesAsync();
         await collectionNames.ForEachAsync(async name =>
@@ -121,12 +127,11 @@ public class TestApplicationFactory : WebApplicationFactory<Program>, IAsyncDisp
     /// </summary>
     public HttpClient CreateUnauthenticatedClient()
     {
-        var client = CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false
-        });
+        var client = CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false }
+        );
         // Explicitly ensure no authorization header
         client.DefaultRequestHeaders.Remove("Authorization");
         return client;
     }
-} 
+}
