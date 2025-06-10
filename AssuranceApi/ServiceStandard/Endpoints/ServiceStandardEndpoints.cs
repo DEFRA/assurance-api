@@ -65,7 +65,7 @@ public static class ServiceStandardEndpoints
             async (
                 string standardId,
                 IServiceStandardHistoryPersistence historyPersistence,
-                ILogger<string> logger
+                ILogger<Program> logger
             ) =>
             {
                 logger.LogInformation("Fetching history for standard {StandardId}", standardId);
