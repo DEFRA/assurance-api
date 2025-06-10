@@ -192,68 +192,17 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder)
         $"api://{clientId}/access_as_user",
     };
 
-    // Log the OpenID Connect metadata URL
-    var metadataUrl = $"{authority}.well-known/openid-configuration";
-
-    // Create HTTP client handler with proxy support
-    HttpClientHandler CreateProxyEnabledHandler()
-    {
-        // Use the same proxy configuration method as in Proxy.cs
-        var proxyUri = System.Environment.GetEnvironmentVariable("CDP_HTTPS_PROXY");
-        var handler = new HttpClientHandler();
-
-        if (!string.IsNullOrEmpty(proxyUri))
-        {
-
-            var proxy = new WebProxy { BypassProxyOnLocal = true };
-
-            var uri = new UriBuilder(proxyUri);
-
-            // Set credentials if available
-            var username = uri.UserName;
-            var password = uri.Password;
-            if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(password))
-            {
-                proxy.Credentials = new NetworkCredential(username, password);
-            }
-
-            // Remove credentials from URI for logging safety
-            uri.UserName = "";
-            uri.Password = "";
-            proxy.Address = uri.Uri;
-
-            handler.Proxy = proxy;
-            handler.UseProxy = true;
-        }
-        else
-        {
-            logger.LogDebug("No proxy configured for Azure AD connections");
-        }
-
-        // Add certificate validation callback for debugging
-        handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, errors) =>
-        {
-            if (errors != System.Net.Security.SslPolicyErrors.None)
-            {
-                logger.LogWarning(
-                    "SSL certificate validation errors when contacting Azure AD: {Errors}",
-                    errors
-                );
-            }
-            return true; // Accept all certificates in this handler
-        };
-
-        return handler;
-    }
-
     _builder
         .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
             options.Authority = authority;
 
-            // Configure backchannel HTTP client with proper proxy settings
-            options.BackchannelHttpHandler = CreateProxyEnabledHandler();
+            // Use existing proxy configuration from Utils.Http.Proxy
+            var handler = new HttpClientHandler();
+            Proxy.ConfigureProxy(handler);
+
+            options.BackchannelHttpHandler = handler;
             options.BackchannelTimeout = TimeSpan.FromSeconds(30); // Reduce from default 60s
 
             options.TokenValidationParameters = new TokenValidationParameters
