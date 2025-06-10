@@ -1,5 +1,8 @@
 using System.Globalization;
 using AssuranceApi.Profession.Services;
+using AssuranceApi.Project.Constants;
+using AssuranceApi.Project.Handlers;
+using AssuranceApi.Project.Helpers;
 using AssuranceApi.Project.Models;
 using AssuranceApi.Project.Services;
 using AssuranceApi.ServiceStandard.Services;
@@ -15,32 +18,6 @@ namespace AssuranceApi.Project.Endpoints;
 
 public static class ProjectEndpoints
 {
-    // Project status validation - 5 RAG system + TBC
-    private static readonly string[] ValidProjectStatuses = new[]
-    {
-        "RED",
-        "AMBER_RED",
-        "AMBER",
-        "GREEN_AMBER",
-        "GREEN",
-        "TBC",
-    };
-
-    private static bool IsValidProjectStatus(string? status) =>
-        !string.IsNullOrEmpty(status) && ValidProjectStatuses.Contains(status);
-
-    // Service standard status validation - 3 RAG system + TBC
-    private static readonly string[] ValidServiceStandardStatuses = new[]
-    {
-        "RED",
-        "AMBER",
-        "GREEN",
-        "TBC",
-    };
-
-    private static bool IsValidServiceStandardStatus(string? status) =>
-        !string.IsNullOrEmpty(status) && ValidServiceStandardStatuses.Contains(status);
-
     public static void UseProjectEndpoints(this IEndpointRouteBuilder app)
     {
         // Protected endpoints that require authentication
@@ -104,177 +81,23 @@ public static class ProjectEndpoints
                     string standardId,
                     string professionId,
                     [FromBody] ProjectStandards assessment,
-                    [FromServices] IProjectStandardsPersistence assessmentPersistence,
-                    [FromServices] IProjectStandardsHistoryPersistence historyPersistence,
-                    [FromServices] IProjectPersistence projectPersistence,
-                    [FromServices] IServiceStandardPersistence standardPersistence,
-                    [FromServices] IProfessionPersistence professionPersistence,
-                    ILogger<string> logger
+                    [FromServices] CreateAssessmentHandler handler,
+                    [FromServices] StandardsSummaryHelper summaryHelper
                 ) =>
                 {
-                    try
+                    var result = await handler.HandleAsync(projectId, standardId, professionId, assessment);
+                    
+                    if (!result.IsValid)
                     {
-                        logger.LogInformation(
-                            "Processing assessment update for project {ProjectId}, standard {StandardId}, profession {ProfessionId}",
-                            projectId,
-                            standardId,
-                            professionId
-                        );
-
-                        // Validate required fields
-                        if (string.IsNullOrEmpty(assessment.Status))
-                        {
-                            logger.LogWarning("Assessment status is required");
-                            return Results.BadRequest("Assessment status is required");
-                        }
-
-                        // Validate service standard status (3 RAG + TBC system)
-                        if (!IsValidServiceStandardStatus(assessment.Status))
-                        {
-                            logger.LogWarning(
-                                "Invalid service standard status: {Status}. Valid statuses are: RED, AMBER, GREEN, TBC",
-                                assessment.Status
-                            );
-                            return Results.BadRequest(
-                                $"Invalid status: {assessment.Status}. Valid statuses are: RED, AMBER, GREEN, TBC"
-                            );
-                        }
-
-                        // **NEW: Basic referential integrity validation**
-
-                        // Check if project exists
-                        var project = await projectPersistence.GetByIdAsync(projectId);
-                        if (project == null)
-                        {
-                            logger.LogWarning("Project {ProjectId} not found", projectId);
-                            return Results.BadRequest("Referenced project does not exist");
-                        }
-
-                        // Check if standard exists and is active
-                        var standard = await standardPersistence.GetActiveByIdAsync(standardId);
-                        if (standard == null)
-                        {
-                            logger.LogWarning("Active standard {StandardId} not found", standardId);
-                            return Results.BadRequest(
-                                "Referenced service standard does not exist or is inactive"
-                            );
-                        }
-
-                        // Check if profession exists and is active
-                        var profession = await professionPersistence.GetActiveByIdAsync(
-                            professionId
-                        );
-                        if (profession == null)
-                        {
-                            logger.LogWarning(
-                                "Active profession {ProfessionId} not found",
-                                professionId
-                            );
-                            return Results.BadRequest(
-                                "Referenced profession does not exist or is inactive"
-                            );
-                        }
-
-                        logger.LogInformation(
-                            "Referential integrity validation passed for assessment"
-                        );
-
-                        // Check if assessment already exists
-                        var existingAssessment = await assessmentPersistence.GetAsync(
-                            projectId,
-                            standardId,
-                            professionId
-                        );
-
-                        // Set the IDs from URL parameters
-                        assessment.ProjectId = projectId;
-                        assessment.StandardId = standardId;
-                        assessment.ProfessionId = professionId;
-                        assessment.LastUpdated = DateTime.UtcNow;
-
-                        // For existing assessments, preserve the existing ID and set ChangedBy if not provided
-                        if (existingAssessment != null)
-                        {
-                            assessment.Id = existingAssessment.Id;
-                            if (string.IsNullOrEmpty(assessment.ChangedBy))
-                            {
-                                assessment.ChangedBy = existingAssessment.ChangedBy ?? "Unknown";
-                            }
-                            logger.LogInformation(
-                                "Updating existing assessment with ID {AssessmentId}",
-                                assessment.Id
-                            );
-                        }
-                        else
-                        {
-                            // Generate ID for new assessment
-                            if (string.IsNullOrEmpty(assessment.Id))
-                            {
-                                assessment.Id = ObjectId.GenerateNewId().ToString();
-                            }
-                            if (string.IsNullOrEmpty(assessment.ChangedBy))
-                            {
-                                assessment.ChangedBy = "Unknown";
-                            }
-                            logger.LogInformation(
-                                "Creating new assessment with ID {AssessmentId}",
-                                assessment.Id
-                            );
-                        }
-
-                        // Upsert assessment
-                        await assessmentPersistence.UpsertAsync(assessment);
-                        logger.LogInformation("Assessment upserted successfully");
-
-                        // Create history entry with proper change tracking
-                        var history = new ProjectStandardsHistory
-                        {
-                            Id = ObjectId.GenerateNewId().ToString(),
-                            ProjectId = projectId,
-                            StandardId = standardId,
-                            ProfessionId = professionId,
-                            Timestamp = DateTime.UtcNow,
-                            ChangedBy = assessment.ChangedBy,
-                            Changes = new AssessmentChanges
-                            {
-                                Status = new StatusChange
-                                {
-                                    From = existingAssessment?.Status ?? "",
-                                    To = assessment.Status,
-                                },
-                                Commentary = new CommentaryChange
-                                {
-                                    From = existingAssessment?.Commentary ?? "",
-                                    To = assessment.Commentary ?? "",
-                                },
-                            },
-                            Archived = false,
-                        };
-
-                        await historyPersistence.AddAsync(history);
-                        logger.LogInformation("Assessment history entry created successfully");
-
-                        // Update standards summary aggregation
-                        await UpdateStandardsSummaryCache(
-                            projectId,
-                            projectPersistence,
-                            assessmentPersistence
-                        );
-                        logger.LogInformation("Standards summary cache updated successfully");
-
-                        return Results.Ok();
+                        return result.StatusCode == 400 
+                            ? Results.BadRequest(result.ErrorMessage)
+                            : Results.Problem(result.ErrorMessage);
                     }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(
-                            ex,
-                            "Error processing assessment update for project {ProjectId}, standard {StandardId}, profession {ProfessionId}",
-                            projectId,
-                            standardId,
-                            professionId
-                        );
-                        return Results.Problem($"Failed to process assessment: {ex.Message}");
-                    }
+
+                    // Update standards summary aggregation
+                    await summaryHelper.UpdateStandardsSummaryCacheAsync(projectId);
+
+                    return Results.Ok();
                 }
             )
             .RequireAuthorization("RequireAdmin");
@@ -385,11 +208,8 @@ public static class ProjectEndpoints
                         }
 
                         // Update standards summary aggregation to reflect the changes
-                        await UpdateStandardsSummaryCache(
-                            projectId,
-                            projectPersistence,
-                            assessmentPersistence
-                        );
+                        var summaryHelper = new StandardsSummaryHelper(projectPersistence, assessmentPersistence);
+                        await summaryHelper.UpdateStandardsSummaryCacheAsync(projectId);
                         logger.LogInformation("Standards summary cache updated after archiving");
 
                         return Results.Ok();
@@ -414,7 +234,7 @@ public static class ProjectEndpoints
     )
     {
         // Validate status
-        if (!IsValidProjectStatus(project.Status))
+        if (!ProjectConstants.IsValidProjectStatus(project.Status))
             return Results.BadRequest($"Invalid status: {project.Status}");
         var validationResult = await validator.ValidateAsync(project);
         if (!validationResult.IsValid)
@@ -459,7 +279,7 @@ public static class ProjectEndpoints
     )
     {
         // Validate status
-        if (!IsValidProjectStatus(updatedProject.Status))
+        if (!ProjectConstants.IsValidProjectStatus(updatedProject.Status))
             return Results.BadRequest($"Invalid status: {updatedProject.Status}");
         var validationResult = await validator.ValidateAsync(updatedProject);
         if (!validationResult.IsValid)
@@ -651,59 +471,5 @@ public static class ProjectEndpoints
         return Results.Ok(summary);
     }
 
-    // --- Aggregation logic for standards summary cache ---
-    private static async Task UpdateStandardsSummaryCache(
-        string projectId,
-        IProjectPersistence projectPersistence,
-        IProjectStandardsPersistence assessmentPersistence
-    )
-    {
-        var assessments = await assessmentPersistence.GetByProjectAsync(projectId);
-        var grouped = assessments
-            .GroupBy(a => a.StandardId)
-            .Select(g => new StandardSummaryModel
-            {
-                StandardId = g.Key,
-                AggregatedStatus = AggregateStatus(g.Select(x => x.Status)),
-                AggregatedCommentary = string.Join(
-                    "; ",
-                    g.Select(x => x.Commentary).Where(c => !string.IsNullOrWhiteSpace(c))
-                ),
-                LastUpdated = g.Max(x => x.LastUpdated),
-                Professions = g.Select(x => new StandardSummaryProfessionModel
-                    {
-                        ProfessionId = x.ProfessionId,
-                        Status = x.Status,
-                        Commentary = x.Commentary,
-                        LastUpdated = x.LastUpdated,
-                    })
-                    .ToList(),
-            })
-            .ToList();
-        var project = await projectPersistence.GetByIdAsync(projectId);
-        if (project != null)
-        {
-            project.StandardsSummary = grouped;
-            await projectPersistence.UpdateAsync(projectId, project);
-        }
-    }
 
-    // Aggregation logic that maps 5 RAG to 3 RAG for service standards
-    // Maps: AMBER_RED -> AMBER, GREEN_AMBER -> AMBER
-    // Priority: RED > AMBER > GREEN > TBC
-    private static string AggregateStatus(IEnumerable<string> statuses)
-    {
-        var mappedStatuses = statuses.Select(status =>
-            status switch
-            {
-                "AMBER_RED" => "AMBER",
-                "GREEN_AMBER" => "AMBER",
-                _ => status,
-            }
-        );
-
-        var order = new[] { "RED", "AMBER", "GREEN", "TBC" };
-        return mappedStatuses.OrderBy(s => Array.IndexOf(order, s)).FirstOrDefault()
-            ?? "NOT_UPDATED";
-    }
 }
