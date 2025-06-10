@@ -2,29 +2,41 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Mongo2Go;
 using MongoDB.Driver;
+using Testcontainers.MongoDb;
 
 namespace AssuranceApi.IntegrationTests;
 
-public class TestApplicationFactory : WebApplicationFactory<Program>, IDisposable
+public class TestApplicationFactory : WebApplicationFactory<Program>, IAsyncDisposable
 {
-    private MongoDbRunner? _mongoDbRunner;
+    private MongoDbContainer? _mongoDbContainer;
+    private readonly Lazy<Task> _mongoDbContainerInitializer;
+
+    public TestApplicationFactory()
+    {
+        _mongoDbContainerInitializer = new Lazy<Task>(InitializeMongoDbAsync);
+    }
+
+    private async Task InitializeMongoDbAsync()
+    {
+        _mongoDbContainer = new MongoDbBuilder()
+            .WithImage("mongo:6.0")
+            .Build();
+            
+        await _mongoDbContainer.StartAsync();
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Ensure MongoDB container is started before configuration
+        _mongoDbContainerInitializer.Value.GetAwaiter().GetResult();
+
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            // Start MongoDB instance if not already started
-            if (_mongoDbRunner == null)
-            {
-                _mongoDbRunner = MongoDbRunner.Start();
-            }
-
             // Override MongoDB configuration for testing
             var testConfiguration = new Dictionary<string, string?>
             {
-                ["Mongo:DatabaseUri"] = _mongoDbRunner.ConnectionString,
+                ["Mongo:DatabaseUri"] = _mongoDbContainer!.GetConnectionString(),
                 ["Mongo:DatabaseName"] = "test-assurance-api",
                 ["Azure:TenantId"] = "test-tenant-id",
                 ["Azure:ClientId"] = "test-client-id"
@@ -52,22 +64,27 @@ public class TestApplicationFactory : WebApplicationFactory<Program>, IDisposabl
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
+        if (disposing && _mongoDbContainer != null)
         {
-            _mongoDbRunner?.Dispose();
+            _mongoDbContainer.DisposeAsync().AsTask().Wait();
         }
         base.Dispose(disposing);
     }
 
-    public new void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        Dispose(true);
+        if (_mongoDbContainer != null)
+        {
+            await _mongoDbContainer.DisposeAsync();
+        }
+        Dispose(false);
         GC.SuppressFinalize(this);
     }
 
     public string GetMongoConnectionString()
     {
-        return _mongoDbRunner?.ConnectionString ?? throw new InvalidOperationException("MongoDB runner not initialized");
+        _mongoDbContainerInitializer.Value.GetAwaiter().GetResult();
+        return _mongoDbContainer?.GetConnectionString() ?? throw new InvalidOperationException("MongoDB container not initialized");
     }
 
     /// <summary>
@@ -75,9 +92,10 @@ public class TestApplicationFactory : WebApplicationFactory<Program>, IDisposabl
     /// </summary>
     public async Task ClearDatabaseAsync()
     {
-        if (_mongoDbRunner == null) return;
+        await _mongoDbContainerInitializer.Value;
+        if (_mongoDbContainer == null) return;
 
-        var client = new MongoClient(_mongoDbRunner.ConnectionString);
+        var client = new MongoClient(_mongoDbContainer.GetConnectionString());
         var database = client.GetDatabase("test-assurance-api");
         
         // Get all collection names and drop them
