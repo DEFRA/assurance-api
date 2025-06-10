@@ -7,21 +7,23 @@ namespace AssuranceApi.Profession.Services;
 
 public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionPersistence
 {
-    public ProfessionPersistence(IMongoDbClientFactory connectionFactory, ILoggerFactory loggerFactory)
-        : base(connectionFactory, "professions", loggerFactory)
-    {
-    }
+    public ProfessionPersistence(
+        IMongoDbClientFactory connectionFactory,
+        ILoggerFactory loggerFactory
+    )
+        : base(connectionFactory, "professions", loggerFactory) { }
 
     protected override List<CreateIndexModel<ProfessionModel>> DefineIndexes(
-        IndexKeysDefinitionBuilder<ProfessionModel> builder)
+        IndexKeysDefinitionBuilder<ProfessionModel> builder
+    )
     {
         return new List<CreateIndexModel<ProfessionModel>>
         {
             new CreateIndexModel<ProfessionModel>(
                 builder.Ascending(x => x.Name),
-                new CreateIndexOptions { Unique = true }),
-            new CreateIndexModel<ProfessionModel>(
-                builder.Ascending(x => x.IsActive))
+                new CreateIndexOptions { Unique = true }
+            ),
+            new CreateIndexModel<ProfessionModel>(builder.Ascending(x => x.IsActive)),
         };
     }
 
@@ -65,7 +67,11 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
                 profession.UpdatedAt = DateTime.UtcNow;
 
                 var filter = Builders<ProfessionModel>.Filter.Eq(x => x.Id, profession.Id);
-                await Collection.ReplaceOneAsync(filter, profession, new ReplaceOptions { IsUpsert = true });
+                await Collection.ReplaceOneAsync(
+                    filter,
+                    profession,
+                    new ReplaceOptions { IsUpsert = true }
+                );
             }
             return true;
         }
@@ -78,16 +84,15 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
 
     public async Task<IEnumerable<ProfessionModel>> GetAllAsync()
     {
-        return await Collection.Find(Builders<ProfessionModel>.Filter.Empty)
+        return await Collection
+            .Find(Builders<ProfessionModel>.Filter.Empty)
             .SortBy(p => p.Name)
             .ToListAsync();
     }
 
     public async Task<IEnumerable<ProfessionModel>> GetAllActiveAsync()
     {
-        return await Collection.Find(p => p.IsActive)
-            .SortBy(p => p.Name)
-            .ToListAsync();
+        return await Collection.Find(p => p.IsActive).SortBy(p => p.Name).ToListAsync();
     }
 
     public async Task<ProfessionModel?> GetByIdAsync(string id)
@@ -122,8 +127,8 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
 
     public async Task<bool> SoftDeleteAsync(string id, string deletedBy)
     {
-        var update = Builders<ProfessionModel>.Update
-            .Set(x => x.IsActive, false)
+        var update = Builders<ProfessionModel>
+            .Update.Set(x => x.IsActive, false)
             .Set(x => x.DeletedAt, DateTime.UtcNow)
             .Set(x => x.DeletedBy, deletedBy)
             .Set(x => x.UpdatedAt, DateTime.UtcNow);
@@ -134,8 +139,8 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
 
     public async Task<bool> RestoreAsync(string id)
     {
-        var update = Builders<ProfessionModel>.Update
-            .Set(x => x.IsActive, true)
+        var update = Builders<ProfessionModel>
+            .Update.Set(x => x.IsActive, true)
             .Unset(x => x.DeletedAt)
             .Unset(x => x.DeletedBy)
             .Set(x => x.UpdatedAt, DateTime.UtcNow);
@@ -143,4 +148,4 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
         var result = await Collection.UpdateOneAsync(p => p.Id == id && !p.IsActive, update);
         return result.ModifiedCount > 0;
     }
-} 
+}

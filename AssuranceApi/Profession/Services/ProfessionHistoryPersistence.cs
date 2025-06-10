@@ -1,17 +1,24 @@
-using MongoDB.Driver;
 using AssuranceApi.Profession.Models;
 using AssuranceApi.Utils.Mongo;
 using Microsoft.Extensions.Logging;
+using MongoDB.Driver;
 
 namespace AssuranceApi.Profession.Services;
 
-public class ProfessionHistoryPersistence : MongoService<ProfessionHistory>, IProfessionHistoryPersistence
+public class ProfessionHistoryPersistence
+    : MongoService<ProfessionHistory>,
+        IProfessionHistoryPersistence
 {
-    public ProfessionHistoryPersistence(IMongoDbClientFactory connectionFactory, ILoggerFactory loggerFactory)
+    public ProfessionHistoryPersistence(
+        IMongoDbClientFactory connectionFactory,
+        ILoggerFactory loggerFactory
+    )
         : base(connectionFactory, "professionHistory", loggerFactory)
     {
-        Logger.LogInformation("Initializing ProfessionHistoryPersistence with collection: professionHistory");
-        try 
+        Logger.LogInformation(
+            "Initializing ProfessionHistoryPersistence with collection: professionHistory"
+        );
+        try
         {
             var builder = Builders<ProfessionHistory>.IndexKeys;
             var indexes = DefineIndexes(builder);
@@ -28,13 +35,14 @@ public class ProfessionHistoryPersistence : MongoService<ProfessionHistory>, IPr
     }
 
     protected override List<CreateIndexModel<ProfessionHistory>> DefineIndexes(
-        IndexKeysDefinitionBuilder<ProfessionHistory> builder)
+        IndexKeysDefinitionBuilder<ProfessionHistory> builder
+    )
     {
         return new List<CreateIndexModel<ProfessionHistory>>
         {
             new CreateIndexModel<ProfessionHistory>(
-                builder.Ascending(x => x.ProfessionId)
-                    .Ascending(x => x.Timestamp))
+                builder.Ascending(x => x.ProfessionId).Ascending(x => x.Timestamp)
+            ),
         };
     }
 
@@ -42,7 +50,10 @@ public class ProfessionHistoryPersistence : MongoService<ProfessionHistory>, IPr
     {
         try
         {
-            Logger.LogInformation("Creating history entry for profession {ProfessionId}", history.ProfessionId);
+            Logger.LogInformation(
+                "Creating history entry for profession {ProfessionId}",
+                history.ProfessionId
+            );
             await Collection.InsertOneAsync(history);
             Logger.LogInformation("Successfully created history entry");
             return true;
@@ -86,4 +97,4 @@ public class ProfessionHistoryPersistence : MongoService<ProfessionHistory>, IPr
             return false;
         }
     }
-} 
+}

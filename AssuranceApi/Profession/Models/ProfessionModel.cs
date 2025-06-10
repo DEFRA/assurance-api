@@ -1,5 +1,5 @@
-using MongoDB.Bson.Serialization.Attributes;
 using System.ComponentModel.DataAnnotations;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace AssuranceApi.Profession.Models;
 
@@ -16,13 +16,13 @@ public class ProfessionModel
     [Required]
     [StringLength(500)]
     public string Description { get; set; } = null!;
-    
+
     // Soft delete fields
     public bool IsActive { get; set; } = true;
     public DateTime? DeletedAt { get; set; }
     public string? DeletedBy { get; set; }
-    
+
     // Basic audit fields
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-} 
+}
