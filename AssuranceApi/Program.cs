@@ -140,11 +140,7 @@ static void ConfigureEndpoints(WebApplicationBuilder _builder)
     // Project services
     _builder.Services.AddSingleton<IProjectPersistence, ProjectPersistence>();
     _builder.Services.AddSingleton<IProjectHistoryPersistence, ProjectHistoryPersistence>();
-    _builder.Services.AddSingleton<IStandardHistoryPersistence, StandardHistoryPersistence>();
-    _builder.Services.AddSingleton<
-        IProjectProfessionHistoryPersistence,
-        ProjectProfessionHistoryPersistence
-    >();
+
 
     // Assessment services for the new data model
     _builder.Services.AddSingleton<IProjectStandardsPersistence, ProjectStandardsPersistence>();
@@ -155,6 +151,10 @@ static void ConfigureEndpoints(WebApplicationBuilder _builder)
 
     _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
     _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();
+
+    // Register new handlers and helpers
+    _builder.Services.AddScoped<AssuranceApi.Project.Handlers.CreateAssessmentHandler>();
+    _builder.Services.AddScoped<AssuranceApi.Project.Helpers.StandardsSummaryHelper>();
 
     _builder.Services.AddHealthChecks();
 }
