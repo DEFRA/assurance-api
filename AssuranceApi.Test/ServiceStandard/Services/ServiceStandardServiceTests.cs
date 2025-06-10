@@ -7,7 +7,8 @@ namespace AssuranceApi.Test.ServiceStandard.Services;
 
 public class ServiceStandardServiceTests
 {
-    private readonly IServiceStandardPersistence _serviceStandardPersistence = Substitute.For<IServiceStandardPersistence>();
+    private readonly IServiceStandardPersistence _serviceStandardPersistence =
+        Substitute.For<IServiceStandardPersistence>();
 
     private ServiceStandardService CreateService()
     {
@@ -21,8 +22,20 @@ public class ServiceStandardServiceTests
         var service = CreateService();
         var expectedStandards = new List<ServiceStandardModel>
         {
-            new() { Id = "1", Number = 1, Name = "Standard 1", IsActive = true },
-            new() { Id = "2", Number = 2, Name = "Standard 2", IsActive = true }
+            new()
+            {
+                Id = "1",
+                Number = 1,
+                Name = "Standard 1",
+                IsActive = true,
+            },
+            new()
+            {
+                Id = "2",
+                Number = 2,
+                Name = "Standard 2",
+                IsActive = true,
+            },
         };
 
         _serviceStandardPersistence.GetAllActiveAsync().Returns(expectedStandards);
@@ -44,8 +57,20 @@ public class ServiceStandardServiceTests
         var service = CreateService();
         var expectedStandards = new List<ServiceStandardModel>
         {
-            new() { Id = "1", Number = 1, Name = "Standard 1", IsActive = true },
-            new() { Id = "2", Number = 2, Name = "Standard 2", IsActive = false }
+            new()
+            {
+                Id = "1",
+                Number = 1,
+                Name = "Standard 1",
+                IsActive = true,
+            },
+            new()
+            {
+                Id = "2",
+                Number = 2,
+                Name = "Standard 2",
+                IsActive = false,
+            },
         };
 
         _serviceStandardPersistence.GetAllAsync().Returns(expectedStandards);
@@ -72,7 +97,7 @@ public class ServiceStandardServiceTests
             Number = 1,
             Name = "Understand users and their needs",
             Description = "Research to develop a deep knowledge of users",
-            IsActive = true
+            IsActive = true,
         };
 
         _serviceStandardPersistence.GetActiveByIdAsync(standardId).Returns(expectedStandard);
@@ -93,7 +118,9 @@ public class ServiceStandardServiceTests
         var service = CreateService();
         var standardId = "nonexistent";
 
-        _serviceStandardPersistence.GetActiveByIdAsync(standardId).Returns((ServiceStandardModel?)null);
+        _serviceStandardPersistence
+            .GetActiveByIdAsync(standardId)
+            .Returns((ServiceStandardModel?)null);
 
         // Act
         var result = await service.GetStandardByIdAsync(standardId);
@@ -114,7 +141,7 @@ public class ServiceStandardServiceTests
             Id = standardId,
             Number = 1,
             Name = "Inactive Standard",
-            IsActive = false
+            IsActive = false,
         };
 
         _serviceStandardPersistence.GetByIdAsync(standardId).Returns(expectedStandard);
@@ -135,8 +162,18 @@ public class ServiceStandardServiceTests
         var service = CreateService();
         var standards = new List<ServiceStandardModel>
         {
-            new() { Id = "1", Number = 1, Name = "Standard 1" },
-            new() { Id = "2", Number = 2, Name = "Standard 2" }
+            new()
+            {
+                Id = "1",
+                Number = 1,
+                Name = "Standard 1",
+            },
+            new()
+            {
+                Id = "2",
+                Number = 2,
+                Name = "Standard 2",
+            },
         };
 
         _serviceStandardPersistence.SeedStandardsAsync(standards).Returns(true);
@@ -156,7 +193,12 @@ public class ServiceStandardServiceTests
         var service = CreateService();
         var standards = new List<ServiceStandardModel>
         {
-            new() { Id = "1", Number = 1, Name = "Standard 1" }
+            new()
+            {
+                Id = "1",
+                Number = 1,
+                Name = "Standard 1",
+            },
         };
 
         _serviceStandardPersistence.SeedStandardsAsync(standards).Returns(false);
@@ -211,10 +253,30 @@ public class ServiceStandardServiceTests
         var service = CreateService();
         var allStandards = new List<ServiceStandardModel>
         {
-            new() { Id = "1", Number = 1, IsActive = true },
-            new() { Id = "2", Number = 2, IsActive = true },
-            new() { Id = "3", Number = 3, IsActive = false },
-            new() { Id = "4", Number = 4, IsActive = false }
+            new()
+            {
+                Id = "1",
+                Number = 1,
+                IsActive = true,
+            },
+            new()
+            {
+                Id = "2",
+                Number = 2,
+                IsActive = true,
+            },
+            new()
+            {
+                Id = "3",
+                Number = 3,
+                IsActive = false,
+            },
+            new()
+            {
+                Id = "4",
+                Number = 4,
+                IsActive = false,
+            },
         };
 
         _serviceStandardPersistence.GetAllAsync().Returns(allStandards);
@@ -254,12 +316,15 @@ public class ServiceStandardService
 
     public async Task<List<ServiceStandardModel>> GetAllStandardsAsync(bool includeInactive = false)
     {
-        return includeInactive 
+        return includeInactive
             ? await _serviceStandardPersistence.GetAllAsync()
             : await _serviceStandardPersistence.GetAllActiveAsync();
     }
 
-    public async Task<ServiceStandardModel?> GetStandardByIdAsync(string id, bool includeInactive = false)
+    public async Task<ServiceStandardModel?> GetStandardByIdAsync(
+        string id,
+        bool includeInactive = false
+    )
     {
         return includeInactive
             ? await _serviceStandardPersistence.GetByIdAsync(id)
@@ -284,12 +349,12 @@ public class ServiceStandardService
     public async Task<StandardsSummary> GetStandardsSummaryAsync()
     {
         var allStandards = await _serviceStandardPersistence.GetAllAsync();
-        
+
         return new StandardsSummary
         {
             TotalStandards = allStandards.Count,
             ActiveStandards = allStandards.Count(s => s.IsActive),
-            InactiveStandards = allStandards.Count(s => !s.IsActive)
+            InactiveStandards = allStandards.Count(s => !s.IsActive),
         };
     }
 
@@ -305,4 +370,4 @@ public class StandardsSummary
     public int TotalStandards { get; set; }
     public int ActiveStandards { get; set; }
     public int InactiveStandards { get; set; }
-} 
+}

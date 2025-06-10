@@ -16,7 +16,13 @@ public class CreateAssessmentHandler
     private readonly IProfessionPersistence _professionPersistence;
     private readonly ILogger<CreateAssessmentHandler> _logger;
 
-    private static readonly string[] ValidServiceStandardStatuses = { "RED", "AMBER", "GREEN", "TBC" };
+    private static readonly string[] ValidServiceStandardStatuses =
+    {
+        "RED",
+        "AMBER",
+        "GREEN",
+        "TBC",
+    };
 
     public CreateAssessmentHandler(
         IProjectStandardsPersistence assessmentPersistence,
@@ -24,7 +30,8 @@ public class CreateAssessmentHandler
         IProjectPersistence projectPersistence,
         IServiceStandardPersistence standardPersistence,
         IProfessionPersistence professionPersistence,
-        ILogger<CreateAssessmentHandler> logger)
+        ILogger<CreateAssessmentHandler> logger
+    )
     {
         _assessmentPersistence = assessmentPersistence;
         _historyPersistence = historyPersistence;
@@ -35,31 +42,50 @@ public class CreateAssessmentHandler
     }
 
     public async Task<AssessmentResult> HandleAsync(
-        string projectId, 
-        string standardId, 
-        string professionId, 
-        ProjectStandards assessment)
+        string projectId,
+        string standardId,
+        string professionId,
+        ProjectStandards assessment
+    )
     {
         try
         {
             _logger.LogInformation(
                 "Processing assessment update for project {ProjectId}, standard {StandardId}, profession {ProfessionId}",
-                projectId, standardId, professionId);
+                projectId,
+                standardId,
+                professionId
+            );
 
             // Validate input
-            var validationResult = await ValidateAsync(projectId, standardId, professionId, assessment);
+            var validationResult = await ValidateAsync(
+                projectId,
+                standardId,
+                professionId,
+                assessment
+            );
             if (!validationResult.IsValid)
                 return validationResult;
 
             // Get existing assessment
-            var existingAssessment = await _assessmentPersistence.GetAsync(projectId, standardId, professionId);
+            var existingAssessment = await _assessmentPersistence.GetAsync(
+                projectId,
+                standardId,
+                professionId
+            );
 
             // Prepare and save assessment
             PrepareAssessment(assessment, existingAssessment, projectId, standardId, professionId);
             await _assessmentPersistence.UpsertAsync(assessment);
 
             // Create history entry
-            await CreateHistoryEntryAsync(assessment, existingAssessment, projectId, standardId, professionId);
+            await CreateHistoryEntryAsync(
+                assessment,
+                existingAssessment,
+                projectId,
+                standardId,
+                professionId
+            );
 
             _logger.LogInformation("Assessment processed successfully");
             return AssessmentResult.Success();
@@ -72,7 +98,11 @@ public class CreateAssessmentHandler
     }
 
     private async Task<AssessmentResult> ValidateAsync(
-        string projectId, string standardId, string professionId, ProjectStandards assessment)
+        string projectId,
+        string standardId,
+        string professionId,
+        ProjectStandards assessment
+    )
     {
         // Validate required fields
         if (string.IsNullOrEmpty(assessment.Status))
@@ -85,7 +115,9 @@ public class CreateAssessmentHandler
         if (!ValidServiceStandardStatuses.Contains(assessment.Status))
         {
             _logger.LogWarning("Invalid service standard status: {Status}", assessment.Status);
-            return AssessmentResult.BadRequest($"Invalid status: {assessment.Status}. Valid statuses are: RED, AMBER, GREEN, TBC");
+            return AssessmentResult.BadRequest(
+                $"Invalid status: {assessment.Status}. Valid statuses are: RED, AMBER, GREEN, TBC"
+            );
         }
 
         // Validate referential integrity
@@ -100,23 +132,30 @@ public class CreateAssessmentHandler
         if (standard == null)
         {
             _logger.LogWarning("Active standard {StandardId} not found", standardId);
-            return AssessmentResult.BadRequest("Referenced service standard does not exist or is inactive");
+            return AssessmentResult.BadRequest(
+                "Referenced service standard does not exist or is inactive"
+            );
         }
 
         var profession = await _professionPersistence.GetActiveByIdAsync(professionId);
         if (profession == null)
         {
             _logger.LogWarning("Active profession {ProfessionId} not found", professionId);
-            return AssessmentResult.BadRequest("Referenced profession does not exist or is inactive");
+            return AssessmentResult.BadRequest(
+                "Referenced profession does not exist or is inactive"
+            );
         }
 
         return AssessmentResult.Success();
     }
 
     private static void PrepareAssessment(
-        ProjectStandards assessment, 
+        ProjectStandards assessment,
         ProjectStandards? existingAssessment,
-        string projectId, string standardId, string professionId)
+        string projectId,
+        string standardId,
+        string professionId
+    )
     {
         assessment.ProjectId = projectId;
         assessment.StandardId = standardId;
@@ -139,9 +178,12 @@ public class CreateAssessmentHandler
     }
 
     private async Task CreateHistoryEntryAsync(
-        ProjectStandards assessment, 
+        ProjectStandards assessment,
         ProjectStandards? existingAssessment,
-        string projectId, string standardId, string professionId)
+        string projectId,
+        string standardId,
+        string professionId
+    )
     {
         var history = new ProjectStandardsHistory
         {
@@ -179,6 +221,20 @@ public class AssessmentResult
     public int StatusCode { get; set; } = 200;
 
     public static AssessmentResult Success() => new() { IsValid = true };
-    public static AssessmentResult BadRequest(string message) => new() { IsValid = false, ErrorMessage = message, StatusCode = 400 };
-    public static AssessmentResult Error(string message) => new() { IsValid = false, ErrorMessage = message, StatusCode = 500 };
-} 
+
+    public static AssessmentResult BadRequest(string message) =>
+        new()
+        {
+            IsValid = false,
+            ErrorMessage = message,
+            StatusCode = 400,
+        };
+
+    public static AssessmentResult Error(string message) =>
+        new()
+        {
+            IsValid = false,
+            ErrorMessage = message,
+            StatusCode = 500,
+        };
+}

@@ -1,5 +1,5 @@
-using FluentAssertions;
 using System.Net;
+using FluentAssertions;
 using Xunit;
 
 namespace AssuranceApi.IntegrationTests;
@@ -40,4 +40,4 @@ public class HealthCheckIntegrationTests : IClassFixture<TestApplicationFactory>
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         content.Should().Be("Healthy");
     }
-} 
+}

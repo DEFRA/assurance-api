@@ -141,7 +141,6 @@ static void ConfigureEndpoints(WebApplicationBuilder _builder)
     _builder.Services.AddSingleton<IProjectPersistence, ProjectPersistence>();
     _builder.Services.AddSingleton<IProjectHistoryPersistence, ProjectHistoryPersistence>();
 
-
     // Assessment services for the new data model
     _builder.Services.AddSingleton<IProjectStandardsPersistence, ProjectStandardsPersistence>();
     _builder.Services.AddSingleton<

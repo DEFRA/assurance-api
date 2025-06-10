@@ -1,26 +1,26 @@
+using System.Text.Json;
 using AssuranceApi.Project.Models;
 using AssuranceApi.Utils.Mongo;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
-using System.Text.Json;
 
 namespace AssuranceApi.Project.Services;
 
 public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistence
 {
     public ProjectPersistence(IMongoDbClientFactory connectionFactory, ILoggerFactory loggerFactory)
-        : base(connectionFactory, "projects", loggerFactory)
-    {
-    }
+        : base(connectionFactory, "projects", loggerFactory) { }
 
     protected override List<CreateIndexModel<ProjectModel>> DefineIndexes(
-        IndexKeysDefinitionBuilder<ProjectModel> builder)
+        IndexKeysDefinitionBuilder<ProjectModel> builder
+    )
     {
         return new List<CreateIndexModel<ProjectModel>>
         {
             new CreateIndexModel<ProjectModel>(
                 builder.Ascending(x => x.Name),
-                new CreateIndexOptions { Unique = true })
+                new CreateIndexOptions { Unique = true }
+            ),
         };
     }
 
@@ -40,10 +40,11 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
 
     public async Task<List<ProjectModel>> GetAllAsync(string? tag = null)
     {
-        var filter = tag == null 
-            ? Builders<ProjectModel>.Filter.Empty
-            : Builders<ProjectModel>.Filter.AnyEq(p => p.Tags, tag);
-        
+        var filter =
+            tag == null
+                ? Builders<ProjectModel>.Filter.Empty
+                : Builders<ProjectModel>.Filter.AnyEq(p => p.Tags, tag);
+
         return await Collection.Find(filter).ToListAsync();
     }
 
@@ -56,10 +57,7 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
     {
         try
         {
-            Logger.LogInformation(
-                "Updating project {ProjectId}",
-                id
-            );
+            Logger.LogInformation("Updating project {ProjectId}", id);
 
             var updateDef = Builders<ProjectModel>.Update;
             var updates = new List<UpdateDefinition<ProjectModel>>();
@@ -91,7 +89,8 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
 
             var result = await Collection.UpdateOneAsync(
                 x => x.Id == id,
-                updateDef.Combine(updates));
+                updateDef.Combine(updates)
+            );
 
             if (result.ModifiedCount == 0)
             {
@@ -116,16 +115,16 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
         try
         {
             Logger.LogInformation("Deleting project with ID: {Id}", id);
-            
+
             // Delete the project
             var deleteResult = await Collection.DeleteOneAsync(p => p.Id == id);
-            
+
             if (deleteResult.DeletedCount == 0)
             {
                 Logger.LogWarning("Project with ID {Id} not found for deletion", id);
                 return false;
             }
-            
+
             Logger.LogInformation("Successfully deleted project with ID: {Id}", id);
             return true;
         }

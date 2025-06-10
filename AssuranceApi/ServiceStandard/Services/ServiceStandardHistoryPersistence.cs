@@ -1,17 +1,24 @@
-using MongoDB.Driver;
 using AssuranceApi.ServiceStandard.Models;
 using AssuranceApi.Utils.Mongo;
 using Microsoft.Extensions.Logging;
+using MongoDB.Driver;
 
 namespace AssuranceApi.ServiceStandard.Services;
 
-public class ServiceStandardHistoryPersistence : MongoService<StandardDefinitionHistory>, IServiceStandardHistoryPersistence
+public class ServiceStandardHistoryPersistence
+    : MongoService<StandardDefinitionHistory>,
+        IServiceStandardHistoryPersistence
 {
-    public ServiceStandardHistoryPersistence(IMongoDbClientFactory connectionFactory, ILoggerFactory loggerFactory)
+    public ServiceStandardHistoryPersistence(
+        IMongoDbClientFactory connectionFactory,
+        ILoggerFactory loggerFactory
+    )
         : base(connectionFactory, "serviceStandardHistory", loggerFactory)
     {
-        Logger.LogInformation("Initializing ServiceStandardHistoryPersistence with collection: serviceStandardHistory");
-        try 
+        Logger.LogInformation(
+            "Initializing ServiceStandardHistoryPersistence with collection: serviceStandardHistory"
+        );
+        try
         {
             var builder = Builders<StandardDefinitionHistory>.IndexKeys;
             var indexes = DefineIndexes(builder);
@@ -19,7 +26,9 @@ public class ServiceStandardHistoryPersistence : MongoService<StandardDefinition
             {
                 Collection.Indexes.CreateOne(index);
             }
-            Logger.LogInformation("Successfully created indexes for serviceStandardHistory collection");
+            Logger.LogInformation(
+                "Successfully created indexes for serviceStandardHistory collection"
+            );
         }
         catch (Exception ex)
         {
@@ -28,13 +37,14 @@ public class ServiceStandardHistoryPersistence : MongoService<StandardDefinition
     }
 
     protected override List<CreateIndexModel<StandardDefinitionHistory>> DefineIndexes(
-        IndexKeysDefinitionBuilder<StandardDefinitionHistory> builder)
+        IndexKeysDefinitionBuilder<StandardDefinitionHistory> builder
+    )
     {
         return new List<CreateIndexModel<StandardDefinitionHistory>>
         {
             new CreateIndexModel<StandardDefinitionHistory>(
-                builder.Ascending(x => x.StandardId)
-                    .Ascending(x => x.Timestamp))
+                builder.Ascending(x => x.StandardId).Ascending(x => x.Timestamp)
+            ),
         };
     }
 
@@ -42,7 +52,10 @@ public class ServiceStandardHistoryPersistence : MongoService<StandardDefinition
     {
         try
         {
-            Logger.LogInformation("Creating history entry for standard {StandardId}", history.StandardId);
+            Logger.LogInformation(
+                "Creating history entry for standard {StandardId}",
+                history.StandardId
+            );
             await Collection.InsertOneAsync(history);
             Logger.LogInformation("Successfully created history entry");
             return true;
@@ -72,4 +85,4 @@ public class ServiceStandardHistoryPersistence : MongoService<StandardDefinition
             return Enumerable.Empty<StandardDefinitionHistory>();
         }
     }
-} 
+}

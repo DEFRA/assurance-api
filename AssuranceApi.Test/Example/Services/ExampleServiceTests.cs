@@ -26,7 +26,7 @@ public class ExampleServiceTests
             Id = new ObjectId(),
             Name = expectedName,
             Value = "Test Value",
-            Counter = 5
+            Counter = 5,
         };
 
         _persistence.GetByExampleName(expectedName).Returns(expectedModel);
@@ -67,7 +67,7 @@ public class ExampleServiceTests
             Id = new ObjectId(),
             Name = "NewExample",
             Value = "New Value",
-            Counter = 0
+            Counter = 0,
         };
 
         _persistence.CreateAsync(newExample).Returns(true);
@@ -90,7 +90,7 @@ public class ExampleServiceTests
             Id = new ObjectId(),
             Name = "FailedExample",
             Value = "Failed Value",
-            Counter = 0
+            Counter = 0,
         };
 
         _persistence.CreateAsync(newExample).Returns(false);
@@ -110,8 +110,20 @@ public class ExampleServiceTests
         var service = CreateService();
         var expectedExamples = new List<ExampleModel>
         {
-            new() { Id = new ObjectId(), Name = "Test1", Value = "Value1", Counter = 1 },
-            new() { Id = new ObjectId(), Name = "Test2", Value = "Value2", Counter = 2 }
+            new()
+            {
+                Id = new ObjectId(),
+                Name = "Test1",
+                Value = "Value1",
+                Counter = 1,
+            },
+            new()
+            {
+                Id = new ObjectId(),
+                Name = "Test2",
+                Value = "Value2",
+                Counter = 2,
+            },
         };
 
         _persistence.GetAllAsync().Returns(expectedExamples);
@@ -160,4 +172,4 @@ public class ExampleService
     {
         return await _persistence.DeleteAsync(name);
     }
-} 
+}

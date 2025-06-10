@@ -85,11 +85,16 @@ public static class ProjectEndpoints
                     [FromServices] StandardsSummaryHelper summaryHelper
                 ) =>
                 {
-                    var result = await handler.HandleAsync(projectId, standardId, professionId, assessment);
-                    
+                    var result = await handler.HandleAsync(
+                        projectId,
+                        standardId,
+                        professionId,
+                        assessment
+                    );
+
                     if (!result.IsValid)
                     {
-                        return result.StatusCode == 400 
+                        return result.StatusCode == 400
                             ? Results.BadRequest(result.ErrorMessage)
                             : Results.Problem(result.ErrorMessage);
                     }
@@ -208,7 +213,10 @@ public static class ProjectEndpoints
                         }
 
                         // Update standards summary aggregation to reflect the changes
-                        var summaryHelper = new StandardsSummaryHelper(projectPersistence, assessmentPersistence);
+                        var summaryHelper = new StandardsSummaryHelper(
+                            projectPersistence,
+                            assessmentPersistence
+                        );
                         await summaryHelper.UpdateStandardsSummaryCacheAsync(projectId);
                         logger.LogInformation("Standards summary cache updated after archiving");
 
@@ -470,6 +478,4 @@ public static class ProjectEndpoints
             );
         return Results.Ok(summary);
     }
-
-
 }

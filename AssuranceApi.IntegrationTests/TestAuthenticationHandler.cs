@@ -8,17 +8,19 @@ namespace AssuranceApi.IntegrationTests;
 
 public class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
-    public TestAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options,
-        ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock)
-        : base(options, logger, encoder, clock)
-    {
-    }
+    public TestAuthenticationHandler(
+        IOptionsMonitor<AuthenticationSchemeOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder,
+        ISystemClock clock
+    )
+        : base(options, logger, encoder, clock) { }
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         // Check if the request has our test authorization header
         var authHeader = Request.Headers["Authorization"].ToString();
-        
+
         // Only authenticate if the special test header is present
         if (authHeader != "Bearer test-token")
         {
@@ -31,7 +33,7 @@ public class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSch
         {
             new Claim(ClaimTypes.Name, "Test User"),
             new Claim(ClaimTypes.NameIdentifier, "test-user-id"),
-            new Claim("role", "admin") // Set as admin for testing protected endpoints
+            new Claim("role", "admin"), // Set as admin for testing protected endpoints
         };
 
         var identity = new ClaimsIdentity(claims, "Test");
@@ -40,4 +42,4 @@ public class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSch
 
         return Task.FromResult(AuthenticateResult.Success(ticket));
     }
-} 
+}

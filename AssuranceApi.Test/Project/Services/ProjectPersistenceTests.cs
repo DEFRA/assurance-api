@@ -92,7 +92,7 @@ public class ProjectPersistenceTests
 
     #region GetAllAsync Tests
 
-    // NOTE: Complex query tests (GetAllAsync, GetByIdAsync) removed 
+    // NOTE: Complex query tests (GetAllAsync, GetByIdAsync) removed
     // due to MongoDB IFindFluent mocking complexity. Business logic is covered by service layer tests.
 
     #endregion

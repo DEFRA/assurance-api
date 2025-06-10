@@ -1,16 +1,21 @@
-using MongoDB.Driver;
 using AssuranceApi.Project.Models;
 using AssuranceApi.Utils.Mongo;
+using MongoDB.Driver;
 
 namespace AssuranceApi.Project.Services;
 
 public class ProjectHistoryPersistence : MongoService<ProjectHistory>, IProjectHistoryPersistence
 {
-    public ProjectHistoryPersistence(IMongoDbClientFactory connectionFactory, ILoggerFactory loggerFactory)
+    public ProjectHistoryPersistence(
+        IMongoDbClientFactory connectionFactory,
+        ILoggerFactory loggerFactory
+    )
         : base(connectionFactory, "projectHistory", loggerFactory)
     {
-        Logger.LogInformation("Initializing ProjectHistoryPersistence with collection: projectHistory");
-        try 
+        Logger.LogInformation(
+            "Initializing ProjectHistoryPersistence with collection: projectHistory"
+        );
+        try
         {
             // Create the index
             var builder = Builders<ProjectHistory>.IndexKeys;
@@ -28,13 +33,14 @@ public class ProjectHistoryPersistence : MongoService<ProjectHistory>, IProjectH
     }
 
     protected override List<CreateIndexModel<ProjectHistory>> DefineIndexes(
-        IndexKeysDefinitionBuilder<ProjectHistory> builder)
+        IndexKeysDefinitionBuilder<ProjectHistory> builder
+    )
     {
         return new List<CreateIndexModel<ProjectHistory>>
         {
             new CreateIndexModel<ProjectHistory>(
-                builder.Ascending(x => x.ProjectId)
-                    .Ascending(x => x.Timestamp))
+                builder.Ascending(x => x.ProjectId).Ascending(x => x.Timestamp)
+            ),
         };
     }
 
@@ -42,8 +48,10 @@ public class ProjectHistoryPersistence : MongoService<ProjectHistory>, IProjectH
     {
         try
         {
-            Logger.LogInformation("Creating history entry for project {ProjectId}", 
-                history.ProjectId);
+            Logger.LogInformation(
+                "Creating history entry for project {ProjectId}",
+                history.ProjectId
+            );
             await Collection.InsertOneAsync(history);
             Logger.LogInformation("Successfully created history entry");
             return true;
@@ -83,25 +91,27 @@ public class ProjectHistoryPersistence : MongoService<ProjectHistory>, IProjectH
     {
         try
         {
-            Logger.LogInformation("Archiving history entry {HistoryId} for project {ProjectId}", 
-                historyId, projectId);
-                
+            Logger.LogInformation(
+                "Archiving history entry {HistoryId} for project {ProjectId}",
+                historyId,
+                projectId
+            );
+
             var filter = Builders<ProjectHistory>.Filter.And(
                 Builders<ProjectHistory>.Filter.Eq(h => h.Id, historyId),
                 Builders<ProjectHistory>.Filter.Eq(h => h.ProjectId, projectId)
             );
-            
-            var update = Builders<ProjectHistory>.Update
-                .Set(h => h.IsArchived, true);
-                
+
+            var update = Builders<ProjectHistory>.Update.Set(h => h.IsArchived, true);
+
             var result = await Collection.UpdateOneAsync(filter, update);
-            
+
             if (result.ModifiedCount > 0)
             {
                 Logger.LogInformation("Successfully archived history entry");
                 return true;
             }
-            
+
             Logger.LogWarning("No history entry found to archive");
             return false;
         }
@@ -128,4 +138,4 @@ public class ProjectHistoryPersistence : MongoService<ProjectHistory>, IProjectH
             return null;
         }
     }
-} 
+}

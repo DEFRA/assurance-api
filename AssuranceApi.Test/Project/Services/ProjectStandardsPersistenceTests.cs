@@ -34,7 +34,7 @@ public class ProjectStandardsPersistenceTests
         _persistence = new ProjectStandardsPersistence(_conFactoryMock, NullLoggerFactory.Instance);
     }
 
-    // NOTE: Complex query tests (GetAsync, GetByProjectAndStandardAsync, GetByProjectAsync) removed 
+    // NOTE: Complex query tests (GetAsync, GetByProjectAndStandardAsync, GetByProjectAsync) removed
     // due to MongoDB IFindFluent mocking complexity. Business logic is covered by service layer tests.
 
     #region UpsertAsync Tests
