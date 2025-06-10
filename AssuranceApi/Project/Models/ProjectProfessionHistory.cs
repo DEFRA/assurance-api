@@ -20,4 +20,4 @@ public class ProfessionChanges
 {
     public StatusChange? Status { get; set; }
     public CommentaryChange? Commentary { get; set; }
-} 
+}
