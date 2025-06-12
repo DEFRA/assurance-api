@@ -1,11 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using System.IdentityModel.Tokens.Jwt;
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using AssuranceApi.Config;
 using AssuranceApi.Profession.Endpoints;
-using AssuranceApi.Profession.Models;
 using AssuranceApi.Profession.Services;
 using AssuranceApi.Project.Endpoints;
 using AssuranceApi.Project.Models;
@@ -21,14 +15,10 @@ using AssuranceApi.Utils.Logging;
 using AssuranceApi.Utils.Mongo;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Protocols;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Core;
 
-//-------- Configure the WebApplication builder------------------//
 
 var app = CreateWebApplication(args);
 await app.RunAsync();
@@ -55,10 +45,8 @@ static void ConfigureWebApplication(WebApplicationBuilder _builder)
     // Load certificates into Trust Store - Note must happen before Mongo and Http client connections
     _builder.Services.AddCustomTrustStore(logger);
 
-    // Configure Authentication
     ConfigureAuthentication(_builder, logger);
 
-    // Add CORS support
     _builder.Services.AddCors(options =>
     {
         options.AddDefaultPolicy(builder =>
@@ -81,6 +69,28 @@ static void ConfigureWebApplication(WebApplicationBuilder _builder)
     _builder.Services.AddHttpProxyClient(logger);
 
     _builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+}
+
+[ExcludeFromCodeCoverage]
+static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
+{
+    var app = _builder.Build();
+
+    app.UseRouting();
+
+    // Add CORS middleware - must be before auth middleware
+    app.UseCors();
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.MapHealthChecks("/health");
+
+    app.UseServiceStandardEndpoints();
+    app.UseProjectEndpoints();
+    app.UseProfessionEndpoints();
+
+    return app;
 }
 
 [ExcludeFromCodeCoverage]
@@ -126,32 +136,21 @@ static void ConfigureMongoDb(WebApplicationBuilder _builder)
 [ExcludeFromCodeCoverage]
 static void ConfigureEndpoints(WebApplicationBuilder _builder)
 {
-    // Service Standard services
     _builder.Services.AddSingleton<IServiceStandardPersistence, ServiceStandardPersistence>();
-    _builder.Services.AddSingleton<
-        IServiceStandardHistoryPersistence,
-        ServiceStandardHistoryPersistence
-    >();
+    _builder.Services.AddSingleton<IServiceStandardHistoryPersistence, ServiceStandardHistoryPersistence>();
 
-    // Profession services
     _builder.Services.AddSingleton<IProfessionPersistence, ProfessionPersistence>();
     _builder.Services.AddSingleton<IProfessionHistoryPersistence, ProfessionHistoryPersistence>();
 
-    // Project services
     _builder.Services.AddSingleton<IProjectPersistence, ProjectPersistence>();
     _builder.Services.AddSingleton<IProjectHistoryPersistence, ProjectHistoryPersistence>();
 
-    // Assessment services for the new data model
     _builder.Services.AddSingleton<IProjectStandardsPersistence, ProjectStandardsPersistence>();
-    _builder.Services.AddSingleton<
-        IProjectStandardsHistoryPersistence,
-        ProjectStandardsHistoryPersistence
-    >();
+    _builder.Services.AddSingleton<IProjectStandardsHistoryPersistence, ProjectStandardsHistoryPersistence>();
 
     _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
     _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();
 
-    // Register new handlers and helpers
     _builder.Services.AddScoped<AssuranceApi.Project.Handlers.CreateAssessmentHandler>();
     _builder.Services.AddScoped<AssuranceApi.Project.Helpers.StandardsSummaryHelper>();
 
@@ -161,15 +160,10 @@ static void ConfigureEndpoints(WebApplicationBuilder _builder)
 [ExcludeFromCodeCoverage]
 static void ConfigureAuthentication(WebApplicationBuilder _builder, Logger logger)
 {
-    // Try to get config from various sources
-    var tenantId =
-        _builder.Configuration["Azure:TenantId"]
-        ?? _builder.Configuration["AZURE:TENANTID"]
-        ?? System.Environment.GetEnvironmentVariable("AZURE__TENANTID");
-    var clientId =
-        _builder.Configuration["Azure:ClientId"]
-        ?? _builder.Configuration["AZURE:CLIENTID"]
-        ?? System.Environment.GetEnvironmentVariable("AZURE__CLIENTID");
+    logger.Information("Configuring Azure AD authentication");
+
+    string? tenantId = GetTenantIdFromConfiguration(_builder);
+    string? clientId = GetClientIdFromConfiguration(_builder);
 
     if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientId))
     {
@@ -178,15 +172,8 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder, Logger logge
     }
 
     var authority = $"https://login.microsoftonline.com/{tenantId}/v2.0/";
-    logger.Information("Configuring Azure AD authentication");
 
-    // Define valid audiences for token validation
-    var validAudiences = new[]
-    {
-        clientId,
-        $"api://{clientId}",
-        $"api://{clientId}/access_as_user",
-    };
+    var validAudiences = GetValidAudiencesFOrTokenValidation(clientId);
 
     _builder
         .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -214,6 +201,30 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder, Logger logge
             };
         });
 
+    static string? GetTenantIdFromConfiguration(WebApplicationBuilder _builder)
+    {
+        return _builder.Configuration["Azure:TenantId"]
+            ?? _builder.Configuration["AZURE:TENANTID"]
+            ?? System.Environment.GetEnvironmentVariable("AZURE__TENANTID");
+    }
+
+    static string? GetClientIdFromConfiguration(WebApplicationBuilder _builder)
+    {
+        return _builder.Configuration["Azure:ClientId"]
+            ?? _builder.Configuration["AZURE:CLIENTID"]
+            ?? System.Environment.GetEnvironmentVariable("AZURE__CLIENTID");
+    }
+
+    static string[] GetValidAudiencesFOrTokenValidation(string clientId)
+    {
+        return
+            [
+                clientId,
+                $"api://{clientId}",
+                $"api://{clientId}/access_as_user",
+            ];
+    }
+
     _builder.Services.AddAuthorization(options =>
     {
         options.AddPolicy("RequireAuthenticated", policy => policy.RequireAuthenticatedUser());
@@ -231,29 +242,6 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder, Logger logge
                     )
         );
     });
-}
-
-[ExcludeFromCodeCoverage]
-static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
-{
-    var app = _builder.Build();
-
-    app.UseRouting();
-
-    // Add CORS middleware - must be before auth middleware
-    app.UseCors();
-
-    // Add authentication and authorization middleware
-    app.UseAuthentication();
-    app.UseAuthorization();
-
-    app.MapHealthChecks("/health");
-
-    app.UseServiceStandardEndpoints();
-    app.UseProjectEndpoints();
-    app.UseProfessionEndpoints();
-
-    return app;
 }
 
 // Make Program class accessible for integration testing
