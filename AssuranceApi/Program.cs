@@ -1,6 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using Asp.Versioning;
 using AssuranceApi.Profession.Endpoints;
+using AssuranceApi.Profession.Models;
 using AssuranceApi.Profession.Services;
+using AssuranceApi.Profession.Validators;
 using AssuranceApi.Project.Endpoints;
 using AssuranceApi.Project.Models;
 using AssuranceApi.Project.Services;
@@ -30,9 +33,7 @@ static WebApplication CreateWebApplication(string[] args)
 
     ConfigureWebApplication(_builder);
 
-    var _app = BuildWebApplication(_builder);
-
-    return _app;
+    return BuildWebApplication(_builder);
 }
 
 [ExcludeFromCodeCoverage]
@@ -60,6 +61,8 @@ static void ConfigureWebApplication(WebApplicationBuilder _builder)
     });
 
     ConfigureMongoDb(_builder);
+
+    // ConfigureControllers(_builder);
 
     ConfigureEndpoints(_builder);
 
@@ -90,8 +93,28 @@ static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
     app.UseProjectEndpoints();
     app.UseProfessionEndpoints();
 
+    // app.MapControllers();
+
     return app;
 }
+
+
+static void ConfigureControllers(WebApplicationBuilder _builder)
+{
+    _builder.Services.AddSingleton<IProfessionPersistence, ProfessionPersistence>();
+    _builder.Services.AddSingleton<IProfessionHistoryPersistence, ProfessionHistoryPersistence>();
+    _builder.Services.AddSingleton<IValidator<ProfessionModel>, ProfessionModelValidator>();
+    _builder.Services.AddControllers();
+
+    _builder.Services.AddApiVersioning(options =>
+    {
+        options.ReportApiVersions = true;
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.ApiVersionReader = new QueryStringApiVersionReader("v");
+    });
+}
+
 
 [ExcludeFromCodeCoverage]
 static Logger ConfigureLogging(WebApplicationBuilder _builder)
