@@ -370,7 +370,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
             var response = await controller.Create(invalidModel);
 
-            var errorMessage = "Validation errors occurred whilst creating the project:\r\n  'Name' must not be empty.";
+            var errorMessage = "Validation errors occurred whilst creating the project:\n  'Name' must not be empty.";
 
             response.Should()
                 .BeOfType<BadRequestObjectResult>()
@@ -410,7 +410,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
             var response = await controller.Create(invalidModel);
 
-            var errorMessage = "Validation errors occurred whilst creating the project:\r\n  The specified condition was not met for 'Phase'.";
+            var errorMessage = "Validation errors occurred whilst creating the project:\n  The specified condition was not met for 'Phase'.";
 
             response.Should()
                 .BeOfType<BadRequestObjectResult>()
@@ -430,7 +430,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
             var response = await controller.Create(invalidModel);
 
-            var errorMessage = "Validation errors occurred whilst creating the project:\r\n  'Commentary' must not be empty.";
+            var errorMessage = "Validation errors occurred whilst creating the project:\n  'Commentary' must not be empty.";
 
             response.Should()
                 .BeOfType<BadRequestObjectResult>()

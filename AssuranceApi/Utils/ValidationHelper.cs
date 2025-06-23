@@ -23,7 +23,7 @@ namespace AssuranceApi.Utils
 
             foreach (var validationFailure in validationFailures)
             {
-                validationMessage += $"{Environment.NewLine}  {validationFailure.ErrorMessage}";
+                validationMessage += $"\n  {validationFailure.ErrorMessage}";
             }
 
             return validationMessage;
