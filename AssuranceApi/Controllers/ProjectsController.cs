@@ -4,6 +4,7 @@ using Asp.Versioning;
 using AssuranceApi.Project.Constants;
 using AssuranceApi.Project.Models;
 using AssuranceApi.Project.Services;
+using AssuranceApi.Utils;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -172,7 +173,7 @@ public class ProjectsController : ControllerBase
             var validationResult = await _validator.ValidateAsync(project);
             if (!validationResult.IsValid)
             {
-                var message = $"Validation failed for create project '{validationResult.Errors}'";
+                var message = ValidationHelper.GetValidationMessage("Validation errors occurred whilst creating the project", validationResult.Errors);
                 _logger.LogError(message);
                 return BadRequest(message);
             }
@@ -203,7 +204,7 @@ public class ProjectsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred whilst crteating the project");
+            _logger.LogError(ex, "An error occurred whilst creating the project");
             return Problem($"Failed to create the project: {ex.Message}");
         }
         finally
@@ -233,7 +234,7 @@ public class ProjectsController : ControllerBase
             var validationResult = await _validator.ValidateAsync(project);
             if (!validationResult.IsValid)
             {
-                var message = $"Validation failed for create project '{validationResult.Errors}'";
+                var message = ValidationHelper.GetValidationMessage("Validation errors occurred whilst updating the project", validationResult.Errors);
                 _logger.LogError(message);
                 return BadRequest(message);
             }
@@ -245,8 +246,13 @@ public class ProjectsController : ControllerBase
                 return NotFound();
             }
 
-            var suppressHistory = Request.Query.TryGetValue("suppressHistory", out var suppressValue)
-                && suppressValue.ToString().Equals("true", StringComparison.OrdinalIgnoreCase);
+            var suppressHistory = false;
+
+            if (Request != null)
+            {
+                suppressHistory = Request.Query.TryGetValue("suppressHistory", out var suppressValue)
+                    && suppressValue.ToString().Equals("true", StringComparison.OrdinalIgnoreCase);
+            }
 
             var updateDate = ParseUpdateDate(project.UpdateDate);
 
