@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using AssuranceApi.Profession.Models;
 using AssuranceApi.Profession.Services;
+using AssuranceApi.Utils;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -110,16 +111,16 @@ public class ProfessionsController : ControllerBase
             var validationErrors = await ValidateProfessions(professions);
             if (validationErrors.Any())
             {
-                var message = $"Validation failed for create profession API call '{validationErrors}'";
+                var message = ValidationHelper.GetValidationMessage("Validation errors occurred whilst seeding the prfoessions", validationErrors);
                 _logger.LogError(message);
                 return BadRequest(message);
             }
 
             var createdCount = await CreateProfessions(professions);
 
-            _logger.LogInformation("Successfully seeded {Count} professions", createdCount);
+            _logger.LogInformation($"Successfully seeded '{createdCount}' professions");
 
-            return Ok(new { Message = $"Seeded {createdCount} professions successfully" });
+            return Ok(new { Message = $"Seeded '{createdCount}' professions successfully" });
         }
         catch (Exception ex)
         {
@@ -153,7 +154,7 @@ public class ProfessionsController : ControllerBase
         }
         finally
         {
-            _logger.LogDebug("Leaving soft deleta profession API call");
+            _logger.LogDebug("Leaving soft delete profession API call");
         }
     }
 
@@ -255,8 +256,8 @@ public class ProfessionsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get profession by ID");
-            return Problem($"Failed to get profession by ID: {ex.Message}");
+            _logger.LogError(ex, "Failed to get profession history");
+            return Problem($"Failed to get profession history: {ex.Message}");
         }
         finally
         {
