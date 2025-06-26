@@ -26,7 +26,8 @@ public class ProjectsController : ControllerBase
         IProjectPersistence persistence,
         IProjectHistoryPersistence historyPersistence,
         IValidator<ProjectModel> validator,
-        ILogger<ProjectsController> logger)
+        ILogger<ProjectsController> logger
+    )
     {
         _persistence = persistence;
         _historyPersistence = historyPersistence;
@@ -35,7 +36,6 @@ public class ProjectsController : ControllerBase
 
         _logger.LogDebug("Creating Projects Controller");
     }
-
 
     [HttpGet]
     [AllowAnonymous]
@@ -61,7 +61,6 @@ public class ProjectsController : ControllerBase
         }
     }
 
-
     [HttpGet("{id}")]
     [AllowAnonymous]
     public async Task<IActionResult> GetById(string id)
@@ -86,7 +85,6 @@ public class ProjectsController : ControllerBase
         }
     }
 
-
     [HttpGet("{id}/history")]
     [AllowAnonymous]
     public async Task<IActionResult> GetHistory(string id)
@@ -110,7 +108,6 @@ public class ProjectsController : ControllerBase
             _logger.LogDebug("Leaving get project history API call");
         }
     }
-
 
     [HttpGet("tags/summary")]
     [AllowAnonymous]
@@ -152,7 +149,6 @@ public class ProjectsController : ControllerBase
         }
     }
 
-
     [HttpPost]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Create(ProjectModel project)
@@ -173,7 +169,10 @@ public class ProjectsController : ControllerBase
             var validationResult = await _validator.ValidateAsync(project);
             if (!validationResult.IsValid)
             {
-                var message = ValidationHelper.GetValidationMessage("Validation errors occurred whilst creating the project", validationResult.Errors);
+                var message = ValidationHelper.GetValidationMessage(
+                    "Validation errors occurred whilst creating the project",
+                    validationResult.Errors
+                );
                 _logger.LogError(message);
                 return BadRequest(message);
             }
@@ -213,7 +212,6 @@ public class ProjectsController : ControllerBase
         }
     }
 
-
     [HttpPut("{id}")]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Update(string id, ProjectModel project)
@@ -234,7 +232,10 @@ public class ProjectsController : ControllerBase
             var validationResult = await _validator.ValidateAsync(project);
             if (!validationResult.IsValid)
             {
-                var message = ValidationHelper.GetValidationMessage("Validation errors occurred whilst updating the project", validationResult.Errors);
+                var message = ValidationHelper.GetValidationMessage(
+                    "Validation errors occurred whilst updating the project",
+                    validationResult.Errors
+                );
                 _logger.LogError(message);
                 return BadRequest(message);
             }
@@ -250,7 +251,8 @@ public class ProjectsController : ControllerBase
 
             if (Request != null)
             {
-                suppressHistory = Request.Query.TryGetValue("suppressHistory", out var suppressValue)
+                suppressHistory =
+                    Request.Query.TryGetValue("suppressHistory", out var suppressValue)
                     && suppressValue.ToString().Equals("true", StringComparison.OrdinalIgnoreCase);
             }
 
@@ -293,7 +295,6 @@ public class ProjectsController : ControllerBase
         }
     }
 
-
     [HttpDelete("{id}")]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Delete(string id)
@@ -318,8 +319,12 @@ public class ProjectsController : ControllerBase
         }
     }
 
-
-    private async Task TrackProjectChanges(string id, ProjectModel existing, ProjectModel updated, DateTime? updateDate)
+    private async Task TrackProjectChanges(
+        string id,
+        ProjectModel existing,
+        ProjectModel updated,
+        DateTime? updateDate
+    )
     {
         var changes = new Changes();
         var hasChanges = false;
@@ -371,8 +376,11 @@ public class ProjectsController : ControllerBase
         }
     }
 
-
-    private async Task UpdateProjectUpdateDate(ProjectModel existing, ProjectModel updated, string id)
+    private async Task UpdateProjectUpdateDate(
+        ProjectModel existing,
+        ProjectModel updated,
+        string id
+    )
     {
         if (!string.IsNullOrEmpty(updated.UpdateDate))
         {
@@ -384,13 +392,14 @@ public class ProjectsController : ControllerBase
                     CultureInfo.InvariantCulture,
                     DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
                     out var parsedUpdateDate
-                ) && parsedUpdateDate < latestDate)
+                )
+                && parsedUpdateDate < latestDate
+            )
             {
                 updated.UpdateDate = existing.UpdateDate;
             }
         }
     }
-
 
     private DateTime? ParseUpdateDate(string updateDateStr)
     {
@@ -401,7 +410,9 @@ public class ProjectsController : ControllerBase
                 CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
                 out var parsedDate
-            ) && parsedDate <= DateTime.UtcNow)
+            )
+            && parsedDate <= DateTime.UtcNow
+        )
             return parsedDate;
         return null;
     }

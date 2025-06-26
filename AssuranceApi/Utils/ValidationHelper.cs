@@ -16,8 +16,10 @@ namespace AssuranceApi.Utils
             return validationMessage;
         }
 
-
-        internal static string GetValidationMessage(string message, List<ValidationFailure> validationFailures)
+        internal static string GetValidationMessage(
+            string message,
+            List<ValidationFailure> validationFailures
+        )
         {
             var validationMessage = $"{message}:";
 

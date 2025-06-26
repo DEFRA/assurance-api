@@ -18,7 +18,8 @@ public class ServiceStandardsController : ControllerBase
     public ServiceStandardsController(
         IServiceStandardPersistence persistence,
         IServiceStandardHistoryPersistence historyPersistence,
-        ILogger<ServiceStandardsController> logger)
+        ILogger<ServiceStandardsController> logger
+    )
     {
         _persistence = persistence;
         _historyPersistence = historyPersistence;
@@ -26,7 +27,6 @@ public class ServiceStandardsController : ControllerBase
 
         _logger.LogDebug("Creating ServiceStandards Controller");
     }
-
 
     [HttpPost("seed")]
     [Authorize(Policy = "RequireAdmin")]
@@ -58,7 +58,6 @@ public class ServiceStandardsController : ControllerBase
         }
     }
 
-
     [HttpPost("deleteAll")]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> DeleteAll()
@@ -82,7 +81,6 @@ public class ServiceStandardsController : ControllerBase
             _logger.LogDebug("Leaving delete all service standards API call");
         }
     }
-
 
     [HttpDelete("{id}")]
     [Authorize(Policy = "RequireAdmin")]
@@ -108,7 +106,6 @@ public class ServiceStandardsController : ControllerBase
         }
     }
 
-
     [HttpPost("{id}/restore")]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Restore(string id)
@@ -133,7 +130,6 @@ public class ServiceStandardsController : ControllerBase
         }
     }
 
-
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
@@ -145,8 +141,8 @@ public class ServiceStandardsController : ControllerBase
             _logger.LogInformation("Getting all service standards");
 
             var standards = includeInactive
-            ? await _persistence.GetAllAsync()
-            : await _persistence.GetAllActiveAsync();
+                ? await _persistence.GetAllAsync()
+                : await _persistence.GetAllActiveAsync();
             return Ok(standards);
         }
         catch (Exception ex)
@@ -160,7 +156,6 @@ public class ServiceStandardsController : ControllerBase
         }
     }
 
-
     [HttpGet("{id}")]
     [AllowAnonymous]
     public async Task<IActionResult> GetById(string id, [FromQuery] bool includeInactive = false)
@@ -172,8 +167,8 @@ public class ServiceStandardsController : ControllerBase
             _logger.LogInformation($"Getting service standard by ID='{id}'");
 
             var standard = includeInactive
-            ? await _persistence.GetByIdAsync(id)
-            : await _persistence.GetActiveByIdAsync(id);
+                ? await _persistence.GetByIdAsync(id)
+                : await _persistence.GetActiveByIdAsync(id);
             return standard is not null ? Ok(standard) : NotFound();
         }
         catch (Exception ex)
@@ -187,7 +182,6 @@ public class ServiceStandardsController : ControllerBase
         }
     }
 
-
     [HttpGet("{standardId}/history")]
     [AllowAnonymous]
     public async Task<IActionResult> GetHistory(string id)
@@ -199,7 +193,11 @@ public class ServiceStandardsController : ControllerBase
             _logger.LogInformation($"Getting service standard history by ID='{id}'");
 
             var history = await _historyPersistence.GetHistoryAsync(id);
-            _logger.LogInformation("Found {Count} history entries for standard {StandardId}", history.Count(), id);
+            _logger.LogInformation(
+                "Found {Count} history entries for standard {StandardId}",
+                history.Count(),
+                id
+            );
             return Ok(history);
         }
         catch (Exception ex)
@@ -213,4 +211,3 @@ public class ServiceStandardsController : ControllerBase
         }
     }
 }
-

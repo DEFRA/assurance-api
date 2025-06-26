@@ -22,7 +22,6 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Core;
 
-
 var app = CreateWebApplication(args);
 await app.RunAsync();
 
@@ -98,7 +97,6 @@ static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
     return app;
 }
 
-
 static void ConfigureControllers(WebApplicationBuilder _builder)
 {
     _builder.Services.AddSingleton<IProfessionPersistence, ProfessionPersistence>();
@@ -114,7 +112,6 @@ static void ConfigureControllers(WebApplicationBuilder _builder)
         options.ApiVersionReader = new QueryStringApiVersionReader("v");
     });
 }
-
 
 [ExcludeFromCodeCoverage]
 static Logger ConfigureLogging(WebApplicationBuilder _builder)
@@ -160,7 +157,10 @@ static void ConfigureMongoDb(WebApplicationBuilder _builder)
 static void ConfigureEndpoints(WebApplicationBuilder _builder)
 {
     _builder.Services.AddSingleton<IServiceStandardPersistence, ServiceStandardPersistence>();
-    _builder.Services.AddSingleton<IServiceStandardHistoryPersistence, ServiceStandardHistoryPersistence>();
+    _builder.Services.AddSingleton<
+        IServiceStandardHistoryPersistence,
+        ServiceStandardHistoryPersistence
+    >();
 
     _builder.Services.AddSingleton<IProfessionPersistence, ProfessionPersistence>();
     _builder.Services.AddSingleton<IProfessionHistoryPersistence, ProfessionHistoryPersistence>();
@@ -169,7 +169,10 @@ static void ConfigureEndpoints(WebApplicationBuilder _builder)
     _builder.Services.AddSingleton<IProjectHistoryPersistence, ProjectHistoryPersistence>();
 
     _builder.Services.AddSingleton<IProjectStandardsPersistence, ProjectStandardsPersistence>();
-    _builder.Services.AddSingleton<IProjectStandardsHistoryPersistence, ProjectStandardsHistoryPersistence>();
+    _builder.Services.AddSingleton<
+        IProjectStandardsHistoryPersistence,
+        ProjectStandardsHistoryPersistence
+    >();
 
     _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
     _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();
@@ -240,12 +243,7 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder, Logger logge
 
     static string[] GetValidAudiencesFOrTokenValidation(string clientId)
     {
-        return
-            [
-                clientId,
-                $"api://{clientId}",
-                $"api://{clientId}/access_as_user",
-            ];
+        return [clientId, $"api://{clientId}", $"api://{clientId}/access_as_user"];
     }
 
     _builder.Services.AddAuthorization(options =>
