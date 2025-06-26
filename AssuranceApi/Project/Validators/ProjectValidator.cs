@@ -18,7 +18,7 @@ public class ProjectValidator : AbstractValidator<ProjectModel>
                 || x == "GREEN"
                 || x == "TBC"
             );
-        RuleFor(x => x.Commentary).NotEmpty();
+        RuleFor(x => x.Commentary).NotNull();
         RuleFor(x => x.Phase)
             .NotEmpty()
             .Must(x =>
