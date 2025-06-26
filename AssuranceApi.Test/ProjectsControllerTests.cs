@@ -1,15 +1,15 @@
 using AssuranceApi.Controllers;
-using Serilog.Extensions.Logging;
-using Serilog;
-using Xunit.Abstractions;
+using AssuranceApi.Project.Models;
+using AssuranceApi.Project.Services;
 using AssuranceApi.Project.Validators;
-using Microsoft.Extensions.Logging;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
-using AssuranceApi.Project.Services;
-using AssuranceApi.Project.Models;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.Routing.Handlers;
+using Serilog;
+using Serilog.Extensions.Logging;
+using Xunit.Abstractions;
 
 namespace AssuranceApi.Test
 {
@@ -18,125 +18,139 @@ namespace AssuranceApi.Test
         private readonly ProjectValidator _validator;
         private readonly ILogger<ProjectsController> _logger;
 
-        private static readonly List<ProjectModel> _activeProjects = [
-            new() {
+        private static readonly List<ProjectModel> _activeProjects =
+        [
+            new()
+            {
                 Commentary = "This is Test Project 1",
                 DefCode = "1234",
                 Id = "1",
                 LastUpdated = new DateTime(2024, 04, 21).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                 Name = "Test Project 1",
                 Phase = "Discovery",
-                StandardsSummary = [
-                    new() {
-                            AggregatedCommentary = "",
-                            AggregatedStatus = "",
-                            LastUpdated = new DateTime(2024, 04, 21),
-                            Professions = [
-                                new () {
-                                    Commentary = "Profession Update",
-                                    LastUpdated = new DateTime(2024, 04, 21),
-                                    ProfessionId = "1",
-                                    Status = "Status"
-                                }
-                            ],
-                            StandardId = "1",
-                    }
+                StandardsSummary =
+                [
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "",
+                        LastUpdated = new DateTime(2024, 04, 21),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 21),
+                                ProfessionId = "1",
+                                Status = "Status",
+                            },
+                        ],
+                        StandardId = "1",
+                    },
                 ],
                 Status = "GREEN",
                 Tags = ["TAG1", "TAG2"],
                 UpdateDate = new DateTime(2024, 04, 21).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
             },
-        new() {
-            Commentary = "This is Test Project 2",
-            DefCode = "2345",
-            Id = "2",
-            LastUpdated = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
-            Name = "Test Project 2",
-            Phase = "Alpha",
-            StandardsSummary = [
-                new() {
+            new()
+            {
+                Commentary = "This is Test Project 2",
+                DefCode = "2345",
+                Id = "2",
+                LastUpdated = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                Name = "Test Project 2",
+                Phase = "Alpha",
+                StandardsSummary =
+                [
+                    new()
+                    {
                         AggregatedCommentary = "",
                         AggregatedStatus = "",
                         LastUpdated = new DateTime(2024, 04, 22),
-                        Professions = [
-                            new() {
+                        Professions =
+                        [
+                            new()
+                            {
                                 Commentary = "Profession Update",
                                 LastUpdated = new DateTime(2024, 04, 22),
                                 ProfessionId = "1",
-                                Status = "Status"
-                            }
+                                Status = "Status",
+                            },
                         ],
                         StandardId = "2",
-                }
-            ],
-            Status = "AMBER",
-            Tags = ["TAG2", "TAG3"],
-            UpdateDate = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-        }];
+                    },
+                ],
+                Status = "AMBER",
+                Tags = ["TAG2", "TAG3"],
+                UpdateDate = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+            },
+        ];
 
-        private static readonly List<ProjectHistory> _projectHistory = [
-            new () {
+        private static readonly List<ProjectHistory> _projectHistory =
+        [
+            new()
+            {
                 Id = "1-a",
-                Changes = new Changes() {
-                    Commentary = new CommentaryChange() {
+                Changes = new Changes()
+                {
+                    Commentary = new CommentaryChange()
+                    {
                         From = "Before commentary update 1",
-                        To = "After commentary update 1"
+                        To = "After commentary update 1",
                     },
-                    Name = new NameChange() {
+                    Name = new NameChange()
+                    {
                         From = "Before name update 1",
-                        To = "After name update 1"
+                        To = "After name update 1",
                     },
-                    Phase = new PhaseChange() {
+                    Phase = new PhaseChange()
+                    {
                         From = "Before phase update 1",
-                        To = "After phase update 1"
+                        To = "After phase update 1",
                     },
-                    Status = new StatusChange() {
-                        From = "Discovery",
-                        To = "Discovery"
-                    },
-                    Tags = new TagsChange() {
-                        From = ["TAG2", "TAG3"],
-                        To = ["TAG2", "TAG4"]
-                    }
+                    Status = new StatusChange() { From = "Discovery", To = "Discovery" },
+                    Tags = new TagsChange() { From = ["TAG2", "TAG3"], To = ["TAG2", "TAG4"] },
                 },
                 ChangedBy = "System",
                 IsArchived = false,
                 ProjectId = "1",
-                Timestamp = new DateTime(2024, 04, 21)
+                Timestamp = new DateTime(2024, 04, 21),
             },
-            new () {
+            new()
+            {
                 Id = "1-b",
-                Changes = new Changes() {
-                    Commentary = new CommentaryChange() {
+                Changes = new Changes()
+                {
+                    Commentary = new CommentaryChange()
+                    {
                         From = "Before commentary update 2",
-                        To = "After commentary update 2"
+                        To = "After commentary update 2",
                     },
-                    Name = new NameChange() {
+                    Name = new NameChange()
+                    {
                         From = "Before name update 2",
-                        To = "After name update 2"
+                        To = "After name update 2",
                     },
-                    Phase = new PhaseChange() {
+                    Phase = new PhaseChange()
+                    {
                         From = "Before phase update 2",
-                        To = "After phase update 2"
+                        To = "After phase update 2",
                     },
-                    Status = new StatusChange() {
-                        From = "Discovery",
-                        To = "Alpha"
-                    },
-                    Tags = new TagsChange() {
+                    Status = new StatusChange() { From = "Discovery", To = "Alpha" },
+                    Tags = new TagsChange()
+                    {
                         From = ["TAG1", "TAG2"],
-                        To = ["TAG1", "TAG2", "TAG4"]
-                    }
+                        To = ["TAG1", "TAG2", "TAG4"],
+                    },
                 },
                 ChangedBy = "",
                 IsArchived = false,
                 ProjectId = "1",
-                Timestamp = new DateTime(2024, 04, 21)
-            }
-            ];
+                Timestamp = new DateTime(2024, 04, 21),
+            },
+        ];
 
         public ProjectsControllerTests(ITestOutputHelper output)
-
         {
             _validator = new ProjectValidator();
             Log.Logger = new LoggerConfiguration()
@@ -147,21 +161,26 @@ namespace AssuranceApi.Test
             _logger = new SerilogLoggerFactory(Log.Logger).CreateLogger<ProjectsController>();
         }
 
-
         [Fact]
         public async Task GetAll_ReturnsOkResult_WithListOfAllProjects_WhenIncludeInactiveIsFalse()
         {
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.GetAll(string.Empty);
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(_activeProjects);
+                .Which.Value.Should()
+                .BeEquivalentTo(_activeProjects);
         }
-
 
         [Fact]
         public async Task GetAllWithTag_ReturnsOkResult_WithListOfTaggedProjects_WhenTagIsSpecified()
@@ -169,14 +188,17 @@ namespace AssuranceApi.Test
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.GetAll("TAG3");
 
-            response.Should()
-                .BeOfType<OkObjectResult>();
+            response.Should().BeOfType<OkObjectResult>();
             response.As<OkObjectResult>().Value.As<List<ProjectModel>>().Count.Should().Be(1);
         }
-
 
         [Fact]
         public async Task GetAll_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
@@ -184,11 +206,9 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(null, null, _validator, _logger);
             var response = await controller.GetAll(string.Empty);
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task GetById_ReturnsOkResult_WithMatchingProjects_WhenAValidIdIsPassed()
@@ -196,14 +216,20 @@ namespace AssuranceApi.Test
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.GetById("1");
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(_activeProjects[0]);
+                .Which.Value.Should()
+                .BeEquivalentTo(_activeProjects[0]);
         }
-
 
         [Fact]
         public async Task GetById_ReturnsNotFound_WhenThereIsNoMatchingProject()
@@ -211,13 +237,16 @@ namespace AssuranceApi.Test
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.GetById("2");
 
-            response.Should()
-                .BeOfType<NotFoundResult>();
+            response.Should().BeOfType<NotFoundResult>();
         }
-
 
         [Fact]
         public async Task GetById_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
@@ -225,11 +254,9 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(null, null, _validator, _logger);
             var response = await controller.GetById("1");
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task GetHistory_ReturnsOkResult_WithMatchingProjectHistory_WhenAValidIdIsPassed()
@@ -237,14 +264,20 @@ namespace AssuranceApi.Test
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.GetHistory("1");
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(_projectHistory);
+                .Which.Value.Should()
+                .BeEquivalentTo(_projectHistory);
         }
-
 
         [Fact]
         public async Task GetHistory_ReturnsOkResult__WithEmptyCollection_WhenThereIsNoMatchingProjectHistory()
@@ -252,14 +285,22 @@ namespace AssuranceApi.Test
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.GetHistory("2");
 
-            response.Should()
-                .BeOfType<OkObjectResult>();
-            response.As<OkObjectResult>().Value.As<IEnumerable<ProjectHistory>>().Count<ProjectHistory>().Should().Be(0);
+            response.Should().BeOfType<OkObjectResult>();
+            response
+                .As<OkObjectResult>()
+                .Value.As<IEnumerable<ProjectHistory>>()
+                .Count<ProjectHistory>()
+                .Should()
+                .Be(0);
         }
-
 
         [Fact]
         public async Task GetHistory_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
@@ -267,11 +308,9 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(null, null, _validator, _logger);
             var response = await controller.GetHistory("1");
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task Delete_ReturnsOkResult_WhenAValidIdIsPassed()
@@ -279,13 +318,16 @@ namespace AssuranceApi.Test
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Delete("1");
 
-            response.Should()
-                .BeOfType<NoContentResult>();
+            response.Should().BeOfType<NoContentResult>();
         }
-
 
         [Fact]
         public async Task Delete_ReturnsNotFoundResult_WhenAnInvalidIdIsPassed()
@@ -293,13 +335,16 @@ namespace AssuranceApi.Test
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Delete("2");
 
-            response.Should()
-                .BeOfType<NotFoundResult>();
+            response.Should().BeOfType<NotFoundResult>();
         }
-
 
         [Fact]
         public async Task Delete_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
@@ -307,11 +352,9 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(null, null, _validator, _logger);
             var response = await controller.Delete("1");
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task GetTagsSummary_ReturnsOkResult_WithMatchingListOfTags_WhenAValidIdIsPassed()
@@ -319,17 +362,20 @@ namespace AssuranceApi.Test
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.GetTagsSummary();
 
             // NEED TO LOOK AT THIS
             // Loks like it is returning a dictionary where the values are dictionaries
             // The logic works, just the response type weems weird
 
-            response.Should()
-                .BeOfType<OkObjectResult>();
+            response.Should().BeOfType<OkObjectResult>();
         }
-
 
         [Fact]
         public async Task GetTagsSummary_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
@@ -337,11 +383,9 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(null, null, _validator, _logger);
             var response = await controller.GetTagsSummary();
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task Create_ReturnsCreatedResult_WithSuccessMessage_WhenAValidProjectIsPassed()
@@ -349,14 +393,20 @@ namespace AssuranceApi.Test
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Create(_activeProjects[0]);
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<CreatedResult>()
-                .Which.Value.Should().BeEquivalentTo(_activeProjects[0]);
+                .Which.Value.Should()
+                .BeEquivalentTo(_activeProjects[0]);
         }
-
 
         [Fact]
         public async Task Create_ReturnsBadRequestObjectResult_WithErrorMessage_WhenAnInvalidProjectIsPassedWithEmptyName()
@@ -367,16 +417,23 @@ namespace AssuranceApi.Test
             var invalidModel = GetNewInstanceOfProjectModelToDiscardChanges();
             invalidModel.Name = string.Empty;
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Create(invalidModel);
 
-            var errorMessage = "Validation errors occurred whilst creating the project:\n  'Name' must not be empty.";
+            var errorMessage =
+                "Validation errors occurred whilst creating the project:\n  'Name' must not be empty.";
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<BadRequestObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(errorMessage);
+                .Which.Value.Should()
+                .BeEquivalentTo(errorMessage);
         }
-
 
         [Fact]
         public async Task Create_ReturnsBadRequestObjectResult_WithErrorMessage_WhenAnInvalidProjectIsPassedWithInvalidStatus()
@@ -387,16 +444,22 @@ namespace AssuranceApi.Test
             var invalidModel = GetNewInstanceOfProjectModelToDiscardChanges();
             invalidModel.Status = "Invalid";
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Create(invalidModel);
 
             var errorMessage = "Validation failed for project status 'Invalid'";
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<BadRequestObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(errorMessage);
+                .Which.Value.Should()
+                .BeEquivalentTo(errorMessage);
         }
-
 
         [Fact]
         public async Task Create_ReturnsBadRequestObjectResult_WithErrorMessage_WhenAnInvalidProjectIsPassedWithEmptyCommentary()
@@ -407,16 +470,23 @@ namespace AssuranceApi.Test
             var invalidModel = GetNewInstanceOfProjectModelToDiscardChanges();
             invalidModel.Phase = "Invalid";
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Create(invalidModel);
 
-            var errorMessage = "Validation errors occurred whilst creating the project:\n  The specified condition was not met for 'Phase'.";
+            var errorMessage =
+                "Validation errors occurred whilst creating the project:\n  The specified condition was not met for 'Phase'.";
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<BadRequestObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(errorMessage);
+                .Which.Value.Should()
+                .BeEquivalentTo(errorMessage);
         }
-
 
         [Fact]
         public async Task Create_ReturnsBadRequestObjectResult_WithErrorMessage_WhenAnInvalidProjectIsPassedWithInvalidPhase()
@@ -427,16 +497,23 @@ namespace AssuranceApi.Test
             var invalidModel = GetNewInstanceOfProjectModelToDiscardChanges();
             invalidModel.Commentary = null;
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Create(invalidModel);
 
-            var errorMessage = "Validation errors occurred whilst creating the project:\n  'Commentary' must not be empty.";
+            var errorMessage =
+                "Validation errors occurred whilst creating the project:\n  'Commentary' must not be empty.";
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<BadRequestObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(errorMessage);
+                .Which.Value.Should()
+                .BeEquivalentTo(errorMessage);
         }
-
 
         [Fact]
         public async Task Create_ReturnsObjectResult_With500Result_WhenAnExceptionOccursPersistingProject()
@@ -444,25 +521,26 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(null, null, _validator, _logger);
             var response = await controller.Create(_activeProjects[0]);
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task Create_ReturnsObjectResult_With500Result_WhenAnExceptionOccursPersistingProjectHistory()
         {
             var mockProjectPersistence = GetProjectPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, null, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                null,
+                _validator,
+                _logger
+            );
             var response = await controller.Create(_activeProjects[0]);
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task Update_ReturnsOkObjectResult_WithSuccessMessage_WhenAValidProjectIsPassed()
@@ -470,14 +548,20 @@ namespace AssuranceApi.Test
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Update(_activeProjects[0].Id, _activeProjects[0]);
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(_activeProjects[0]);
+                .Which.Value.Should()
+                .BeEquivalentTo(_activeProjects[0]);
         }
-
 
         [Fact]
         public async Task Update_ReturnsOkObjectResult_WithSuccessMessage_WhenAValidProjectIsPassedThatHasChangedName()
@@ -488,14 +572,20 @@ namespace AssuranceApi.Test
             var changedModel = GetNewInstanceOfProjectModelToDiscardChanges();
             changedModel.Name = "Changed";
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Update(_activeProjects[0].Id, changedModel);
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(changedModel);
+                .Which.Value.Should()
+                .BeEquivalentTo(changedModel);
         }
-
 
         [Fact]
         public async Task Update_ReturnsOkObjectResult_WithSuccessMessage_WhenAValidProjectIsPassedThatHasChangedPhase()
@@ -506,14 +596,20 @@ namespace AssuranceApi.Test
             var changedModel = GetNewInstanceOfProjectModelToDiscardChanges();
             changedModel.Phase = "Private Beta";
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Update(_activeProjects[0].Id, changedModel);
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(changedModel);
+                .Which.Value.Should()
+                .BeEquivalentTo(changedModel);
         }
-
 
         [Fact]
         public async Task Update_ReturnsOkObjectResult_WithSuccessMessage_WhenAValidProjectIsPassedThatHasChangedStatus()
@@ -524,14 +620,20 @@ namespace AssuranceApi.Test
             var changedModel = GetNewInstanceOfProjectModelToDiscardChanges();
             changedModel.Status = "RED";
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Update(_activeProjects[0].Id, changedModel);
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(changedModel);
+                .Which.Value.Should()
+                .BeEquivalentTo(changedModel);
         }
-
 
         [Fact]
         public async Task Update_ReturnsOkObjectResult_WithSuccessMessage_WhenAValidProjectIsPassedThatHasChangedCommentary()
@@ -542,14 +644,20 @@ namespace AssuranceApi.Test
             var changedModel = GetNewInstanceOfProjectModelToDiscardChanges();
             changedModel.Commentary = "Changed!!!";
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Update(_activeProjects[0].Id, changedModel);
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(changedModel);
+                .Which.Value.Should()
+                .BeEquivalentTo(changedModel);
         }
-
 
         [Fact]
         public async Task Update_ReturnsOkObjectResult_WithSuccessMessage_WhenAValidProjectIsPassedWithInvalidUpdateDate()
@@ -560,14 +668,20 @@ namespace AssuranceApi.Test
             var invalidModel = GetNewInstanceOfProjectModelToDiscardChanges();
             invalidModel.UpdateDate = string.Empty;
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
             var response = await controller.Update(invalidModel.Id, invalidModel);
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(invalidModel);
+                .Which.Value.Should()
+                .BeEquivalentTo(invalidModel);
         }
-
 
         [Fact]
         public async Task Update_ReturnsNotFoundResult_WithErrorMessage_WhenAValidProjectIsPassedWithAnInvalidId()
@@ -575,39 +689,52 @@ namespace AssuranceApi.Test
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, mockProjectHistoryPersistence, _validator, _logger);
-            var response = await controller.Update("99", GetNewInstanceOfProjectModelToDiscardChanges());
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                _validator,
+                _logger
+            );
+            var response = await controller.Update(
+                "99",
+                GetNewInstanceOfProjectModelToDiscardChanges()
+            );
 
-            response.Should()
-                .BeOfType<NotFoundResult>();
+            response.Should().BeOfType<NotFoundResult>();
         }
-
 
         [Fact]
         public async Task Update_ReturnsObjectResult_With500Result_WhenAnExceptionOccursPersistingProject()
         {
             var controller = new ProjectsController(null, null, _validator, _logger);
-            var response = await controller.Update("3", GetNewInstanceOfProjectModelToDiscardChanges());
+            var response = await controller.Update(
+                "3",
+                GetNewInstanceOfProjectModelToDiscardChanges()
+            );
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task Update_ReturnsObjectResult_With500Result_WhenAnExceptionOccursPersistingProjectHistory()
         {
             var mockProjectPersistence = GetProjectPersistenceMock();
 
-            var controller = new ProjectsController(mockProjectPersistence, null, _validator, _logger);
-            var response = await controller.Update("3", GetNewInstanceOfProjectModelToDiscardChanges());
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                null,
+                _validator,
+                _logger
+            );
+            var response = await controller.Update(
+                "3",
+                GetNewInstanceOfProjectModelToDiscardChanges()
+            );
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         private static IProjectPersistence GetProjectPersistenceMock()
         {
@@ -617,14 +744,17 @@ namespace AssuranceApi.Test
             mockProjectPersistence.GetAllAsync(string.Empty).Returns(_activeProjects);
             mockProjectPersistence.GetAllAsync("TAG3").Returns([_activeProjects[1]]);
             mockProjectPersistence.GetByIdAsync("1").Returns(_activeProjects[0]);
-            mockProjectPersistence.GetByIdAsync("3").Returns(GetNewInstanceOfProjectModelToDiscardChanges());
+            mockProjectPersistence
+                .GetByIdAsync("3")
+                .Returns(GetNewInstanceOfProjectModelToDiscardChanges());
             mockProjectPersistence.DeleteAsync("1").Returns(true);
             mockProjectPersistence.CreateAsync(Arg.Any<ProjectModel>()).Returns(true);
-            mockProjectPersistence.UpdateAsync(Arg.Any<string>(), Arg.Any<ProjectModel>()).Returns(true);
+            mockProjectPersistence
+                .UpdateAsync(Arg.Any<string>(), Arg.Any<ProjectModel>())
+                .Returns(true);
 
             return mockProjectPersistence;
         }
-
 
         private static IProjectHistoryPersistence GetProjectHistoryPersistenceMock()
         {
@@ -636,7 +766,6 @@ namespace AssuranceApi.Test
             return mockProjectHistoryPersistence;
         }
 
-
         private static ProjectModel GetNewInstanceOfProjectModelToDiscardChanges()
         {
             return new ProjectModel()
@@ -647,25 +776,43 @@ namespace AssuranceApi.Test
                 LastUpdated = _activeProjects[0].LastUpdated,
                 Name = _activeProjects[0].Name,
                 Phase = _activeProjects[0].Phase,
-                StandardsSummary = [
-                        new () {
-                                AggregatedCommentary = _activeProjects[0].StandardsSummary[0].AggregatedCommentary,
-                                AggregatedStatus = _activeProjects[0].StandardsSummary[0].AggregatedStatus,
-                                LastUpdated = _activeProjects[0].StandardsSummary[0].LastUpdated,
-                                Professions = [
-                                    new () {
-                                        Commentary = _activeProjects[0].StandardsSummary[0].Professions[0].Commentary,
-                                        LastUpdated = _activeProjects[0].StandardsSummary[0].Professions[0].LastUpdated,
-                                        ProfessionId = _activeProjects[0].StandardsSummary[0].Professions[0].ProfessionId,
-                                        Status = _activeProjects[0].StandardsSummary[0].Professions[0].Status
-                                    }
-                                ],
-                                StandardId = _activeProjects[0].StandardsSummary[0].StandardId,
-                        }
-                    ],
+                StandardsSummary =
+                [
+                    new()
+                    {
+                        AggregatedCommentary = _activeProjects[0]
+                            .StandardsSummary[0]
+                            .AggregatedCommentary,
+                        AggregatedStatus = _activeProjects[0].StandardsSummary[0].AggregatedStatus,
+                        LastUpdated = _activeProjects[0].StandardsSummary[0].LastUpdated,
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = _activeProjects[0]
+                                    .StandardsSummary[0]
+                                    .Professions[0]
+                                    .Commentary,
+                                LastUpdated = _activeProjects[0]
+                                    .StandardsSummary[0]
+                                    .Professions[0]
+                                    .LastUpdated,
+                                ProfessionId = _activeProjects[0]
+                                    .StandardsSummary[0]
+                                    .Professions[0]
+                                    .ProfessionId,
+                                Status = _activeProjects[0]
+                                    .StandardsSummary[0]
+                                    .Professions[0]
+                                    .Status,
+                            },
+                        ],
+                        StandardId = _activeProjects[0].StandardsSummary[0].StandardId,
+                    },
+                ],
                 Status = _activeProjects[0].Status,
                 Tags = new List<string>(),
-                UpdateDate = _activeProjects[0].UpdateDate
+                UpdateDate = _activeProjects[0].UpdateDate,
             };
         }
     }

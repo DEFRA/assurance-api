@@ -22,7 +22,8 @@ public class ProfessionsController : ControllerBase
         IProfessionPersistence persistence,
         IProfessionHistoryPersistence historyPersistence,
         IValidator<ProfessionModel> validator,
-        ILogger<ProfessionsController> logger)
+        ILogger<ProfessionsController> logger
+    )
     {
         _persistence = persistence;
         _historyPersistence = historyPersistence;
@@ -31,7 +32,6 @@ public class ProfessionsController : ControllerBase
 
         _logger.LogDebug("Creating Professions Controller");
     }
-
 
     [HttpPost]
     [Authorize(Policy = "RequireAdmin")]
@@ -44,7 +44,8 @@ public class ProfessionsController : ControllerBase
             var validationResult = await _validator.ValidateAsync(profession);
             if (!validationResult.IsValid)
             {
-                var message = $"Validation failed for create profession API call '{validationResult.Errors}'";
+                var message =
+                    $"Validation failed for create profession API call '{validationResult.Errors}'";
                 _logger.LogError(message);
                 return BadRequest(message);
             }
@@ -72,7 +73,6 @@ public class ProfessionsController : ControllerBase
         }
     }
 
-
     [HttpPost("deleteAll")]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> DeleteAll()
@@ -97,7 +97,6 @@ public class ProfessionsController : ControllerBase
         }
     }
 
-
     [HttpPost("seed")]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Seed([FromBody] ProfessionModel[] professions)
@@ -111,7 +110,10 @@ public class ProfessionsController : ControllerBase
             var validationErrors = await ValidateProfessions(professions);
             if (validationErrors.Any())
             {
-                var message = ValidationHelper.GetValidationMessage("Validation errors occurred whilst seeding the prfoessions", validationErrors);
+                var message = ValidationHelper.GetValidationMessage(
+                    "Validation errors occurred whilst seeding the prfoessions",
+                    validationErrors
+                );
                 _logger.LogError(message);
                 return BadRequest(message);
             }
@@ -132,7 +134,6 @@ public class ProfessionsController : ControllerBase
             _logger.LogDebug("Leaving seed all profession API call");
         }
     }
-
 
     [HttpDelete("{id}")]
     [Authorize(Policy = "RequireAdmin")]
@@ -158,7 +159,6 @@ public class ProfessionsController : ControllerBase
         }
     }
 
-
     [HttpPost("{id}/restore")]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Restore(string id)
@@ -182,7 +182,6 @@ public class ProfessionsController : ControllerBase
             _logger.LogDebug("Leaving restore profession API call");
         }
     }
-
 
     [HttpGet]
     [AllowAnonymous]
@@ -210,7 +209,6 @@ public class ProfessionsController : ControllerBase
         }
     }
 
-
     [HttpGet("{id}")]
     [AllowAnonymous]
     public async Task<IActionResult> GetById(string id, [FromQuery] bool includeInactive = false)
@@ -219,7 +217,9 @@ public class ProfessionsController : ControllerBase
 
         try
         {
-            _logger.LogInformation($"Getting profession where ID='{id}' and Inactive='{includeInactive}'");
+            _logger.LogInformation(
+                $"Getting profession where ID='{id}' and Inactive='{includeInactive}'"
+            );
 
             var profession = includeInactive
                 ? await _persistence.GetByIdAsync(id)
@@ -237,7 +237,6 @@ public class ProfessionsController : ControllerBase
         }
     }
 
-
     [HttpGet("{professionId}/history")]
     [AllowAnonymous]
     public async Task<IActionResult> GetHistory(string professionId)
@@ -250,7 +249,9 @@ public class ProfessionsController : ControllerBase
 
             var history = await _historyPersistence.GetHistoryAsync(professionId);
 
-            _logger.LogInformation($"Found '{history.Count()}' history entries for ID='{professionId}'");
+            _logger.LogInformation(
+                $"Found '{history.Count()}' history entries for ID='{professionId}'"
+            );
 
             return Ok(history);
         }
@@ -264,7 +265,6 @@ public class ProfessionsController : ControllerBase
             _logger.LogDebug("Leaving get profession history API call");
         }
     }
-
 
     private async Task<List<string>> ValidateProfessions(ProfessionModel[] professions)
     {
@@ -282,7 +282,6 @@ public class ProfessionsController : ControllerBase
         return validationErrors;
     }
 
-
     private async Task<int> CreateProfessions(ProfessionModel[] professions)
     {
         var createdCount = 0;
@@ -290,7 +289,8 @@ public class ProfessionsController : ControllerBase
         foreach (var profession in professions)
         {
             var created = await _persistence.CreateAsync(profession);
-            if (created) createdCount++;
+            if (created)
+                createdCount++;
         }
 
         return createdCount;

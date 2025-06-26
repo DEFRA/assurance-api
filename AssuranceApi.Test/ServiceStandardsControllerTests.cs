@@ -1,14 +1,13 @@
-
 using AssuranceApi.Controllers;
-using Serilog.Extensions.Logging;
-using Serilog;
-using Xunit.Abstractions;
-using Microsoft.Extensions.Logging;
+using AssuranceApi.ServiceStandard.Models;
+using AssuranceApi.ServiceStandard.Services;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
-using AssuranceApi.ServiceStandard.Services;
-using AssuranceApi.ServiceStandard.Models;
+using Serilog;
+using Serilog.Extensions.Logging;
+using Xunit.Abstractions;
 
 namespace AssuranceApi.Test
 {
@@ -16,9 +15,10 @@ namespace AssuranceApi.Test
     {
         private readonly ILogger<ServiceStandardsController> _logger;
 
-
-        private static readonly List<ServiceStandardModel> _activeServiceStandards = [
-            new ServiceStandardModel() {
+        private static readonly List<ServiceStandardModel> _activeServiceStandards =
+        [
+            new ServiceStandardModel()
+            {
                 CreatedAt = new DateTime(2024, 04, 21),
                 DeletedAt = null,
                 DeletedBy = null,
@@ -27,9 +27,10 @@ namespace AssuranceApi.Test
                 IsActive = true,
                 Name = "Service Standard 1",
                 Number = 1,
-                UpdatedAt = new DateTime(2024, 04, 21)
+                UpdatedAt = new DateTime(2024, 04, 21),
             },
-            new ServiceStandardModel() {
+            new ServiceStandardModel()
+            {
                 CreatedAt = new DateTime(2024, 04, 22),
                 DeletedAt = null,
                 DeletedBy = null,
@@ -38,12 +39,14 @@ namespace AssuranceApi.Test
                 IsActive = true,
                 Name = "Service Standard 2",
                 Number = 2,
-                UpdatedAt = new DateTime(2024, 04, 22)
-            }
-            ];
+                UpdatedAt = new DateTime(2024, 04, 22),
+            },
+        ];
 
-        private static readonly List<ServiceStandardModel> _allServiceStandards = [
-            new ServiceStandardModel() {
+        private static readonly List<ServiceStandardModel> _allServiceStandards =
+        [
+            new ServiceStandardModel()
+            {
                 CreatedAt = new DateTime(2024, 04, 21),
                 DeletedAt = null,
                 DeletedBy = null,
@@ -52,9 +55,10 @@ namespace AssuranceApi.Test
                 IsActive = true,
                 Name = "Service Standard 1",
                 Number = 1,
-                UpdatedAt = new DateTime(2024, 04, 21)
+                UpdatedAt = new DateTime(2024, 04, 21),
             },
-            new ServiceStandardModel() {
+            new ServiceStandardModel()
+            {
                 CreatedAt = new DateTime(2024, 04, 22),
                 DeletedAt = null,
                 DeletedBy = null,
@@ -63,9 +67,10 @@ namespace AssuranceApi.Test
                 IsActive = true,
                 Name = "Service Standard 2",
                 Number = 2,
-                UpdatedAt = new DateTime(2024, 04, 22)
+                UpdatedAt = new DateTime(2024, 04, 22),
             },
-            new ServiceStandardModel() {
+            new ServiceStandardModel()
+            {
                 CreatedAt = new DateTime(2024, 04, 23),
                 DeletedAt = new DateTime(2024, 04, 23),
                 DeletedBy = "System",
@@ -74,9 +79,10 @@ namespace AssuranceApi.Test
                 IsActive = true,
                 Name = "Service Standard 3",
                 Number = 3,
-                UpdatedAt = new DateTime(2024, 04, 23)
+                UpdatedAt = new DateTime(2024, 04, 23),
             },
-            new ServiceStandardModel() {
+            new ServiceStandardModel()
+            {
                 CreatedAt = new DateTime(2024, 04, 24),
                 DeletedAt = new DateTime(2024, 04, 24),
                 DeletedBy = "System",
@@ -85,9 +91,9 @@ namespace AssuranceApi.Test
                 IsActive = true,
                 Name = "Service Standard 4",
                 Number = 4,
-                UpdatedAt = new DateTime(2024, 04, 24)
-            }
-            ];
+                UpdatedAt = new DateTime(2024, 04, 24),
+            },
+        ];
 
         private static readonly List<StandardDefinitionHistory> _serviceStandardHistory =
         [
@@ -101,20 +107,12 @@ namespace AssuranceApi.Test
                     Description = new DescriptionChange()
                     {
                         From = "Description 1",
-                        To = "Description 2"
+                        To = "Description 2",
                     },
-                    Guidance = new GuidanceChange()
-                    {
-                        From = "Guidance 1",
-                        To = "Guidance 2"
-                    },
-                    Name = new NameChange()
-                    {
-                        From = "Name 1",
-                        To = "Name 2"
-                    }
+                    Guidance = new GuidanceChange() { From = "Guidance 1", To = "Guidance 2" },
+                    Name = new NameChange() { From = "Name 1", To = "Name 2" },
                 },
-                Timestamp = new DateTime(2024, 04, 25)
+                Timestamp = new DateTime(2024, 04, 25),
             },
             new()
             {
@@ -126,35 +124,26 @@ namespace AssuranceApi.Test
                     Description = new DescriptionChange()
                     {
                         From = "Description 1",
-                        To = "Description 2"
+                        To = "Description 2",
                     },
-                    Guidance = new GuidanceChange()
-                    {
-                        From = "Guidance 1",
-                        To = "Guidance 2"
-                    },
-                    Name = new NameChange()
-                    {
-                        From = "Name 1",
-                        To = "Name 2"
-                    }
+                    Guidance = new GuidanceChange() { From = "Guidance 1", To = "Guidance 2" },
+                    Name = new NameChange() { From = "Name 1", To = "Name 2" },
                 },
-                Timestamp = new DateTime(2024, 04, 26)
-            }
+                Timestamp = new DateTime(2024, 04, 26),
+            },
         ];
 
-
         public ServiceStandardsControllerTests(ITestOutputHelper output)
-
         {
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.TestOutput(output)
                 .MinimumLevel.Verbose()
                 .CreateLogger();
 
-            _logger = new SerilogLoggerFactory(Log.Logger).CreateLogger<ServiceStandardsController>();
+            _logger = new SerilogLoggerFactory(
+                Log.Logger
+            ).CreateLogger<ServiceStandardsController>();
         }
-
 
         [Fact]
         public async Task GetAll_ReturnsOkResult_WithListOfActiveServiceStandards_WhenIncludeInactiveIsFalse()
@@ -162,14 +151,19 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.GetAll(false);
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(_activeServiceStandards);
+                .Which.Value.Should()
+                .BeEquivalentTo(_activeServiceStandards);
         }
-
 
         [Fact]
         public async Task GetAll_ReturnsOkResult_WithListOfActiveServiceStandards_WhenIncludeInactiveIsTrue()
@@ -177,14 +171,19 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.GetAll(true);
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(_allServiceStandards);
+                .Which.Value.Should()
+                .BeEquivalentTo(_allServiceStandards);
         }
-
 
         [Fact]
         public async Task GetAll_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
@@ -192,11 +191,9 @@ namespace AssuranceApi.Test
             var controller = new ServiceStandardsController(null, null, _logger);
             var response = await controller.GetAll(true);
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task GetById_ReturnsOkResult_WithActiveServiceStandard_WhenIncludeInactiveIsFalse()
@@ -204,14 +201,19 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.GetById("1", false);
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(_activeServiceStandards[0]);
+                .Which.Value.Should()
+                .BeEquivalentTo(_activeServiceStandards[0]);
         }
-
 
         [Fact]
         public async Task GetById_ReturnsOkResult_WithInactiveServiceStandard_WhenIncludeInactiveIsTrue()
@@ -219,14 +221,19 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.GetById("3", true);
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(_allServiceStandards[2]);
+                .Which.Value.Should()
+                .BeEquivalentTo(_allServiceStandards[2]);
         }
-
 
         [Fact]
         public async Task GetById_NotFoundResult__WhenAnInvalidIdIsPassed()
@@ -234,13 +241,15 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.GetById("99", true);
 
-            response.Should()
-                .BeOfType<NotFoundResult>();
+            response.Should().BeOfType<NotFoundResult>();
         }
-
 
         [Fact]
         public async Task GetById_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
@@ -248,11 +257,9 @@ namespace AssuranceApi.Test
             var controller = new ServiceStandardsController(null, null, _logger);
             var response = await controller.GetById("99", true);
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task Seed_ReturnsOkResult_WithAValidMessage_WhenValidServiceStandardsArePassed()
@@ -260,14 +267,17 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.Seed([.. _activeServiceStandards]);
-            var responseMessage = $"{{ Message = Seeded '{_activeServiceStandards.Count}' professions successfully }}";
+            var responseMessage =
+                $"{{ Message = Seeded '{_activeServiceStandards.Count}' professions successfully }}";
 
-            response.Should()
-                .BeOfType<OkResult>();
+            response.Should().BeOfType<OkResult>();
         }
-
 
         [Fact]
         public async Task Seed_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
@@ -275,11 +285,9 @@ namespace AssuranceApi.Test
             var controller = new ServiceStandardsController(null, null, _logger);
             var response = await controller.Seed([.. _activeServiceStandards]);
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task DeleteAll_ReturnsOkResult_WhenAValidSetupIsUsed()
@@ -287,14 +295,19 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.DeleteAll();
 
-            response.Should()
+            response
+                .Should()
                 .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo("All service standards deleted");
+                .Which.Value.Should()
+                .BeEquivalentTo("All service standards deleted");
         }
-
 
         [Fact]
         public async Task DeleteAll_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
@@ -302,11 +315,9 @@ namespace AssuranceApi.Test
             var controller = new ServiceStandardsController(null, null, _logger);
             var response = await controller.DeleteAll();
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task SoftDelete_ReturnsOkResult_WhenAValidIdIsUsed()
@@ -314,13 +325,15 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.SoftDelete("1");
 
-            response.Should()
-                .BeOfType<OkResult>();
+            response.Should().BeOfType<OkResult>();
         }
-
 
         [Fact]
         public async Task SoftDelete_ReturnsNotFoundResult_WhenAValidIdIsUsed()
@@ -328,13 +341,15 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.SoftDelete("INVALID");
 
-            response.Should()
-                .BeOfType<NotFoundResult>();
+            response.Should().BeOfType<NotFoundResult>();
         }
-
 
         [Fact]
         public async Task SoftDelete_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
@@ -342,11 +357,9 @@ namespace AssuranceApi.Test
             var controller = new ServiceStandardsController(null, null, _logger);
             var response = await controller.SoftDelete("1");
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task Restore_ReturnsOkResult_WhenAValidIdIsUsed()
@@ -354,13 +367,15 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.Restore("1");
 
-            response.Should()
-                .BeOfType<OkResult>();
+            response.Should().BeOfType<OkResult>();
         }
-
 
         [Fact]
         public async Task Restore_ReturnsNotFoundResult_WhenAValidIdIsUsed()
@@ -368,13 +383,15 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.Restore("INVALID");
 
-            response.Should()
-                .BeOfType<NotFoundResult>();
+            response.Should().BeOfType<NotFoundResult>();
         }
-
 
         [Fact]
         public async Task Restore_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
@@ -382,11 +399,9 @@ namespace AssuranceApi.Test
             var controller = new ServiceStandardsController(null, null, _logger);
             var response = await controller.Restore("1");
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         [Fact]
         public async Task GetHistory_ReturnsOkObjectResult_WithAValidListOfChanges_WhenAValidIdIsUsed()
@@ -394,14 +409,19 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.GetHistory("1");
 
-            response.Should()
-            .BeOfType<OkObjectResult>()
-                .Which.Value.Should().BeEquivalentTo(_serviceStandardHistory);
+            response
+                .Should()
+                .BeOfType<OkObjectResult>()
+                .Which.Value.Should()
+                .BeEquivalentTo(_serviceStandardHistory);
         }
-
 
         [Fact]
         public async Task GetHistory_ReturnsOkObjectResult_WithEmptyResults_WhenAnInvalidIdIsUsed()
@@ -409,14 +429,20 @@ namespace AssuranceApi.Test
             var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
             var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
 
-            var controller = new ServiceStandardsController(mockServiceStandardPersistence, mockServiceStandardHistoryPersistence, _logger);
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _logger
+            );
             var response = await controller.GetHistory("99");
 
-            response.Should()
-                .BeOfType<OkObjectResult>();
-            response.As<OkObjectResult>().Value.As<ICollection<StandardDefinitionHistory>>().Count.Should().Be(0);
+            response.Should().BeOfType<OkObjectResult>();
+            response
+                .As<OkObjectResult>()
+                .Value.As<ICollection<StandardDefinitionHistory>>()
+                .Count.Should()
+                .Be(0);
         }
-
 
         [Fact]
         public async Task GetHistory_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
@@ -424,11 +450,9 @@ namespace AssuranceApi.Test
             var controller = new ServiceStandardsController(null, null, _logger);
             var response = await controller.GetHistory("99");
 
-            response.Should()
-                .BeOfType<ObjectResult>();
+            response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
-
 
         private static IServiceStandardPersistence GetServiceStandardPersistenceMock()
         {
@@ -437,22 +461,30 @@ namespace AssuranceApi.Test
             mockServiceStandardPersistence.GetAllAsync().Returns(_allServiceStandards);
             mockServiceStandardPersistence.GetAllActiveAsync().Returns(_activeServiceStandards);
             mockServiceStandardPersistence.GetByIdAsync("3").Returns(_allServiceStandards[2]);
-            mockServiceStandardPersistence.GetActiveByIdAsync("1").Returns(_activeServiceStandards[0]);
-            mockServiceStandardPersistence.SeedStandardsAsync(Arg.Any<List<ServiceStandardModel>>()).Returns(true);
+            mockServiceStandardPersistence
+                .GetActiveByIdAsync("1")
+                .Returns(_activeServiceStandards[0]);
+            mockServiceStandardPersistence
+                .SeedStandardsAsync(Arg.Any<List<ServiceStandardModel>>())
+                .Returns(true);
             mockServiceStandardPersistence.SoftDeleteAsync("1", Arg.Any<string>()).Returns(true);
-            mockServiceStandardPersistence.SoftDeleteAsync("INVALID", Arg.Any<string>()).Returns(false);
+            mockServiceStandardPersistence
+                .SoftDeleteAsync("INVALID", Arg.Any<string>())
+                .Returns(false);
             mockServiceStandardPersistence.RestoreAsync("1").Returns(true);
             mockServiceStandardPersistence.RestoreAsync("INVALID").Returns(false);
 
             return mockServiceStandardPersistence;
         }
 
-
         private static IServiceStandardHistoryPersistence GetServiceStandardHistoryPersistenceMock()
         {
-            var mockServiceStandardHistoryPersistence = Substitute.For<IServiceStandardHistoryPersistence>();
+            var mockServiceStandardHistoryPersistence =
+                Substitute.For<IServiceStandardHistoryPersistence>();
 
-            mockServiceStandardHistoryPersistence.GetHistoryAsync("1").Returns(_serviceStandardHistory);
+            mockServiceStandardHistoryPersistence
+                .GetHistoryAsync("1")
+                .Returns(_serviceStandardHistory);
             mockServiceStandardHistoryPersistence.GetHistoryAsync("99").Returns([]);
 
             return mockServiceStandardHistoryPersistence;
