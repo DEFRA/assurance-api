@@ -62,7 +62,7 @@ static void ConfigureWebApplication(WebApplicationBuilder _builder)
 
     ConfigureMongoDb(_builder);
 
-    // ConfigureControllers(_builder);
+    ConfigureControllers(_builder);
 
     ConfigureEndpoints(_builder);
 
@@ -93,7 +93,7 @@ static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
     app.UseProjectEndpoints();
     app.UseProfessionEndpoints();
 
-    // app.MapControllers();
+    app.MapControllers();
 
     return app;
 }
