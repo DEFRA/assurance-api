@@ -2,6 +2,8 @@
 using System.Globalization;
 using Asp.Versioning;
 using AssuranceApi.Project.Constants;
+using AssuranceApi.Project.Handlers;
+using AssuranceApi.Project.Helpers;
 using AssuranceApi.Project.Models;
 using AssuranceApi.Project.Services;
 using AssuranceApi.Utils;
@@ -19,18 +21,21 @@ public class ProjectsController : ControllerBase
 {
     private readonly IProjectPersistence _persistence;
     private readonly IProjectHistoryPersistence _historyPersistence;
+    private readonly IProjectStandardsPersistence _projectStandardsPersistence;
     private readonly IValidator<ProjectModel> _validator;
     private readonly ILogger<ProjectsController> _logger;
 
     public ProjectsController(
         IProjectPersistence persistence,
         IProjectHistoryPersistence historyPersistence,
-        IValidator<ProjectModel> validator,
+        IProjectStandardsPersistence projectStandardsPersistence,
+        IValidator<ProjectModel> validator, 
         ILogger<ProjectsController> logger
     )
     {
         _persistence = persistence;
         _historyPersistence = historyPersistence;
+        _projectStandardsPersistence = projectStandardsPersistence;
         _validator = validator;
         _logger = logger;
 
@@ -106,6 +111,35 @@ public class ProjectsController : ControllerBase
         finally
         {
             _logger.LogDebug("Leaving get project history API call");
+        }
+    }
+
+    [HttpPut("{projectId}/history/{historyId}/archive")]
+    [AllowAnonymous]
+    public async Task<IActionResult> DeleteHistory(string projectId, string historyId)
+    {
+        // TODO: This should be a DELETE verb
+        _logger.LogDebug("Entering delete project history API call");
+
+        try
+        {
+            _logger.LogInformation($"Deleting the project history for project ID='{projectId}' AND history ID='{historyId}'");
+
+            var success = await _historyPersistence.ArchiveHistoryEntryAsync(
+                        projectId,
+                        historyId
+                    );
+
+            return success ? Ok() : NotFound();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred deleting the project history");
+            return Problem($"Failed to delete the project history: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving delete project history API call");
         }
     }
 
@@ -316,6 +350,225 @@ public class ProjectsController : ControllerBase
         finally
         {
             _logger.LogDebug("Leaving getdelete project API call");
+        }
+    }
+
+    [HttpGet("{projectId}/standards/{standardId}/professions/{professionId}/assessment")]
+    [Authorize(Policy = "RequireAdmin")]
+    public async Task<IActionResult> GetProjectStandardProfessionAssessment(string projectId, string standardId, string professionId)
+    {
+        _logger.LogDebug("Entering get project standard professions assessment API call");
+
+        try
+        {
+            _logger.LogInformation($"Getting the assessment for project ID='{projectId}' AND standard ID='{standardId}' AND profession ID='{professionId}'");
+
+            var assessment = await _projectStandardsPersistence.GetAsync(
+                projectId,
+                standardId,
+                professionId
+        );
+
+            return assessment is not null ? Ok(assessment) : NotFound();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred whilst deleting the project");
+            return Problem($"Failed to update the project: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving get project standard professions assessment API call");
+        }
+    }
+
+    [HttpPost("{projectId}/standards/{standardId}/professions/{professionId}/assessment")]
+    [Authorize(Policy = "RequireAdmin")]
+    public async Task<IActionResult> CreateProjectStandardProfessionAssessment(
+        string projectId,
+        string standardId, 
+        string professionId, 
+        [FromBody] ProjectStandards assessment,
+        [FromServices] CreateAssessmentHandler handler,
+        [FromServices] StandardsSummaryHelper summaryHelper)
+    {
+        _logger.LogDebug("Entering create project standard professions assessment API call");
+
+        try
+        {
+            _logger.LogInformation($"Creating the assessment for project ID='{projectId}' AND standard ID='{standardId}' AND profession ID='{professionId}'");
+
+            var result = await handler.HandleAsync(
+                        projectId,
+                        standardId,
+                        professionId,
+                        assessment
+                    );
+
+            if (!result.IsValid)
+            {
+                return result.StatusCode == 400
+                    ? BadRequest(result.ErrorMessage)
+                    : Problem(result.ErrorMessage);
+            }
+
+            // Update standards summary aggregation
+            await summaryHelper.UpdateStandardsSummaryCacheAsync(projectId);
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred whilst creating the project standard professions assessment");
+            return Problem($"Failed to create the project standard professions assessment: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving create project standard professions assessment API call");
+        }
+    }
+
+    [HttpGet("{projectId}/standards/{standardId}/professions/{professionId}/history")]
+    public async Task<IActionResult> GetProjectStandardProfessionHistory(
+        string projectId,
+        string standardId,
+        string professionId,
+        IProjectStandardsHistoryPersistence historyPersistence)
+    {
+        _logger.LogDebug("Entering get project standard professions history API call");
+
+        try
+        {
+            _logger.LogInformation($"Getting the history for project ID='{projectId}' AND standard ID='{standardId}' AND profession ID='{professionId}'");
+
+            var history = await historyPersistence.GetHistoryAsync(
+                    projectId,
+                    standardId,
+                    professionId
+                );
+
+            if (history == null)
+            {
+                return new NotFoundResult();
+            }
+
+            _logger.LogInformation($"Found '{history.Count}' assessment history entries");
+
+            return Ok(history);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred whilst getting project standard professions history");
+            return Problem($"Failed to get the project standard professions history: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving get project standard professions history API call");
+        }
+    }
+
+    [HttpGet("{projectId}/standards/{standardId}/professions/{professionId}/history/{historyId}/archive")]
+    [Authorize(Policy = "RequireAdmin")]
+    public async Task<IActionResult> DeleteProjectStandardProfessionHistory(
+        string projectId,
+        string standardId,
+        string professionId,
+        string historyId,
+        IProjectStandardsHistoryPersistence historyPersistence,
+        [FromServices] IProjectStandardsPersistence assessmentPersistence,
+        [FromServices] IProjectPersistence projectPersistence)
+    {
+        _logger.LogDebug("Archiving project standard professions history API call");
+
+        try
+        {
+            _logger.LogInformation($"Archiving the history for project ID='{projectId}' AND standard ID='{standardId}' AND profession ID='{professionId}' AND history ID='{historyId}'");
+
+            var success = await historyPersistence.ArchiveAsync(
+                        projectId,
+                        standardId,
+                        professionId,
+                        historyId
+                    );
+            if (success)
+            {
+                _logger.LogInformation(
+                    "Successfully archived assessment history entry, updating current assessment"
+                );
+
+                // Get the most recent non-archived history entry for this profession/standard
+                var remainingHistory = await historyPersistence.GetHistoryAsync(
+                    projectId,
+                    standardId,
+                    professionId
+                );
+
+                if (remainingHistory.Count != 0)
+                {
+                    // Update the current assessment to reflect the most recent non-archived entry
+                    var mostRecentEntry = remainingHistory.First(); // Already sorted by timestamp desc
+                    var currentAssessment = await assessmentPersistence.GetAsync(
+                        projectId,
+                        standardId,
+                        professionId
+                    );
+
+                    if (currentAssessment != null)
+                    {
+                        currentAssessment.Status =
+                            mostRecentEntry.Changes.Status?.To ?? currentAssessment.Status;
+                        currentAssessment.Commentary =
+                            mostRecentEntry.Changes.Commentary?.To
+                            ?? currentAssessment.Commentary;
+                        currentAssessment.LastUpdated = mostRecentEntry.Timestamp;
+                        currentAssessment.ChangedBy = mostRecentEntry.ChangedBy;
+
+                        await assessmentPersistence.UpsertAsync(currentAssessment);
+                        _logger.LogInformation(
+                            "Updated current assessment to reflect most recent non-archived entry"
+                        );
+                    }
+                }
+                else
+                {
+                    // No remaining history - this was the only assessment, remove the current assessment
+                    _logger.LogInformation(
+                        "No remaining history entries, removing current assessment"
+                    );
+                    await assessmentPersistence.DeleteAsync(
+                        projectId,
+                        standardId,
+                        professionId
+                    );
+                }
+
+                // Update standards summary aggregation to reflect the changes
+                var summaryHelper = new StandardsSummaryHelper(
+                    projectPersistence,
+                    assessmentPersistence
+                );
+
+                await summaryHelper.UpdateStandardsSummaryCacheAsync(projectId);
+                _logger.LogInformation("Standards summary cache updated after archiving");
+
+                return Ok();
+            }
+            else
+            {
+                _logger.LogError(
+                    "Failed to archive assessment history entry - entry not found"
+                );
+                return NotFound();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred whilst archiving project standard professions history");
+            return Problem($"Failed to archive the project standard professions history: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving archiving project standard professions history API call");
         }
     }
 
