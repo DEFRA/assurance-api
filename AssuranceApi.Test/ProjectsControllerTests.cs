@@ -1,14 +1,20 @@
 using AssuranceApi.Controllers;
+using AssuranceApi.Profession.Models;
+using AssuranceApi.Profession.Services;
+using AssuranceApi.Project.Handlers;
+using AssuranceApi.Project.Helpers;
 using AssuranceApi.Project.Models;
 using AssuranceApi.Project.Services;
 using AssuranceApi.Project.Validators;
+using AssuranceApi.ServiceStandard.Models;
+using AssuranceApi.ServiceStandard.Services;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using NSubstitute.Routing.Handlers;
 using Serilog;
 using Serilog.Extensions.Logging;
+using System.Security.Cryptography.Xml;
 using Xunit.Abstractions;
 
 namespace AssuranceApi.Test
@@ -98,7 +104,7 @@ namespace AssuranceApi.Test
                         From = "Before commentary update 1",
                         To = "After commentary update 1",
                     },
-                    Name = new NameChange()
+                    Name = new AssuranceApi.Project.Models.NameChange()
                     {
                         From = "Before name update 1",
                         To = "After name update 1",
@@ -126,7 +132,7 @@ namespace AssuranceApi.Test
                         From = "Before commentary update 2",
                         To = "After commentary update 2",
                     },
-                    Name = new NameChange()
+                    Name = new AssuranceApi.Project.Models.NameChange()
                     {
                         From = "Before name update 2",
                         To = "After name update 2",
@@ -150,6 +156,67 @@ namespace AssuranceApi.Test
             },
         ];
 
+        private static readonly ProjectStandards _projectStandards = new()
+            {
+                ChangedBy = "System",
+                Commentary = "Commentary 1",
+                Id = "1",
+                LastUpdated = new DateTime(2024, 04, 21),
+                ProfessionId = "1",
+                ProjectId = "1",
+                StandardId = "1",
+                Status = "GREEN"
+            };
+
+        private static readonly ServiceStandardModel _serviceStandardModel = new()
+        {
+            CreatedAt = new DateTime(2024, 04, 21),
+            DeletedAt = null,
+            DeletedBy = null,
+            Description = "Service Standard 1",
+            Id = "1",
+            IsActive = true,
+            Name = "1",
+            Number = 1,
+            UpdatedAt = new DateTime(2024, 04, 21)
+        };
+
+        private static readonly ProfessionModel _professionModel = new()
+        {
+            CreatedAt = new DateTime(2024, 04, 21),
+            DeletedAt = null,
+            DeletedBy = null,
+            Description = "Profession 1",
+            Id = "1",
+            IsActive = true,
+            Name = "1",
+            UpdatedAt = new DateTime(2024, 04, 21)
+        };
+
+        private static readonly List<ProjectStandardsHistory> _projectStandardsHistory =
+        [
+            new()
+            {
+                Archived = false,
+                ChangedBy = "SYSTEM",
+                Changes = new AssessmentChanges() {
+                    Commentary = new CommentaryChange() {
+                        From = "From Commentary",
+                        To = "To Commentary"
+                    },
+                    Status = new StatusChange() {
+                        From = "GREEN",
+                        To = "RED"
+                    }
+                },
+                Id = "1",
+                ProfessionId = "1",
+                ProjectId = "1",
+                StandardId = "1",
+                Timestamp = new DateTime(2024, 04, 21)
+            },
+        ];
+
         public ProjectsControllerTests(ITestOutputHelper output)
         {
             _validator = new ProjectValidator();
@@ -170,7 +237,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.GetAll(string.Empty);
@@ -191,7 +258,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.GetAll("TAG3");
@@ -203,7 +270,7 @@ namespace AssuranceApi.Test
         [Fact]
         public async Task GetAll_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
         {
-            var controller = new ProjectsController(null, null, _validator, _logger);
+            var controller = new ProjectsController(null, null, null, _validator, _logger);
             var response = await controller.GetAll(string.Empty);
 
             response.Should().BeOfType<ObjectResult>();
@@ -219,7 +286,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.GetById("1");
@@ -240,7 +307,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.GetById("2");
@@ -251,7 +318,7 @@ namespace AssuranceApi.Test
         [Fact]
         public async Task GetById_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
         {
-            var controller = new ProjectsController(null, null, _validator, _logger);
+            var controller = new ProjectsController(null, null, null, _validator, _logger);
             var response = await controller.GetById("1");
 
             response.Should().BeOfType<ObjectResult>();
@@ -267,7 +334,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.GetHistory("1");
@@ -288,7 +355,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.GetHistory("2");
@@ -305,8 +372,52 @@ namespace AssuranceApi.Test
         [Fact]
         public async Task GetHistory_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
         {
-            var controller = new ProjectsController(null, null, _validator, _logger);
+            var controller = new ProjectsController(null, null, null, _validator, _logger);
             var response = await controller.GetHistory("1");
+
+            response.Should().BeOfType<ObjectResult>();
+            response.As<ObjectResult>().StatusCode.Should().Be(500);
+        }
+
+        [Fact]
+        public async Task DeleteHistory_ReturnsOkResult_WhenThereIsAValidProjectHistory()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null, _validator,
+                _logger
+            );
+            var response = await controller.DeleteHistory("1", "1");
+
+            response.Should().BeOfType<OkResult>();
+        }
+
+        [Fact]
+        public async Task DeleteHistory_ReturnsNotFoundResult_WhenThereIsAnInvalidProjectHistory()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null, _validator,
+                _logger
+            );
+            var response = await controller.DeleteHistory("INVALID", "INVALID");
+
+            response.Should().BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
+        public async Task DeleteHistory_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
+        {
+            var controller = new ProjectsController(null, null, null, _validator, _logger);
+            var response = await controller.DeleteHistory("INVALID", "INVALID");
 
             response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
@@ -321,7 +432,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Delete("1");
@@ -338,7 +449,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Delete("2");
@@ -349,7 +460,7 @@ namespace AssuranceApi.Test
         [Fact]
         public async Task Delete_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
         {
-            var controller = new ProjectsController(null, null, _validator, _logger);
+            var controller = new ProjectsController(null, null, null, _validator, _logger);
             var response = await controller.Delete("1");
 
             response.Should().BeOfType<ObjectResult>();
@@ -365,7 +476,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.GetTagsSummary();
@@ -380,7 +491,7 @@ namespace AssuranceApi.Test
         [Fact]
         public async Task GetTagsSummary_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
         {
-            var controller = new ProjectsController(null, null, _validator, _logger);
+            var controller = new ProjectsController(null, null, null, _validator, _logger);
             var response = await controller.GetTagsSummary();
 
             response.Should().BeOfType<ObjectResult>();
@@ -396,7 +507,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Create(_activeProjects[0]);
@@ -420,7 +531,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Create(invalidModel);
@@ -447,7 +558,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Create(invalidModel);
@@ -473,7 +584,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Create(invalidModel);
@@ -500,7 +611,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Create(invalidModel);
@@ -518,7 +629,7 @@ namespace AssuranceApi.Test
         [Fact]
         public async Task Create_ReturnsObjectResult_With500Result_WhenAnExceptionOccursPersistingProject()
         {
-            var controller = new ProjectsController(null, null, _validator, _logger);
+            var controller = new ProjectsController(null, null, null, _validator, _logger);
             var response = await controller.Create(_activeProjects[0]);
 
             response.Should().BeOfType<ObjectResult>();
@@ -533,7 +644,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 null,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Create(_activeProjects[0]);
@@ -551,7 +662,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Update(_activeProjects[0].Id, _activeProjects[0]);
@@ -575,7 +686,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Update(_activeProjects[0].Id, changedModel);
@@ -599,7 +710,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Update(_activeProjects[0].Id, changedModel);
@@ -623,7 +734,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Update(_activeProjects[0].Id, changedModel);
@@ -647,7 +758,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Update(_activeProjects[0].Id, changedModel);
@@ -671,7 +782,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Update(invalidModel.Id, invalidModel);
@@ -692,7 +803,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 mockProjectHistoryPersistence,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Update(
@@ -706,7 +817,7 @@ namespace AssuranceApi.Test
         [Fact]
         public async Task Update_ReturnsObjectResult_With500Result_WhenAnExceptionOccursPersistingProject()
         {
-            var controller = new ProjectsController(null, null, _validator, _logger);
+            var controller = new ProjectsController(null, null, null, _validator, _logger);
             var response = await controller.Update(
                 "3",
                 GetNewInstanceOfProjectModelToDiscardChanges()
@@ -724,7 +835,7 @@ namespace AssuranceApi.Test
             var controller = new ProjectsController(
                 mockProjectPersistence,
                 null,
-                _validator,
+                null, _validator,
                 _logger
             );
             var response = await controller.Update(
@@ -734,6 +845,432 @@ namespace AssuranceApi.Test
 
             response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
+        }
+
+        [Fact]
+        public async Task GetProjectStandardProfessionAssessment_ReturnsOkResult_WithMatchingProjectStandards_WhenValidIdsArePassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var mockProjectStandardsPersistence = GetProjectStandardsPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                mockProjectStandardsPersistence, 
+                _validator,
+                _logger
+            );
+            var response = await controller.GetProjectStandardProfessionAssessment("1", "1", "1");
+
+            response
+                .Should()
+                .BeOfType<OkObjectResult>()
+                .Which.Value.Should()
+                .BeEquivalentTo(_projectStandards);
+        }
+
+        [Fact]
+        public async Task GetProjectStandardProfessionAssessment_ReturnsNotFoundResult_WithMatchingProjectStandards_WhenValidIdsArePassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var mockProjectStandardsPersistence = GetProjectStandardsPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                mockProjectStandardsPersistence,
+                _validator,
+                _logger
+            );
+            var response = await controller.GetProjectStandardProfessionAssessment("INVALID", "INVALID", "INVALID");
+
+            response
+                .Should()
+                .BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
+        public async Task GetProjectStandardProfessionAssessment_ReturnsObjectResult_With500Result_WhenAnExceptionOccursPersistingProjectHistory()
+        {
+            var controller = new ProjectsController(
+                null,
+                null,
+                null, 
+                _validator,
+                _logger
+            );
+            var response = await controller.GetProjectStandardProfessionAssessment("INVALID", "INVALID", "INVALID");
+
+            response.Should().BeOfType<ObjectResult>();
+            response.As<ObjectResult>().StatusCode.Should().Be(500);
+        }
+
+        [Fact]
+        public async Task CreateProjectStandardProfessionAssessment_ReturnsOkResult_WhenValidIdsArePassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectStandardHistoryPersistence = GetProjectStandardHistoryPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var mockProjectStandardsPersistence = GetProjectStandardsPersistenceMock();
+            var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
+            var mockProfessionPersistence = GetProfessionPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                mockProjectStandardsPersistence,
+                _validator,
+                _logger
+            );
+            var response = await controller.CreateProjectStandardProfessionAssessment(
+                "1",
+                "1",
+                "1",
+                _projectStandards,
+                new CreateAssessmentHandler(
+                    mockProjectStandardsPersistence,
+                    mockProjectStandardHistoryPersistence,
+                    mockProjectPersistence,
+                    mockServiceStandardPersistence,
+                    mockProfessionPersistence,
+                    new SerilogLoggerFactory(Log.Logger).CreateLogger<CreateAssessmentHandler>()
+                ),
+                new StandardsSummaryHelper(
+                    mockProjectPersistence,
+                    mockProjectStandardsPersistence                   
+                    )
+                );
+
+            response
+                .Should()
+                .BeOfType<OkResult>();
+        }
+
+        [Fact]
+        public async Task CreateProjectStandardProfessionAssessment_ReturnsBadRequestObjectResult_WhenInvalidProjectIdIsPassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectStandardHistoryPersistence = GetProjectStandardHistoryPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var mockProjectStandardsPersistence = GetProjectStandardsPersistenceMock();
+            var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
+            var mockProfessionPersistence = GetProfessionPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                mockProjectStandardsPersistence,
+                _validator,
+                _logger
+            );
+            var response = await controller.CreateProjectStandardProfessionAssessment(
+                "2",
+                "1",
+                "1",
+                _projectStandards,
+                new CreateAssessmentHandler(
+                    mockProjectStandardsPersistence,
+                    mockProjectStandardHistoryPersistence,
+                    mockProjectPersistence,
+                    mockServiceStandardPersistence,
+                    mockProfessionPersistence,
+                    new SerilogLoggerFactory(Log.Logger).CreateLogger<CreateAssessmentHandler>()
+                ),
+                new StandardsSummaryHelper(
+                    mockProjectPersistence,
+                    mockProjectStandardsPersistence
+                    )
+                );
+
+            response
+                .Should()
+                .BeOfType<BadRequestObjectResult>();
+            response.As<BadRequestObjectResult>().StatusCode.Should().Be(400);
+            response.As<BadRequestObjectResult>().Value.Should().Be("Referenced project does not exist"); 
+        }
+
+        [Fact]
+        public async Task CreateProjectStandardProfessionAssessment_ReturnsObjectResult_With500Result_WhenInvalidProjectStandardPersistenceIsPassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectStandardHistoryPersistence = GetProjectStandardHistoryPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var mockProjectStandardsPersistence = GetProjectStandardsPersistenceMock();
+            var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
+            var mockProfessionPersistence = GetProfessionPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                mockProjectStandardsPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.CreateProjectStandardProfessionAssessment(
+                "1",
+                "1",
+                "1",
+                _projectStandards,
+                new CreateAssessmentHandler(
+                    mockProjectStandardsPersistence,
+                    mockProjectStandardHistoryPersistence,
+                    mockProjectPersistence,
+                    null,
+                    mockProfessionPersistence,
+                    new SerilogLoggerFactory(Log.Logger).CreateLogger<CreateAssessmentHandler>()
+                ),
+                new StandardsSummaryHelper(
+                    mockProjectPersistence,
+                    mockProjectStandardsPersistence
+                    )
+                );
+
+            response
+                .Should()
+                .BeOfType<ObjectResult>();
+            response.As<ObjectResult>().StatusCode.Should().Be(500);
+        }
+
+        [Fact]
+        public async Task CreateProjectStandardProfessionAssessment_ReturnsObjectResult_With500Result_WhenInvalidCreateAssessmentHandlerIsPassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectStandardHistoryPersistence = GetProjectStandardHistoryPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var mockProjectStandardsPersistence = GetProjectStandardsPersistenceMock();
+            var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
+            var mockProfessionPersistence = GetProfessionPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                mockProjectStandardsPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.CreateProjectStandardProfessionAssessment(
+                "1",
+                "1",
+                "1",
+                _projectStandards,
+                null,
+                new StandardsSummaryHelper(
+                    mockProjectPersistence,
+                    mockProjectStandardsPersistence
+                    )
+                );
+
+            response
+                .Should()
+                .BeOfType<ObjectResult>();
+            response.As<ObjectResult>().StatusCode.Should().Be(500);
+        }
+
+        [Fact]
+        public async Task GetProjectStandardProfessionHistory_ReturnsNotFoundResult_WithValidHistory_WhenAnInvalidProjectIdIsPassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectStandardHistoryPersistence = GetProjectStandardHistoryPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var mockProjectStandardsPersistence = GetProjectStandardsPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                mockProjectStandardsPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.GetProjectStandardProfessionHistory(
+                "2",
+                "1",
+                "1",
+                mockProjectStandardHistoryPersistence);
+
+            response
+                .Should()
+                .BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
+        public async Task GetProjectStandardProfessionHistory_ReturnsOkObjectResult_WithValidHistory_WhenValidIdsArePassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectStandardHistoryPersistence = GetProjectStandardHistoryPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var mockProjectStandardsPersistence = GetProjectStandardsPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                mockProjectStandardsPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.GetProjectStandardProfessionHistory(
+                "1",
+                "1",
+                "1",
+                mockProjectStandardHistoryPersistence);
+
+            response
+                .Should()
+                .BeOfType<OkObjectResult>();
+            response.As<OkObjectResult>().Value.Should().Be(_projectStandardsHistory);
+        }
+
+        [Fact]
+        public async Task GetProjectStandardProfessionHistory_ReturnsObjectResult_With500Result_WhenAnInvalidProjectStandardHistoryPersistenceIsPassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var mockProjectStandardsPersistence = GetProjectStandardsPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                mockProjectStandardsPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.GetProjectStandardProfessionHistory(
+                "1",
+                "1",
+                "1",
+                null);
+
+            response
+                .Should()
+                .BeOfType<ObjectResult>();
+            response.As<ObjectResult>().StatusCode.Should().Be(500);
+        }
+
+        [Fact]
+        public async Task DeleteProjectStandardProfessionHistory_ReturnsOkResult_WhenValidIdsArePassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectStandardHistoryPersistence = GetProjectStandardHistoryPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var mockProjectStandardsPersistence = GetProjectStandardsPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                mockProjectStandardsPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.DeleteProjectStandardProfessionHistory(
+                "1",
+                "1",
+                "1",
+                "1",
+                mockProjectStandardHistoryPersistence,
+                mockProjectStandardsPersistence,
+                mockProjectPersistence
+                );
+
+            response
+                .Should()
+                .BeOfType<OkResult>();
+        }
+
+        [Fact]
+        public async Task DeleteProjectStandardProfessionHistory_ReturnsNotFoundResult_WhenAnInvalidHistoryIdIsPassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectStandardHistoryPersistence = GetProjectStandardHistoryPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var mockProjectStandardsPersistence = GetProjectStandardsPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                mockProjectStandardsPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.DeleteProjectStandardProfessionHistory(
+                "1",
+                "1",
+                "1",
+                "2",
+                mockProjectStandardHistoryPersistence,
+                mockProjectStandardsPersistence,
+                mockProjectPersistence
+                );
+
+            response
+                .Should()
+                .BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
+        public async Task DeleteProjectStandardProfessionHistory_ReturnsObjectResult_With500Result_WhenAnInvalidProjectStandardsHistoryPersistenceIsPassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var mockProjectStandardsPersistence = GetProjectStandardsPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                mockProjectStandardsPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.DeleteProjectStandardProfessionHistory(
+                "1",
+                "1",
+                "1",
+                "2",
+                null,
+                mockProjectStandardsPersistence,
+                mockProjectPersistence
+                );
+
+            response
+                .Should()
+                .BeOfType<ObjectResult>();
+            response.As<ObjectResult>().StatusCode.Should().Be(500);
+        }
+
+        private static IProjectStandardsHistoryPersistence GetProjectStandardHistoryPersistenceMock()
+        {
+            var mockProjectStandardsHistoryPersistence = Substitute.For<IProjectStandardsHistoryPersistence>();
+
+            mockProjectStandardsHistoryPersistence.GetHistoryAsync("1", "1", "1").Returns(_projectStandardsHistory);
+            mockProjectStandardsHistoryPersistence.ArchiveAsync("1", "1", "1", "1").Returns(true);
+
+            return mockProjectStandardsHistoryPersistence;
+        }
+
+        private static IServiceStandardPersistence GetServiceStandardPersistenceMock()
+        {
+            var mockServiceStandardPersistence = Substitute.For<IServiceStandardPersistence>();
+            
+            mockServiceStandardPersistence.GetActiveByIdAsync("1").Returns(_serviceStandardModel);
+
+            return mockServiceStandardPersistence;
+        }
+
+        private static IProfessionPersistence GetProfessionPersistenceMock()
+        {
+            var mockProfessionPersistence = Substitute.For<IProfessionPersistence>();
+
+            mockProfessionPersistence.GetActiveByIdAsync("1").Returns(_professionModel);
+
+            return mockProfessionPersistence;
         }
 
         private static IProjectPersistence GetProjectPersistenceMock()
@@ -762,8 +1299,19 @@ namespace AssuranceApi.Test
 
             mockProjectHistoryPersistence.GetHistoryAsync("1").Returns(_projectHistory);
             mockProjectHistoryPersistence.GetHistoryAsync("2").Returns([]);
+            mockProjectHistoryPersistence.ArchiveHistoryEntryAsync("1", "1").Returns(true);
 
             return mockProjectHistoryPersistence;
+        }
+
+        private static IProjectStandardsPersistence GetProjectStandardsPersistenceMock()
+        {
+            var mockProjectStandardsPersistence = Substitute.For<IProjectStandardsPersistence>();
+
+            mockProjectStandardsPersistence.GetAsync("1", "1", "1").Returns(_projectStandards);
+            mockProjectStandardsPersistence.GetByProjectAsync("1").Returns([_projectStandards]);
+
+            return mockProjectStandardsPersistence;
         }
 
         private static ProjectModel GetNewInstanceOfProjectModelToDiscardChanges()
