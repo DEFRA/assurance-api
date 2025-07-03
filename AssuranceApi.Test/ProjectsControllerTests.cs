@@ -168,6 +168,8 @@ namespace AssuranceApi.Test
                 Status = "GREEN"
             };
 
+
+
         private static readonly ServiceStandardModel _serviceStandardModel = new()
         {
             CreatedAt = new DateTime(2024, 04, 21),
@@ -520,13 +522,13 @@ namespace AssuranceApi.Test
         }
 
         [Fact]
-        public async Task Create_ReturnsBadRequestObjectResult_WithErrorMessage_WhenAnInvalidProjectIsPassedWithEmptyName()
+        public async Task Create_ReturnsCreatedResult_WhenAnEmptyNameIsPassed()
         {
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
-            var invalidModel = GetNewInstanceOfProjectModelToDiscardChanges();
-            invalidModel.Name = string.Empty;
+            var validModel = GetNewInstanceOfProjectModelToDiscardChanges();
+            validModel.Name = string.Empty; // Empty name is now allowed
 
             var controller = new ProjectsController(
                 mockProjectPersistence,
@@ -534,16 +536,12 @@ namespace AssuranceApi.Test
                 null, _validator,
                 _logger
             );
-            var response = await controller.Create(invalidModel);
+            var response = await controller.Create(validModel);
 
-            var errorMessage =
-                "Validation errors occurred whilst creating the project:\n  'Name' must not be empty.";
-
+            // Should succeed because empty names are now allowed for partial updates
             response
                 .Should()
-                .BeOfType<BadRequestObjectResult>()
-                .Which.Value.Should()
-                .BeEquivalentTo(errorMessage);
+                .BeOfType<CreatedResult>();
         }
 
         [Fact]
@@ -573,13 +571,13 @@ namespace AssuranceApi.Test
         }
 
         [Fact]
-        public async Task Create_ReturnsBadRequestObjectResult_WithErrorMessage_WhenAnInvalidProjectIsPassedWithEmptyCommentary()
+        public async Task Create_ReturnsBadRequestObjectResult_WithErrorMessage_WhenAnInvalidProjectIsPassedWithInvalidPhase()
         {
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
             var invalidModel = GetNewInstanceOfProjectModelToDiscardChanges();
-            invalidModel.Phase = "Invalid";
+            invalidModel.Phase = "Invalid"; // Invalid phase value
 
             var controller = new ProjectsController(
                 mockProjectPersistence,
@@ -600,13 +598,13 @@ namespace AssuranceApi.Test
         }
 
         [Fact]
-        public async Task Create_ReturnsBadRequestObjectResult_WithErrorMessage_WhenAnInvalidProjectIsPassedWithInvalidPhase()
+        public async Task Create_ReturnsBadRequestObjectResult_WithErrorMessage_WhenAnInvalidProjectIsPassedWithNullCommentary()
         {
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
             var invalidModel = GetNewInstanceOfProjectModelToDiscardChanges();
-            invalidModel.Commentary = null;
+            invalidModel.Commentary = null; // null is not allowed, but empty string is
 
             var controller = new ProjectsController(
                 mockProjectPersistence,
@@ -624,6 +622,29 @@ namespace AssuranceApi.Test
                 .BeOfType<BadRequestObjectResult>()
                 .Which.Value.Should()
                 .BeEquivalentTo(errorMessage);
+        }
+
+        [Fact]
+        public async Task Create_ReturnsCreatedResult_WhenAnEmptyPhaseIsPassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            var validModel = GetNewInstanceOfProjectModelToDiscardChanges();
+            validModel.Phase = string.Empty; // Empty phase is now allowed
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null, _validator,
+                _logger
+            );
+            var response = await controller.Create(validModel);
+
+            // Should succeed because empty phases are now allowed for partial updates
+            response
+                .Should()
+                .BeOfType<CreatedResult>();
         }
 
         [Fact]

@@ -7,10 +7,10 @@ public class ProjectValidator : AbstractValidator<ProjectModel>
 {
     public ProjectValidator()
     {
-        RuleFor(x => x.Name).NotEmpty();
+        // For updates, we need to be more lenient as fields might be partial
+        RuleFor(x => x.Name).NotEmpty().When(x => !string.IsNullOrEmpty(x.Name));
         RuleFor(x => x.Status)
-            .NotEmpty()
-            .Must(x =>
+            .Must(x => string.IsNullOrEmpty(x) || 
                 x == "RED"
                 || x == "AMBER_RED"
                 || x == "AMBER"
@@ -20,8 +20,7 @@ public class ProjectValidator : AbstractValidator<ProjectModel>
             );
         RuleFor(x => x.Commentary).NotNull();
         RuleFor(x => x.Phase)
-            .NotEmpty()
-            .Must(x =>
+            .Must(x => string.IsNullOrEmpty(x) ||
                 x == "Discovery"
                 || x == "Alpha"
                 || x == "Private Beta"
