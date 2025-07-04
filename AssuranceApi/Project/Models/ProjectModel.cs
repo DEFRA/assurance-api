@@ -10,7 +10,7 @@ public class ProjectModel
     public string Id { get; set; } = null!;
     public string Name { get; set; } = null!;
     public string Status { get; set; } = null!; // RED, AMBER_RED, AMBER, GREEN_AMBER, GREEN, TBC
-    public string LastUpdated { get; set; } = null!;
+    public string? LastUpdated { get; set; } // Backend manages this field automatically
     public string Commentary { get; set; } = null!;
     public string? Phase { get; set; } // GDS phase (e.g., Discovery, Alpha, Beta, Live) - optional
     public string? DefCode { get; set; } // DEFRA project identifier - optional

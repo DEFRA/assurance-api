@@ -467,7 +467,7 @@ public class ProjectsController : ControllerBase
         }
     }
 
-    [HttpGet("{projectId}/standards/{standardId}/professions/{professionId}/history/{historyId}/archive")]
+    [HttpPost("{projectId}/standards/{standardId}/professions/{professionId}/history/{historyId}/archive")]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> DeleteProjectStandardProfessionHistory(
         string projectId,
