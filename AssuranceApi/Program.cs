@@ -82,15 +82,10 @@ static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
 {
     var app = _builder.Build();
 
+    app.UseSwagger();
     if (app.Environment.IsDevelopment())
     {
-        app.UseSwagger();
         app.UseSwaggerUI();
-        //app.UseSwaggerUI(options =>
-        //{
-        //    options.SwaggerEndpoint("./swagger/v1.0/swagger.json", "v1.0");
-        //    options.RoutePrefix = string.Empty;
-        //});
     }
 
     app.UseRouting();
