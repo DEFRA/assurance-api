@@ -44,12 +44,12 @@ public class StandardDefinitionChanges
     /// <summary>
     /// Gets or sets the changes made to the name of the standard.
     /// </summary>
-    public NameChange? Name { get; set; }
+    public ServiceStandardNameChange? Name { get; set; }
 
     /// <summary>
     /// Gets or sets the changes made to the description of the standard.
     /// </summary>
-    public DescriptionChange? Description { get; set; }
+    public ServiceStandardDescriptionChange? Description { get; set; }
 
     /// <summary>
     /// Gets or sets the changes made to the guidance of the standard.
@@ -60,7 +60,7 @@ public class StandardDefinitionChanges
 /// <summary>
 /// Represents a change made to the name of a standard.
 /// </summary>
-public class NameChange
+public class ServiceStandardNameChange
 {
     /// <summary>
     /// Gets or sets the original name of the standard.
@@ -76,7 +76,7 @@ public class NameChange
 /// <summary>
 /// Represents a change made to the description of a standard.
 /// </summary>
-public class DescriptionChange
+public class ServiceStandardDescriptionChange
 {
     /// <summary>
     /// Gets or sets the original description of the standard.
