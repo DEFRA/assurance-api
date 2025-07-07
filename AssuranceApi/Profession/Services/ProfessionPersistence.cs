@@ -5,14 +5,27 @@ using MongoDB.Driver;
 
 namespace AssuranceApi.Profession.Services;
 
+/// <summary>
+/// Provides persistence operations for Profession entities in the MongoDB database.
+/// </summary>
 public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionPersistence
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProfessionPersistence"/> class.
+    /// </summary>
+    /// <param name="connectionFactory">The MongoDB client factory.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
     public ProfessionPersistence(
         IMongoDbClientFactory connectionFactory,
         ILoggerFactory loggerFactory
     )
         : base(connectionFactory, "professions", loggerFactory) { }
 
+    /// <summary>
+    /// Defines the indexes for the Profession collection.
+    /// </summary>
+    /// <param name="builder">The index keys definition builder.</param>
+    /// <returns>A list of index models for the Profession collection.</returns>
     protected override List<CreateIndexModel<ProfessionModel>> DefineIndexes(
         IndexKeysDefinitionBuilder<ProfessionModel> builder
     )
@@ -27,6 +40,11 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
         };
     }
 
+    /// <summary>
+    /// Creates a new profession in the database.
+    /// </summary>
+    /// <param name="profession">The profession to create.</param>
+    /// <returns>True if the creation was successful; otherwise, false.</returns>
     public async Task<bool> CreateAsync(ProfessionModel profession)
     {
         try
@@ -54,6 +72,11 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
         }
     }
 
+    /// <summary>
+    /// Seeds the database with a collection of professions. If a profession with the same ID exists, it will be updated; otherwise, it will be inserted.
+    /// </summary>
+    /// <param name="professions">The collection of professions to seed.</param>
+    /// <returns>True if the operation was successful; otherwise, false.</returns>
     public async Task<bool> SeedProfessionsAsync(IEnumerable<ProfessionModel> professions)
     {
         try
@@ -82,6 +105,10 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
         }
     }
 
+    /// <summary>
+    /// Retrieves all professions from the database.
+    /// </summary>
+    /// <returns>A collection of all professions.</returns>
     public async Task<IEnumerable<ProfessionModel>> GetAllAsync()
     {
         return await Collection
@@ -90,21 +117,39 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Retrieves all active professions from the database.
+    /// </summary>
+    /// <returns>A collection of all active professions.</returns>
     public async Task<IEnumerable<ProfessionModel>> GetAllActiveAsync()
     {
         return await Collection.Find(p => p.IsActive).SortBy(p => p.Name).ToListAsync();
     }
 
+    /// <summary>
+    /// Retrieves a profession by its unique identifier.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profession.</param>
+    /// <returns>The profession with the specified ID, or null if not found.</returns>
     public async Task<ProfessionModel?> GetByIdAsync(string id)
     {
         return await Collection.Find(x => x.Id == id).FirstOrDefaultAsync();
     }
 
+    /// <summary>
+    /// Retrieves an active profession by its unique identifier.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profession.</param>
+    /// <returns>The active profession with the specified ID, or null if not found.</returns>
     public async Task<ProfessionModel?> GetActiveByIdAsync(string id)
     {
         return await Collection.Find(x => x.Id == id && x.IsActive).FirstOrDefaultAsync();
     }
 
+    /// <summary>
+    /// Deletes all professions from the database.
+    /// </summary>
+    /// <returns>True if the operation was successful; otherwise, false.</returns>
     public async Task<bool> DeleteAllAsync()
     {
         try
@@ -119,12 +164,23 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
         }
     }
 
+    /// <summary>
+    /// Deletes a profession by its unique identifier. This performs a soft delete, marking the profession as inactive.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profession to delete.</param>
+    /// <returns>True if the operation was successful; otherwise, false.</returns>
     public async Task<bool> DeleteAsync(string id)
     {
         // Now performs soft delete instead of hard delete
         return await SoftDeleteAsync(id, "System");
     }
 
+    /// <summary>
+    /// Performs a soft delete on a profession by marking it as inactive and setting audit fields.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profession to delete.</param>
+    /// <param name="deletedBy">The user or system that performed the delete operation.</param>
+    /// <returns>True if the operation was successful; otherwise, false.</returns>
     public async Task<bool> SoftDeleteAsync(string id, string deletedBy)
     {
         var update = Builders<ProfessionModel>
@@ -137,6 +193,11 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
         return result.ModifiedCount > 0;
     }
 
+    /// <summary>
+    /// Restores a previously soft-deleted profession by marking it as active and clearing audit fields.
+    /// </summary>
+    /// <param name="id">The unique identifier of the profession to restore.</param>
+    /// <returns>True if the operation was successful; otherwise, false.</returns>
     public async Task<bool> RestoreAsync(string id)
     {
         var update = Builders<ProfessionModel>

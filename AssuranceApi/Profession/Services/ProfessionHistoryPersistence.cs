@@ -5,7 +5,7 @@ using MongoDB.Driver;
 
 namespace AssuranceApi.Profession.Services;
 
-public class ProfessionHistoryPersistence
+internal class ProfessionHistoryPersistence
     : MongoService<ProfessionHistory>,
         IProfessionHistoryPersistence
 {

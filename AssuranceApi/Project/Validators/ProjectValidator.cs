@@ -3,14 +3,22 @@ using FluentValidation;
 
 namespace AssuranceApi.Project.Validators;
 
+/// <summary>
+/// Validator for the <see cref="ProjectModel"/> class.
+/// Ensures that the properties of a project meet the required validation rules.
+/// </summary>
 public class ProjectValidator : AbstractValidator<ProjectModel>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectValidator"/> class.
+    /// Defines validation rules for the <see cref="ProjectModel"/>.
+    /// </summary>
     public ProjectValidator()
     {
         // For updates, we need to be more lenient as fields might be partial
         RuleFor(x => x.Name).NotEmpty().When(x => !string.IsNullOrEmpty(x.Name));
         RuleFor(x => x.Status)
-            .Must(x => string.IsNullOrEmpty(x) || 
+            .Must(x => string.IsNullOrEmpty(x) ||
                 x == "RED"
                 || x == "AMBER_RED"
                 || x == "AMBER"

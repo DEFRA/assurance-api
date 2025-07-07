@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using Asp.Versioning;
 using AssuranceApi.Profession.Endpoints;
 using AssuranceApi.Profession.Models;
@@ -19,6 +20,7 @@ using AssuranceApi.Utils.Mongo;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Core;
 
@@ -65,6 +67,8 @@ static void ConfigureWebApplication(WebApplicationBuilder _builder)
 
     ConfigureEndpoints(_builder);
 
+    ConfigureApiDocumentation(_builder, logger);
+
     _builder.Services.AddHttpClient();
 
     // calls outside the platform should be done using the named 'proxy' http client.
@@ -77,6 +81,17 @@ static void ConfigureWebApplication(WebApplicationBuilder _builder)
 static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
 {
     var app = _builder.Build();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+        //app.UseSwaggerUI(options =>
+        //{
+        //    options.SwaggerEndpoint("./swagger/v1.0/swagger.json", "v1.0");
+        //    options.RoutePrefix = string.Empty;
+        //});
+    }
 
     app.UseRouting();
 
@@ -183,6 +198,34 @@ static void ConfigureEndpoints(WebApplicationBuilder _builder)
     _builder.Services.AddHealthChecks();
 }
 
+static void ConfigureApiDocumentation(WebApplicationBuilder builder, Logger logger)
+{
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.SwaggerDoc("v1", new OpenApiInfo
+        {
+            Version = "v1",
+            Title = "Defra Digital Assurance API",
+            Description = "These are the core APIs that underpin the Defra Digital Assurance application.",
+            TermsOfService = new Uri("https://defra.gov.uk"),
+            Contact = new OpenApiContact
+            {
+                Name = "Example Contact",
+                Url = new Uri("https://defra.gov.uk")
+            },
+            License = new OpenApiLicense
+            {
+                Name = "Example License",
+                Url = new Uri("https://defra.gov.uk")
+            }
+        });
+
+        var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+        options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename), true);
+    });
+}
+
 [ExcludeFromCodeCoverage]
 static void ConfigureAuthentication(WebApplicationBuilder _builder, Logger logger)
 {
@@ -266,7 +309,11 @@ static void ConfigureAuthentication(WebApplicationBuilder _builder, Logger logge
 }
 
 // Make Program class accessible for integration testing
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 public partial class Program
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 {
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     protected Program() { }
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }

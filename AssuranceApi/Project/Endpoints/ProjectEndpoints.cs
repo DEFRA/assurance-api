@@ -369,7 +369,7 @@ public static class ProjectEndpoints
         var hasChanges = false;
         if (existing.Name != updated.Name)
         {
-            changes.Name = new NameChange { From = existing.Name, To = updated.Name };
+            changes.Name = new ProjectNameChange { From = existing.Name, To = updated.Name };
             hasChanges = true;
         }
         if (existing.Phase != updated.Phase)

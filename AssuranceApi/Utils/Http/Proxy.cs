@@ -4,18 +4,21 @@ using Serilog.Core;
 
 namespace AssuranceApi.Utils.Http;
 
+/// <summary>
+/// Provides utility methods for configuring and using an HTTP client with a proxy.
+/// </summary>
 public static class Proxy
 {
+    /// <summary>
+    /// The name of the HTTP client configured to use the platform's outbound proxy.
+    /// </summary>
     public const string ProxyClient = "proxy";
 
-    /**
-     * A preconfigured HTTP Client that uses the Platform's outbound proxy.
-     *
-     * Usage:
-     *  1. inject an `IHttpClientFactory` into your class.
-     *  2. Use the IHttpClientFactory to create a named instance of HttpClient:
-     *     `clientFactory.CreateClient(Proxy.ProxyClient);`
-     */
+    /// <summary>
+    /// Adds a preconfigured HTTP client that uses the platform's outbound proxy to the service collection.
+    /// </summary>
+    /// <param name="services">The service collection to which the HTTP client will be added.</param>
+    /// <param name="logger">The logger used for logging proxy-related information.</param>
     [ExcludeFromCodeCoverage]
     public static void AddHttpProxyClient(this IServiceCollection services, Logger logger)
     {
@@ -27,6 +30,11 @@ public static class Proxy
             });
     }
 
+    /// <summary>
+    /// Configures the primary HTTP message handler for the HTTP client.
+    /// </summary>
+    /// <param name="logger">The logger used for logging proxy-related information.</param>
+    /// <returns>A configured <see cref="HttpClientHandler"/> instance.</returns>
     [ExcludeFromCodeCoverage]
     public static HttpClientHandler ConfigurePrimaryHttpMessageHandler(Logger logger)
     {
@@ -34,12 +42,24 @@ public static class Proxy
         return CreateHttpClientHandler(proxyUri, logger);
     }
 
+    /// <summary>
+    /// Creates an <see cref="HttpClientHandler"/> configured with the specified proxy URI.
+    /// </summary>
+    /// <param name="proxyUri">The URI of the proxy server.</param>
+    /// <param name="logger">The logger used for logging proxy-related information.</param>
+    /// <returns>A configured <see cref="HttpClientHandler"/> instance.</returns>
     public static HttpClientHandler CreateHttpClientHandler(string? proxyUri, Logger logger)
     {
         var proxy = CreateProxy(proxyUri, logger);
         return new HttpClientHandler { Proxy = proxy, UseProxy = proxyUri != null };
     }
 
+    /// <summary>
+    /// Creates a <see cref="WebProxy"/> instance configured with the specified proxy URI.
+    /// </summary>
+    /// <param name="proxyUri">The URI of the proxy server.</param>
+    /// <param name="logger">The logger used for logging proxy-related information.</param>
+    /// <returns>A configured <see cref="WebProxy"/> instance.</returns>
     public static WebProxy CreateProxy(string? proxyUri, Logger logger)
     {
         var proxy = new WebProxy { BypassProxyOnLocal = true };
@@ -54,6 +74,12 @@ public static class Proxy
         return proxy;
     }
 
+    /// <summary>
+    /// Configures the specified <see cref="WebProxy"/> with the given proxy URI.
+    /// </summary>
+    /// <param name="proxy">The <see cref="WebProxy"/> to configure.</param>
+    /// <param name="proxyUri">The URI of the proxy server.</param>
+    /// <param name="logger">The logger used for logging proxy-related information.</param>
     public static void ConfigureProxy(WebProxy proxy, string proxyUri, Logger logger)
     {
         logger.Debug("Creating proxy http client");
@@ -72,6 +98,11 @@ public static class Proxy
         proxy.Address = uri.Uri;
     }
 
+    /// <summary>
+    /// Extracts credentials from the specified URI.
+    /// </summary>
+    /// <param name="uri">The URI containing the credentials.</param>
+    /// <returns>A <see cref="NetworkCredential"/> instance if credentials are found; otherwise, null.</returns>
     private static NetworkCredential? GetCredentialsFromUri(UriBuilder uri)
     {
         var username = uri.UserName;
