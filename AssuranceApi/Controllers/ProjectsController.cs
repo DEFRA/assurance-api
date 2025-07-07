@@ -14,6 +14,9 @@ using MongoDB.Bson;
 
 namespace AssuranceApi.Controllers;
 
+/// <summary>
+/// API endpoints for managing projects and their assessments.
+/// </summary>
 [ApiController]
 [ApiVersion(1.0)]
 [Route("api/v{version:ApiVersion}/projects")]
@@ -25,11 +28,19 @@ public class ProjectsController : ControllerBase
     private readonly IValidator<ProjectModel> _validator;
     private readonly ILogger<ProjectsController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectsController"/> class.
+    /// </summary>
+    /// <param name="persistence">The project persistence service.</param>
+    /// <param name="historyPersistence">The project history persistence service.</param>
+    /// <param name="projectStandardsPersistence">The project standards persistence service.</param>
+    /// <param name="validator">The validator for <see cref="ProjectModel"/>.</param>
+    /// <param name="logger">The logger for <see cref="ProjectsController"/>.</param>
     public ProjectsController(
         IProjectPersistence persistence,
         IProjectHistoryPersistence historyPersistence,
         IProjectStandardsPersistence projectStandardsPersistence,
-        IValidator<ProjectModel> validator, 
+        IValidator<ProjectModel> validator,
         ILogger<ProjectsController> logger
     )
     {
@@ -42,7 +53,16 @@ public class ProjectsController : ControllerBase
         _logger.LogDebug("Creating Projects Controller");
     }
 
+    /// <summary>
+    /// Gets all projects.
+    /// </summary>
+    /// <param name="tag">Optional tag to filter projects.</param>
+    /// <returns>A list of projects.</returns>
+    /// <response code="200">Returns the list of projects.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<ProjectModel>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] string? tag)
     {
@@ -66,7 +86,18 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets a project by its ID.
+    /// </summary>
+    /// <param name="id">The project ID.</param>
+    /// <returns>The project if found.</returns>
+    /// <response code="200">Returns the project.</response>
+    /// <response code="404">Project not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(ProjectModel), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
     public async Task<IActionResult> GetById(string id)
     {
@@ -90,7 +121,16 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets the history for a project.
+    /// </summary>
+    /// <param name="id">The project ID.</param>
+    /// <returns>List of project history entries.</returns>
+    /// <response code="200">Returns the project history.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpGet("{id}/history")]
+    [ProducesResponseType(typeof(IEnumerable<ProjectHistory>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
     public async Task<IActionResult> GetHistory(string id)
     {
@@ -114,7 +154,19 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Archives a project history entry.
+    /// </summary>
+    /// <param name="projectId">The project ID.</param>
+    /// <param name="historyId">The history entry ID.</param>
+    /// <returns>Status of the archive operation.</returns>
+    /// <response code="200">History entry archived successfully.</response>
+    /// <response code="404">History entry not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpPut("{projectId}/history/{historyId}/archive")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
     public async Task<IActionResult> DeleteHistory(string projectId, string historyId)
     {
@@ -143,7 +195,15 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets a summary of all project tags.
+    /// </summary>
+    /// <returns>Summary of tags grouped by category and value.</returns>
+    /// <response code="200">Returns the tags summary.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpGet("tags/summary")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
     public async Task<IActionResult> GetTagsSummary()
     {
@@ -183,7 +243,18 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Creates a new project.
+    /// </summary>
+    /// <param name="project">The project to create.</param>
+    /// <returns>The newly created project.</returns>
+    /// <response code="201">Returns the newly created project.</response>
+    /// <response code="400">If the project is invalid or validation fails.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpPost]
+    [ProducesResponseType(typeof(ProjectModel), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Create(ProjectModel project)
     {
@@ -246,7 +317,21 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Updates an existing project.
+    /// </summary>
+    /// <param name="id">The project ID.</param>
+    /// <param name="project">The updated project data.</param>
+    /// <returns>The updated project if successful.</returns>
+    /// <response code="200">Project updated successfully.</response>
+    /// <response code="400">If the project is invalid or validation fails.</response>
+    /// <response code="404">Project not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpPut("{id}")]
+    [ProducesResponseType(typeof(ProjectModel), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Update(string id, ProjectModel project)
     {
@@ -329,7 +414,18 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Deletes a project by ID.
+    /// </summary>
+    /// <param name="id">The project ID.</param>
+    /// <returns>No content if deleted.</returns>
+    /// <response code="204">Project deleted successfully.</response>
+    /// <response code="404">Project not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Delete(string id)
     {
@@ -353,7 +449,20 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets the assessment for a specific project, standard, and profession.
+    /// </summary>
+    /// <param name="projectId">The project ID.</param>
+    /// <param name="standardId">The standard ID.</param>
+    /// <param name="professionId">The profession ID.</param>
+    /// <returns>The assessment if found.</returns>
+    /// <response code="200">Returns the assessment.</response>
+    /// <response code="404">Assessment not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpGet("{projectId}/standards/{standardId}/professions/{professionId}/assessment")]
+    [ProducesResponseType(typeof(ProjectStandards), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> GetProjectStandardProfessionAssessment(string projectId, string standardId, string professionId)
     {
@@ -382,12 +491,28 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Creates an assessment for a specific project, standard, and profession.
+    /// </summary>
+    /// <param name="projectId">The project ID.</param>
+    /// <param name="standardId">The standard ID.</param>
+    /// <param name="professionId">The profession ID.</param>
+    /// <param name="assessment">The assessment to create.</param>
+    /// <param name="handler">The assessment handler.</param>
+    /// <param name="summaryHelper">The standards summary helper.</param>
+    /// <returns>Status of the create operation.</returns>
+    /// <response code="200">Assessment created successfully.</response>
+    /// <response code="400">Validation failed.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpPost("{projectId}/standards/{standardId}/professions/{professionId}/assessment")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> CreateProjectStandardProfessionAssessment(
         string projectId,
-        string standardId, 
-        string professionId, 
+        string standardId,
+        string professionId,
         [FromBody] ProjectStandards assessment,
         [FromServices] CreateAssessmentHandler handler,
         [FromServices] StandardsSummaryHelper summaryHelper)
@@ -428,7 +553,21 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets the assessment history for a specific project, standard, and profession.
+    /// </summary>
+    /// <param name="projectId">The project ID.</param>
+    /// <param name="standardId">The standard ID.</param>
+    /// <param name="professionId">The profession ID.</param>
+    /// <param name="historyPersistence">The history persistence service.</param>
+    /// <returns>List of assessment history entries.</returns>
+    /// <response code="200">Returns the assessment history.</response>
+    /// <response code="404">Assessment history not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpGet("{projectId}/standards/{standardId}/professions/{professionId}/history")]
+    [ProducesResponseType(typeof(IEnumerable<ProjectStandardsHistory>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetProjectStandardProfessionHistory(
         string projectId,
         string standardId,
@@ -467,7 +606,24 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Archives an assessment history entry for a specific project, standard, and profession.
+    /// </summary>
+    /// <param name="projectId">The project ID.</param>
+    /// <param name="standardId">The standard ID.</param>
+    /// <param name="professionId">The profession ID.</param>
+    /// <param name="historyId">The history entry ID.</param>
+    /// <param name="historyPersistence">The history persistence service.</param>
+    /// <param name="assessmentPersistence">The assessment persistence service.</param>
+    /// <param name="projectPersistence">The project persistence service.</param>
+    /// <returns>Status of the archive operation.</returns>
+    /// <response code="200">History entry archived successfully.</response>
+    /// <response code="404">History entry not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpPost("{projectId}/standards/{standardId}/professions/{professionId}/history/{historyId}/archive")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> DeleteProjectStandardProfessionHistory(
         string projectId,
@@ -584,7 +740,7 @@ public class ProjectsController : ControllerBase
 
         if (existing.Name != updated.Name)
         {
-            changes.Name = new NameChange { From = existing.Name, To = updated.Name };
+            changes.Name = new ProjectNameChange { From = existing.Name, To = updated.Name };
             hasChanges = true;
         }
         if (existing.Phase != updated.Phase)
@@ -654,7 +810,7 @@ public class ProjectsController : ControllerBase
         }
     }
 
-    private DateTime? ParseUpdateDate(string updateDateStr)
+    private static DateTime? ParseUpdateDate(string updateDateStr)
     {
         if (
             !string.IsNullOrEmpty(updateDateStr)

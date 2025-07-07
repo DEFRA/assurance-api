@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AssuranceApi.Controllers;
 
+/// <summary>
+/// API endpoints for managing service standards.
+/// </summary>
 [ApiController]
 [ApiVersion(1.0)]
 [Route("api/v{version:ApiVersion}/servicestandards")]
@@ -15,6 +18,12 @@ public class ServiceStandardsController : ControllerBase
     private readonly IServiceStandardHistoryPersistence _historyPersistence;
     private readonly ILogger<ServiceStandardsController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ServiceStandardsController"/> class.
+    /// </summary>
+    /// <param name="persistence">The service standard persistence service.</param>
+    /// <param name="historyPersistence">The service standard history persistence service.</param>
+    /// <param name="logger">The logger instance for logging operations.</param>
     public ServiceStandardsController(
         IServiceStandardPersistence persistence,
         IServiceStandardHistoryPersistence historyPersistence,
@@ -28,7 +37,18 @@ public class ServiceStandardsController : ControllerBase
         _logger.LogDebug("Creating ServiceStandards Controller");
     }
 
+    /// <summary>
+    /// Seeds the service standards collection with the provided list.
+    /// </summary>
+    /// <param name="standards">List of service standards to seed.</param>
+    /// <returns>Status of the seed operation.</returns>
+    /// <response code="200">Service standards seeded successfully or all deleted if list is empty.</response>
+    /// <response code="400">Failed to seed service standards.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpPost("seed")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Seed([FromBody] List<ServiceStandardModel> standards)
     {
@@ -58,7 +78,15 @@ public class ServiceStandardsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Deletes all service standards.
+    /// </summary>
+    /// <returns>Status of the delete operation.</returns>
+    /// <response code="200">All service standards deleted successfully.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpPost("deleteAll")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> DeleteAll()
     {
@@ -82,7 +110,18 @@ public class ServiceStandardsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Soft deletes a service standard by ID.
+    /// </summary>
+    /// <param name="id">The service standard ID.</param>
+    /// <returns>Status of the delete operation.</returns>
+    /// <response code="200">Service standard soft deleted successfully.</response>
+    /// <response code="404">Service standard not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> SoftDelete(string id)
     {
@@ -106,7 +145,18 @@ public class ServiceStandardsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Restores a soft-deleted service standard by ID.
+    /// </summary>
+    /// <param name="id">The service standard ID.</param>
+    /// <returns>Status of the restore operation.</returns>
+    /// <response code="200">Service standard restored successfully.</response>
+    /// <response code="404">Service standard not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpPost("{id}/restore")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Restore(string id)
     {
@@ -130,7 +180,16 @@ public class ServiceStandardsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets all service standards.
+    /// </summary>
+    /// <param name="includeInactive">Whether to include inactive service standards.</param>
+    /// <returns>List of service standards.</returns>
+    /// <response code="200">Returns the list of service standards.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<ServiceStandardModel>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
     {
@@ -156,7 +215,19 @@ public class ServiceStandardsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets a service standard by ID.
+    /// </summary>
+    /// <param name="id">The service standard ID.</param>
+    /// <param name="includeInactive">Whether to include inactive service standards.</param>
+    /// <returns>The service standard if found.</returns>
+    /// <response code="200">Returns the service standard.</response>
+    /// <response code="404">Service standard not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(ServiceStandardModel), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
     public async Task<IActionResult> GetById(string id, [FromQuery] bool includeInactive = false)
     {
@@ -182,7 +253,16 @@ public class ServiceStandardsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets the history for a service standard.
+    /// </summary>
+    /// <param name="id">The service standard ID.</param>
+    /// <returns>List of service standard history entries.</returns>
+    /// <response code="200">Returns the service standard history.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpGet("{standardId}/history")]
+    [ProducesResponseType(typeof(IEnumerable<StandardDefinitionHistory>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
     public async Task<IActionResult> GetHistory(string id)
     {

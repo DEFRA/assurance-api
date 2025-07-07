@@ -104,13 +104,13 @@ namespace AssuranceApi.Test
                 ChangedBy = "System",
                 Changes = new StandardDefinitionChanges()
                 {
-                    Description = new DescriptionChange()
+                    Description = new ServiceStandardDescriptionChange()
                     {
                         From = "Description 1",
                         To = "Description 2",
                     },
                     Guidance = new GuidanceChange() { From = "Guidance 1", To = "Guidance 2" },
-                    Name = new NameChange() { From = "Name 1", To = "Name 2" },
+                    Name = new ServiceStandardNameChange() { From = "Name 1", To = "Name 2" },
                 },
                 Timestamp = new DateTime(2024, 04, 25),
             },
@@ -121,13 +121,13 @@ namespace AssuranceApi.Test
                 ChangedBy = "System",
                 Changes = new StandardDefinitionChanges()
                 {
-                    Description = new DescriptionChange()
+                    Description = new ServiceStandardDescriptionChange()
                     {
                         From = "Description 1",
                         To = "Description 2",
                     },
                     Guidance = new GuidanceChange() { From = "Guidance 1", To = "Guidance 2" },
-                    Name = new NameChange() { From = "Name 1", To = "Name 2" },
+                    Name = new ServiceStandardNameChange() { From = "Name 1", To = "Name 2" },
                 },
                 Timestamp = new DateTime(2024, 04, 26),
             },

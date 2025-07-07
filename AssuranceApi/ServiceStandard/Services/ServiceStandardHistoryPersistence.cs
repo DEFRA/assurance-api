@@ -5,10 +5,18 @@ using MongoDB.Driver;
 
 namespace AssuranceApi.ServiceStandard.Services;
 
+/// <summary>
+/// Provides persistence operations for service standard history, including creating and retrieving history entries.
+/// </summary>
 public class ServiceStandardHistoryPersistence
     : MongoService<StandardDefinitionHistory>,
         IServiceStandardHistoryPersistence
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ServiceStandardHistoryPersistence"/> class.
+    /// </summary>
+    /// <param name="connectionFactory">The factory to create MongoDB client connections.</param>
+    /// <param name="loggerFactory">The factory to create loggers.</param>
     public ServiceStandardHistoryPersistence(
         IMongoDbClientFactory connectionFactory,
         ILoggerFactory loggerFactory
@@ -36,6 +44,11 @@ public class ServiceStandardHistoryPersistence
         }
     }
 
+    /// <summary>
+    /// Defines the indexes for the service standard history collection.
+    /// </summary>
+    /// <param name="builder">The index key definition builder.</param>
+    /// <returns>A list of index models to be created.</returns>
     protected override List<CreateIndexModel<StandardDefinitionHistory>> DefineIndexes(
         IndexKeysDefinitionBuilder<StandardDefinitionHistory> builder
     )
@@ -48,6 +61,11 @@ public class ServiceStandardHistoryPersistence
         };
     }
 
+    /// <summary>
+    /// Creates a new history entry for a service standard.
+    /// </summary>
+    /// <param name="history">The history entry to create.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success or failure.</returns>
     public async Task<bool> CreateAsync(StandardDefinitionHistory history)
     {
         try
@@ -67,6 +85,11 @@ public class ServiceStandardHistoryPersistence
         }
     }
 
+    /// <summary>
+    /// Retrieves the history entries for a specific service standard.
+    /// </summary>
+    /// <param name="standardId">The ID of the service standard.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a collection of history entries.</returns>
     public async Task<IEnumerable<StandardDefinitionHistory>> GetHistoryAsync(string standardId)
     {
         try

@@ -5,10 +5,18 @@ using MongoDB.Driver;
 
 namespace AssuranceApi.Project.Services;
 
+/// <summary>
+/// Provides persistence operations for Project Standards in the MongoDB database.
+/// </summary>
 public class ProjectStandardsPersistence
     : MongoService<ProjectStandards>,
         IProjectStandardsPersistence
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectStandardsPersistence"/> class.
+    /// </summary>
+    /// <param name="connectionFactory">The MongoDB client factory.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
     public ProjectStandardsPersistence(
         IMongoDbClientFactory connectionFactory,
         ILoggerFactory loggerFactory
@@ -20,6 +28,7 @@ public class ProjectStandardsPersistence
         );
     }
 
+    /// <inheritdoc />
     protected override List<CreateIndexModel<ProjectStandards>> DefineIndexes(
         IndexKeysDefinitionBuilder<ProjectStandards> builder
     )
@@ -36,6 +45,13 @@ public class ProjectStandardsPersistence
         };
     }
 
+    /// <summary>
+    /// Retrieves a specific Project Standard by project, standard, and profession IDs.
+    /// </summary>
+    /// <param name="projectId">The project ID.</param>
+    /// <param name="standardId">The standard ID.</param>
+    /// <param name="professionId">The profession ID.</param>
+    /// <returns>The matching <see cref="ProjectStandards"/> or null if not found.</returns>
     public async Task<ProjectStandards?> GetAsync(
         string projectId,
         string standardId,
@@ -51,6 +67,12 @@ public class ProjectStandardsPersistence
             .FirstOrDefaultAsync();
     }
 
+    /// <summary>
+    /// Retrieves all Project Standards for a specific project and standard.
+    /// </summary>
+    /// <param name="projectId">The project ID.</param>
+    /// <param name="standardId">The standard ID.</param>
+    /// <returns>A list of matching <see cref="ProjectStandards"/>.</returns>
     public async Task<List<ProjectStandards>> GetByProjectAndStandardAsync(
         string projectId,
         string standardId
@@ -61,11 +83,20 @@ public class ProjectStandardsPersistence
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Retrieves all Project Standards for a specific project.
+    /// </summary>
+    /// <param name="projectId">The project ID.</param>
+    /// <returns>A list of matching <see cref="ProjectStandards"/>.</returns>
     public async Task<List<ProjectStandards>> GetByProjectAsync(string projectId)
     {
         return await Collection.Find(x => x.ProjectId == projectId).ToListAsync();
     }
 
+    /// <summary>
+    /// Inserts or updates a Project Standard in the database.
+    /// </summary>
+    /// <param name="assessment">The <see cref="ProjectStandards"/> to upsert.</param>
     public async Task UpsertAsync(ProjectStandards assessment)
     {
         var filter = Builders<ProjectStandards>.Filter.Where(x =>
@@ -80,6 +111,13 @@ public class ProjectStandardsPersistence
         );
     }
 
+    /// <summary>
+    /// Deletes a specific Project Standard by project, standard, and profession IDs.
+    /// </summary>
+    /// <param name="projectId">The project ID.</param>
+    /// <param name="standardId">The standard ID.</param>
+    /// <param name="professionId">The profession ID.</param>
+    /// <returns>True if the deletion was successful; otherwise, false.</returns>
     public async Task<bool> DeleteAsync(string projectId, string standardId, string professionId)
     {
         var filter = Builders<ProjectStandards>.Filter.Where(x =>

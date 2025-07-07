@@ -6,11 +6,24 @@ using MongoDB.Driver;
 
 namespace AssuranceApi.Project.Services;
 
+/// <summary>
+/// Provides persistence operations for ProjectModel entities in a MongoDB collection.
+/// </summary>
 public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistence
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectPersistence"/> class.
+    /// </summary>
+    /// <param name="connectionFactory">The factory to create MongoDB client connections.</param>
+    /// <param name="loggerFactory">The factory to create loggers.</param>
     public ProjectPersistence(IMongoDbClientFactory connectionFactory, ILoggerFactory loggerFactory)
         : base(connectionFactory, "projects", loggerFactory) { }
 
+    /// <summary>
+    /// Defines the indexes for the ProjectModel collection.
+    /// </summary>
+    /// <param name="builder">The index keys definition builder.</param>
+    /// <returns>A list of index models to be created.</returns>
     protected override List<CreateIndexModel<ProjectModel>> DefineIndexes(
         IndexKeysDefinitionBuilder<ProjectModel> builder
     )
@@ -24,6 +37,11 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
         };
     }
 
+    /// <summary>
+    /// Creates a new project in the database.
+    /// </summary>
+    /// <param name="project">The project to create.</param>
+    /// <returns>True if the project was created successfully; otherwise, false.</returns>
     public async Task<bool> CreateAsync(ProjectModel project)
     {
         try
@@ -38,6 +56,11 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
         }
     }
 
+    /// <summary>
+    /// Retrieves all projects, optionally filtered by a tag.
+    /// </summary>
+    /// <param name="tag">The tag to filter projects by, or null to retrieve all projects.</param>
+    /// <returns>A list of projects.</returns>
     public async Task<List<ProjectModel>> GetAllAsync(string? tag = null)
     {
         var filter =
@@ -48,11 +71,22 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
         return await Collection.Find(filter).ToListAsync();
     }
 
+    /// <summary>
+    /// Retrieves a project by its ID.
+    /// </summary>
+    /// <param name="id">The ID of the project to retrieve.</param>
+    /// <returns>The project with the specified ID, or null if not found.</returns>
     public async Task<ProjectModel?> GetByIdAsync(string id)
     {
         return await Collection.Find(x => x.Id == id).FirstOrDefaultAsync();
     }
 
+    /// <summary>
+    /// Updates an existing project in the database.
+    /// </summary>
+    /// <param name="id">The ID of the project to update.</param>
+    /// <param name="project">The updated project data.</param>
+    /// <returns>True if the project was updated successfully; otherwise, false.</returns>
     public async Task<bool> UpdateAsync(string id, ProjectModel project)
     {
         try
@@ -105,11 +139,19 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
         }
     }
 
+    /// <summary>
+    /// Deletes all projects from the database.
+    /// </summary>
     public async Task DeleteAllAsync()
     {
         await Collection.DeleteManyAsync(Builders<ProjectModel>.Filter.Empty);
     }
 
+    /// <summary>
+    /// Deletes a project by its ID.
+    /// </summary>
+    /// <param name="id">The ID of the project to delete.</param>
+    /// <returns>True if the project was deleted successfully; otherwise, false.</returns>
     public async Task<bool> DeleteAsync(string id)
     {
         try
@@ -135,6 +177,11 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
         }
     }
 
+    /// <summary>
+    /// Seeds the database with a list of projects.
+    /// </summary>
+    /// <param name="projects">The list of projects to seed.</param>
+    /// <returns>True if the seeding was successful; otherwise, false.</returns>
     public async Task<bool> SeedAsync(List<ProjectModel> projects)
     {
         try
@@ -153,7 +200,11 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
         }
     }
 
-    // Add a new method for adding projects without clearing
+    /// <summary>
+    /// Adds a list of projects to the database without clearing existing data.
+    /// </summary>
+    /// <param name="projects">The list of projects to add.</param>
+    /// <returns>True if the projects were added successfully; otherwise, false.</returns>
     public async Task<bool> AddProjectsAsync(List<ProjectModel> projects)
     {
         try

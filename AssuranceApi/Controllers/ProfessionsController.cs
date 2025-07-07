@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AssuranceApi.Controllers;
 
+/// <summary>
+/// API endpoints for managing professions.
+/// </summary>
 [ApiController]
 [ApiVersion(1.0)]
 [Route("api/v{version:ApiVersion}/professions")]
@@ -18,11 +21,18 @@ public class ProfessionsController : ControllerBase
     private readonly IValidator<ProfessionModel> _validator;
     private readonly ILogger<ProfessionsController> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProfessionsController"/> class.
+    /// </summary>
+    /// <param name="persistence">The profession persistence service.</param>
+    /// <param name="historyPersistence">The profession history persistence service.</param>
+    /// <param name="validator">The validator for <see cref="ProfessionModel"/>.</param>
+    /// <param name="logger">The logger for the controller.</param>
     public ProfessionsController(
-        IProfessionPersistence persistence,
-        IProfessionHistoryPersistence historyPersistence,
-        IValidator<ProfessionModel> validator,
-        ILogger<ProfessionsController> logger
+       IProfessionPersistence persistence,
+       IProfessionHistoryPersistence historyPersistence,
+       IValidator<ProfessionModel> validator,
+       ILogger<ProfessionsController> logger
     )
     {
         _persistence = persistence;
@@ -33,7 +43,18 @@ public class ProfessionsController : ControllerBase
         _logger.LogDebug("Creating Professions Controller");
     }
 
+    /// <summary>
+    /// Creates a new profession.
+    /// </summary>
+    /// <param name="profession">The profession to create.</param>
+    /// <returns>The newly created profession.</returns>
+    /// <response code="201">Returns the newly created profession.</response>
+    /// <response code="400">If the profession is invalid or validation fails.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpPost]
+    [ProducesResponseType(typeof(ProfessionModel), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Create([FromBody] ProfessionModel profession)
     {
@@ -73,7 +94,15 @@ public class ProfessionsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Deletes all professions.
+    /// </summary>
+    /// <returns>Status of the delete operation.</returns>
+    /// <response code="200">All professions deleted successfully.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpPost("deleteAll")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> DeleteAll()
     {
@@ -97,7 +126,18 @@ public class ProfessionsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Seeds the professions collection with the provided array.
+    /// </summary>
+    /// <param name="professions">Array of professions to seed.</param>
+    /// <returns>Status of the seed operation.</returns>
+    /// <response code="200">Professions seeded successfully.</response>
+    /// <response code="400">Validation errors occurred.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpPost("seed")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Seed([FromBody] ProfessionModel[] professions)
     {
@@ -135,7 +175,18 @@ public class ProfessionsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Soft deletes a profession by ID.
+    /// </summary>
+    /// <param name="id">The profession ID.</param>
+    /// <returns>Status of the delete operation.</returns>
+    /// <response code="200">Profession soft deleted successfully.</response>
+    /// <response code="404">Profession not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> SoftDelete(string id)
     {
@@ -159,7 +210,18 @@ public class ProfessionsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Restores a soft-deleted profession by ID.
+    /// </summary>
+    /// <param name="id">The profession ID.</param>
+    /// <returns>Status of the restore operation.</returns>
+    /// <response code="200">Profession restored successfully.</response>
+    /// <response code="404">Profession not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpPost("{id}/restore")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<IActionResult> Restore(string id)
     {
@@ -183,7 +245,16 @@ public class ProfessionsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets all professions.
+    /// </summary>
+    /// <param name="includeInactive">Whether to include inactive professions.</param>
+    /// <returns>List of professions.</returns>
+    /// <response code="200">Returns the list of professions.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<ProfessionModel>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
     {
@@ -209,7 +280,19 @@ public class ProfessionsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets a profession by ID.
+    /// </summary>
+    /// <param name="id">The profession ID.</param>
+    /// <param name="includeInactive">Whether to include inactive professions.</param>
+    /// <returns>The profession if found.</returns>
+    /// <response code="200">Returns the profession.</response>
+    /// <response code="404">Profession not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(ProfessionModel), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
     public async Task<IActionResult> GetById(string id, [FromQuery] bool includeInactive = false)
     {
@@ -237,7 +320,16 @@ public class ProfessionsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets the history for a profession.
+    /// </summary>
+    /// <param name="professionId">The profession ID.</param>
+    /// <returns>List of profession history entries.</returns>
+    /// <response code="200">Returns the profession history.</response>
+    /// <response code="500">If an internal server error occurs.</response>
     [HttpGet("{professionId}/history")]
+    [ProducesResponseType(typeof(IEnumerable<ProfessionHistory>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
     public async Task<IActionResult> GetHistory(string professionId)
     {

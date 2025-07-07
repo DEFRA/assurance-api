@@ -7,15 +7,44 @@ using MongoDB.Bson;
 
 namespace AssuranceApi.Project.Handlers;
 
+/// <summary>
+/// Handles the creation and updating of project assessments.
+/// </summary>
 public class CreateAssessmentHandler
 {
+    /// <summary>
+    /// Persistence service for project standards assessments.
+    /// </summary>
     private readonly IProjectStandardsPersistence _assessmentPersistence;
+
+    /// <summary>
+    /// Persistence service for project standards history.
+    /// </summary>
     private readonly IProjectStandardsHistoryPersistence _historyPersistence;
+
+    /// <summary>
+    /// Persistence service for projects.
+    /// </summary>
     private readonly IProjectPersistence _projectPersistence;
+
+    /// <summary>
+    /// Persistence service for service standards.
+    /// </summary>
     private readonly IServiceStandardPersistence _standardPersistence;
+
+    /// <summary>
+    /// Persistence service for professions.
+    /// </summary>
     private readonly IProfessionPersistence _professionPersistence;
+
+    /// <summary>
+    /// Logger for the handler.
+    /// </summary>
     private readonly ILogger<CreateAssessmentHandler> _logger;
 
+    /// <summary>
+    /// Valid statuses for service standards.
+    /// </summary>
     private static readonly string[] ValidServiceStandardStatuses =
     {
         "RED",
@@ -24,6 +53,15 @@ public class CreateAssessmentHandler
         "TBC",
     };
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CreateAssessmentHandler"/> class.
+    /// </summary>
+    /// <param name="assessmentPersistence">The assessment persistence service.</param>
+    /// <param name="historyPersistence">The history persistence service.</param>
+    /// <param name="projectPersistence">The project persistence service.</param>
+    /// <param name="standardPersistence">The service standard persistence service.</param>
+    /// <param name="professionPersistence">The profession persistence service.</param>
+    /// <param name="logger">The logger instance.</param>
     public CreateAssessmentHandler(
         IProjectStandardsPersistence assessmentPersistence,
         IProjectStandardsHistoryPersistence historyPersistence,
@@ -41,6 +79,14 @@ public class CreateAssessmentHandler
         _logger = logger;
     }
 
+    /// <summary>
+    /// Handles the creation or update of a project assessment.
+    /// </summary>
+    /// <param name="projectId">The project ID.</param>
+    /// <param name="standardId">The service standard ID.</param>
+    /// <param name="professionId">The profession ID.</param>
+    /// <param name="assessment">The assessment details.</param>
+    /// <returns>An <see cref="AssessmentResult"/> indicating the outcome.</returns>
     public async Task<AssessmentResult> HandleAsync(
         string projectId,
         string standardId,
@@ -214,14 +260,37 @@ public class CreateAssessmentHandler
     }
 }
 
+/// <summary>
+/// Represents the result of an assessment operation.
+/// </summary>
 public class AssessmentResult
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether the operation was successful.
+    /// </summary>
     public bool IsValid { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error message, if any, associated with the operation.
+    /// </summary>
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HTTP status code associated with the operation.
+    /// </summary>
     public int StatusCode { get; set; } = 200;
 
+    /// <summary>
+    /// Creates a successful <see cref="AssessmentResult"/>.
+    /// </summary>
+    /// <returns>An instance of <see cref="AssessmentResult"/> indicating success.</returns>
     public static AssessmentResult Success() => new() { IsValid = true };
 
+    /// <summary>
+    /// Creates a bad request <see cref="AssessmentResult"/> with the specified error message.
+    /// </summary>
+    /// <param name="message">The error message.</param>
+    /// <returns>An instance of <see cref="AssessmentResult"/> indicating a bad request.</returns>
     public static AssessmentResult BadRequest(string message) =>
         new()
         {
@@ -230,6 +299,11 @@ public class AssessmentResult
             StatusCode = 400,
         };
 
+    /// <summary>
+    /// Creates an error <see cref="AssessmentResult"/> with the specified error message.
+    /// </summary>
+    /// <param name="message">The error message.</param>
+    /// <returns>An instance of <see cref="AssessmentResult"/> indicating an error.</returns>
     public static AssessmentResult Error(string message) =>
         new()
         {

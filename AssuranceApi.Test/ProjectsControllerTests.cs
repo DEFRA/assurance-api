@@ -104,7 +104,7 @@ namespace AssuranceApi.Test
                         From = "Before commentary update 1",
                         To = "After commentary update 1",
                     },
-                    Name = new AssuranceApi.Project.Models.NameChange()
+                    Name = new AssuranceApi.Project.Models.ProjectNameChange()
                     {
                         From = "Before name update 1",
                         To = "After name update 1",
@@ -132,7 +132,7 @@ namespace AssuranceApi.Test
                         From = "Before commentary update 2",
                         To = "After commentary update 2",
                     },
-                    Name = new AssuranceApi.Project.Models.NameChange()
+                    Name = new AssuranceApi.Project.Models.ProjectNameChange()
                     {
                         From = "Before name update 2",
                         To = "After name update 2",

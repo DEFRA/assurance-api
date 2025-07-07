@@ -6,16 +6,29 @@ using Serilog.Core;
 
 namespace AssuranceApi.Utils;
 
+/// <summary>
+/// Provides utility methods for managing the trust store, including adding custom certificates.
+/// </summary>
 [ExcludeFromCodeCoverage]
 public static class TrustStore
 {
-    public static void AddCustomTrustStore(this IServiceCollection _, Logger logger)
+    /// <summary>
+    /// Adds custom certificates to the trust store from environment variables.
+    /// </summary>
+    /// <param name="_">The service collection (not used).</param>
+    /// <param name="logger">The logger instance for logging information.</param>
+    internal static void AddCustomTrustStore(this IServiceCollection _, Logger logger)
     {
         logger.Information("Loading Certificates into Trust store");
         var certificates = GetCertificates(logger);
         AddCertificates(certificates);
     }
 
+    /// <summary>
+    /// Retrieves certificates from environment variables that are base64 encoded.
+    /// </summary>
+    /// <param name="logger">The logger instance for logging information.</param>
+    /// <returns>A list of decoded certificate strings.</returns>
     private static List<string> GetCertificates(Logger logger)
     {
         return Environment
@@ -34,6 +47,10 @@ public static class TrustStore
             .ToList();
     }
 
+    /// <summary>
+    /// Adds the provided certificates to the current user's trust store.
+    /// </summary>
+    /// <param name="certificates">A collection of certificate strings to add.</param>
     private static void AddCertificates(IReadOnlyCollection<string> certificates)
     {
         if (certificates.Count == 0)
@@ -64,6 +81,11 @@ public static class TrustStore
         }
     }
 
+    /// <summary>
+    /// Checks if a given string is a valid Base64 encoded string.
+    /// </summary>
+    /// <param name="str">The string to validate.</param>
+    /// <returns>True if the string is Base64 encoded; otherwise, false.</returns>
     private static bool IsBase64String(string str)
     {
         var buffer = new Span<byte>(new byte[str.Length]);
