@@ -11,6 +11,7 @@ using Xunit.Abstractions;
 
 namespace AssuranceApi.Test
 {
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
     public class ServiceStandardsControllerTests
     {
         private readonly ILogger<ServiceStandardsController> _logger;
@@ -491,3 +492,4 @@ namespace AssuranceApi.Test
         }
     }
 }
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.

@@ -3,8 +3,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AssuranceApi.Profession.Models;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Xunit;
 
 namespace AssuranceApi.IntegrationTests;
 
@@ -25,7 +23,7 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
         var client = _factory.CreateUnauthenticatedClient(); // Public endpoint
 
         // Act
-        var response = await client.GetAsync("/professions");
+        var response = await client.GetAsync("/api/v1.0/professions");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -40,7 +38,7 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
     [Fact]
     public async Task CreateProfession_ReturnsCreated_WhenValidProfessionProvided()
     {
-        // Arrange - Clear database and use authenticated client
+        // Arrange - Clear database and use authenticated authenticatedClient
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateAuthenticatedClient(); // Protected endpoint
 
@@ -52,12 +50,12 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Act
-        var response = await client.PostAsJsonAsync("/professions", profession);
+        var response = await client.PostAsJsonAsync("/api/v1.0/professions", profession);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         response.Headers.Location.Should().NotBeNull();
-        response.Headers.Location!.ToString().Should().Contain("/professions/test-profession");
+        response.Headers.Location!.ToString().Should().Contain("/api/v1.0/professions/test-profession");
     }
 
     [Fact]
@@ -68,7 +66,7 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
         var client = _factory.CreateUnauthenticatedClient(); // Public endpoint
 
         // Act
-        var response = await client.GetAsync("/professions/non-existent-id");
+        var response = await client.GetAsync("/api/v1.0/professions/non-existent-id");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -90,10 +88,10 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Create the profession first
-        await authenticatedClient.PostAsJsonAsync("/professions", profession);
+        await authenticatedClient.PostAsJsonAsync("/api/v1.0/professions", profession);
 
-        // Act - Use public client to test read access
-        var response = await publicClient.GetAsync("/professions/test-get-profession");
+        // Act - Use public authenticatedClient to test read access
+        var response = await publicClient.GetAsync("/api/v1.0/professions/test-get-profession");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -113,7 +111,7 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
     {
         // Arrange - Clear database and create profession
         await _factory.ClearDatabaseAsync();
-        var client = _factory.CreateAuthenticatedClient(); // Protected endpoint
+        var authenticatedClient = _factory.CreateAuthenticatedClient(); // Protected endpoint
 
         var profession = new ProfessionModel
         {
@@ -123,10 +121,10 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Create the profession first
-        await client.PostAsJsonAsync("/professions", profession);
+        await authenticatedClient.PostAsJsonAsync("/api/v1.0/professions", profession);
 
         // Act
-        var response = await client.DeleteAsync("/professions/delete-test-profession");
+        var response = await authenticatedClient.DeleteAsync("/api/v1.0/professions/delete-test-profession");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -152,18 +150,18 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
             Description = "Test 2",
         };
 
-        await client.PostAsJsonAsync("/professions", profession1);
-        await client.PostAsJsonAsync("/professions", profession2);
+        await client.PostAsJsonAsync("/api/v1.0/professions", profession1);
+        await client.PostAsJsonAsync("/api/v1.0/professions", profession2);
 
         // Act
-        var response = await client.PostAsync("/professions/deleteAll", null);
+        var response = await client.PostAsync("/api/v1.0/professions/deleteAll", null);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify all professions are deleted
         var publicClient = _factory.CreateUnauthenticatedClient();
-        var getResponse = await publicClient.GetAsync("/professions");
+        var getResponse = await publicClient.GetAsync("/api/v1.0/professions");
         var content = await getResponse.Content.ReadAsStringAsync();
         var professions = JsonSerializer.Deserialize<List<ProfessionModel>>(
             content,
