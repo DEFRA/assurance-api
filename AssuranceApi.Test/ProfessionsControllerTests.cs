@@ -270,7 +270,7 @@ namespace AssuranceApi.Test
 
             response
                 .Should()
-                .BeOfType<CreatedAtActionResult>()
+                .BeOfType<CreatedResult>()
                 .Which.Value.Should()
                 .BeEquivalentTo(_newProfession);
         }

@@ -5,6 +5,7 @@ using AssuranceApi.Utils;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
 
 namespace AssuranceApi.Controllers;
 
@@ -81,7 +82,8 @@ public class ProfessionsController : ControllerBase
                 return StatusCode(500, message);
             }
 
-            return CreatedAtAction(nameof(GetById), new { id = profession.Id }, profession);
+            var getRoute = $"/api/v1.0/professions/{profession.Id}";
+            return Created(getRoute, profession);
         }
         catch (Exception ex)
         {
