@@ -17,9 +17,9 @@ public class AuthorizationIntegrationTests : IClassFixture<TestApplicationFactor
     }
 
     [Theory]
-    [InlineData("/professions")] // GET endpoints should be public
-    [InlineData("/serviceStandards")]
-    [InlineData("/projects")]
+    [InlineData("/api/1.0/professions")] // GET endpoints should be public
+    [InlineData("/api/1.0/serviceStandards")]
+    [InlineData("/api/1.0/projects")]
     [InlineData("/health")]
     public async Task PublicEndpoints_AllowUnauthenticatedAccess(string endpoint)
     {
@@ -35,12 +35,12 @@ public class AuthorizationIntegrationTests : IClassFixture<TestApplicationFactor
     }
 
     [Theory]
-    [InlineData("POST", "/professions")] // Protected admin endpoints
-    [InlineData("DELETE", "/professions/test-id")]
-    [InlineData("POST", "/professions/deleteAll")]
-    [InlineData("POST", "/serviceStandards/seed")]
-    [InlineData("DELETE", "/serviceStandards/test-id")]
-    [InlineData("POST", "/projects")]
+    [InlineData("POST", "/api/1.0/professions")] // Protected admin endpoints
+    [InlineData("DELETE", "/api/1.0/professions/test-id")]
+    [InlineData("POST", "/api/1.0/professions/deleteAll")]
+    [InlineData("POST", "/api/1.0/serviceStandards/seed")]
+    [InlineData("DELETE", "/api/1.0/serviceStandards/test-id")]
+    [InlineData("POST", "/api/1.0/projects")]
     public async Task ProtectedEndpoints_RequireAuthentication(string method, string endpoint)
     {
         // Arrange - Clear database and create client WITHOUT authentication
@@ -89,7 +89,7 @@ public class AuthorizationIntegrationTests : IClassFixture<TestApplicationFactor
         };
 
         // Act
-        var response = await client.PostAsJsonAsync("/professions", profession);
+        var response = await client.PostAsJsonAsync("/api/1.0/professions", profession);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -110,10 +110,10 @@ public class AuthorizationIntegrationTests : IClassFixture<TestApplicationFactor
             Description = "Testing authenticated deletion",
         };
 
-        await client.PostAsJsonAsync("/professions", profession);
+        await client.PostAsJsonAsync("/api/1.0/professions", profession);
 
         // Act
-        var response = await client.DeleteAsync("/professions/delete-test-profession");
+        var response = await client.DeleteAsync("/api/1.0/professions/delete-test-profession");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -127,7 +127,7 @@ public class AuthorizationIntegrationTests : IClassFixture<TestApplicationFactor
         var client = _factory.CreateUnauthenticatedClient();
 
         // Act
-        var response = await client.PostAsync("/professions/deleteAll", null);
+        var response = await client.PostAsync("/api/1.0/professions/deleteAll", null);
 
         // Assert
         response

@@ -25,7 +25,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         var client = _factory.CreateUnauthenticatedClient(); // Public endpoint
 
         // Act
-        var response = await client.GetAsync("/serviceStandards");
+        var response = await client.GetAsync("/api/1.0/serviceStandards");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -66,7 +66,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         };
 
         // Act
-        var response = await client.PostAsJsonAsync("/serviceStandards/seed", standards);
+        var response = await client.PostAsJsonAsync("/api/1.0/serviceStandards/seed", standards);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -92,7 +92,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         };
 
         // Act
-        var response = await client.PostAsJsonAsync("/serviceStandards/seed", standards);
+        var response = await client.PostAsJsonAsync("/api/1.0/serviceStandards/seed", standards);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -127,10 +127,10 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         };
 
         // Seed the standards
-        await authenticatedClient.PostAsJsonAsync("/serviceStandards/seed", standards);
+        await authenticatedClient.PostAsJsonAsync("/api/1.0/serviceStandards/seed", standards);
 
         // Act - Use public client to test read access
-        var response = await publicClient.GetAsync("/serviceStandards");
+        var response = await publicClient.GetAsync("/api/1.0/serviceStandards");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -166,10 +166,10 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         };
 
         // Seed the standard first
-        await client.PostAsJsonAsync("/serviceStandards/seed", standards);
+        await client.PostAsJsonAsync("/api/1.0/serviceStandards/seed", standards);
 
         // Act
-        var response = await client.DeleteAsync("/serviceStandards/delete-test-standard");
+        var response = await client.DeleteAsync("/api/1.0/serviceStandards/delete-test-standard");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -183,7 +183,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         var client = _factory.CreateUnauthenticatedClient();
 
         // Act
-        var response = await client.DeleteAsync("/serviceStandards/test-id");
+        var response = await client.DeleteAsync("/api/1.0/serviceStandards/test-id");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -216,17 +216,17 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
             },
         };
 
-        await client.PostAsJsonAsync("/serviceStandards/seed", standards);
+        await client.PostAsJsonAsync("/api/1.0/serviceStandards/seed", standards);
 
         // Act
-        var response = await client.PostAsync("/serviceStandards/deleteAll", null);
+        var response = await client.PostAsync("/api/1.0/serviceStandards/deleteAll", null);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify all standards are deleted
         var publicClient = _factory.CreateUnauthenticatedClient();
-        var getResponse = await publicClient.GetAsync("/serviceStandards");
+        var getResponse = await publicClient.GetAsync("/api/1.0/serviceStandards");
         var content = await getResponse.Content.ReadAsStringAsync();
         var remainingStandards = JsonSerializer.Deserialize<List<ServiceStandardModel>>(
             content,
@@ -243,7 +243,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         var client = _factory.CreateUnauthenticatedClient();
 
         // Act
-        var response = await client.PostAsync("/serviceStandards/deleteAll", null);
+        var response = await client.PostAsync("/api/1.0/serviceStandards/deleteAll", null);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -269,12 +269,12 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         };
 
         // Seed and then delete the standard
-        await client.PostAsJsonAsync("/serviceStandards/seed", standards);
-        await client.DeleteAsync("/serviceStandards/restore-test-standard");
+        await client.PostAsJsonAsync("/api/1.0/serviceStandards/seed", standards);
+        await client.DeleteAsync("/api/1.0/serviceStandards/restore-test-standard");
 
         // Act - Restore the standard
         var response = await client.PostAsync(
-            "/serviceStandards/restore-test-standard/restore",
+            "/api/1.0/serviceStandards/restore-test-standard/restore",
             null
         );
 
@@ -290,7 +290,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         var client = _factory.CreateUnauthenticatedClient();
 
         // Act
-        var response = await client.PostAsync("/serviceStandards/test-id/restore", null);
+        var response = await client.PostAsync("/api/1.0/serviceStandards/test-id/restore", null);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
