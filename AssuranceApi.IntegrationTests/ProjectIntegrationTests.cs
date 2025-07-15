@@ -26,7 +26,7 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         var client = _factory.CreateUnauthenticatedClient(); // Public endpoint
 
         // Act
-        var response = await client.GetAsync("/api/1.0/projects");
+        var response = await client.GetAsync("/api/v1.0/projects");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -57,7 +57,7 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/1.0/projects", project);
+        var response = await client.PostAsJsonAsync("/api/v1.0/projects", project);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -81,7 +81,7 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/1.0/projects", project);
+        var response = await client.PostAsJsonAsync("/api/v1.0/projects", project);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -96,7 +96,7 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
 
         // Act - Use a valid ObjectId format
         var nonExistentId = ObjectId.GenerateNewId().ToString();
-        var response = await client.GetAsync($"/api/1.0/projects/{nonExistentId}");
+        var response = await client.GetAsync($"/api/v1.0/projects/{nonExistentId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -123,10 +123,10 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Create the project first
-        await authenticatedClient.PostAsJsonAsync("/api/1.0/projects", project);
+        await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project);
 
         // Act - Use public client to test read access
-        var response = await publicClient.GetAsync($"/api/1.0/projects/{projectId}");
+        var response = await publicClient.GetAsync($"/api/v1.0/projects/{projectId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -175,14 +175,14 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Create the projects
-        var response1 = await authenticatedClient.PostAsJsonAsync("/api/1.0/projects", project1);
+        var response1 = await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project1);
         response1.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var response2 = await authenticatedClient.PostAsJsonAsync("/api/1.0/projects", project2);
+        var response2 = await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project2);
         response2.StatusCode.Should().Be(HttpStatusCode.Created);
 
         // Act - Use public client to test read access
-        var response = await publicClient.GetAsync("/api/1.0/projects");
+        var response = await publicClient.GetAsync("/api/v1.0/projects");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -232,11 +232,11 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Create the projects
-        await authenticatedClient.PostAsJsonAsync("/api/1.0/projects", project1);
-        await authenticatedClient.PostAsJsonAsync("/api/1.0/projects", project2);
+        await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project1);
+        await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project2);
 
         // Act - Filter by API tag
-        var response = await publicClient.GetAsync("/api/1.0/projects?tag=api");
+        var response = await publicClient.GetAsync("/api/v1.0/projects?tag=api");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -270,7 +270,7 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Create the project first
-        await client.PostAsJsonAsync("/api/1.0/projects", originalProject);
+        await client.PostAsJsonAsync("/api/v1.0/projects", originalProject);
 
         var updatedProject = new ProjectModel
         {
@@ -284,13 +284,13 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Act
-        var response = await client.PutAsJsonAsync($"/api/1.0/projects/{projectId}", updatedProject);
+        var response = await client.PutAsJsonAsync($"/api/v1.0/projects/{projectId}", updatedProject);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify the update by fetching the project
-        var getResponse = await client.GetAsync($"/api/1.0/projects/{projectId}");
+        var getResponse = await client.GetAsync($"/api/v1.0/projects/{projectId}");
         var content = await getResponse.Content.ReadAsStringAsync();
         var fetchedProject = JsonSerializer.Deserialize<ProjectModel>(
             content,
@@ -321,7 +321,7 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Act
-        var response = await client.PutAsJsonAsync($"/api/1.0/projects/{projectId}", project);
+        var response = await client.PutAsJsonAsync($"/api/v1.0/projects/{projectId}", project);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -346,10 +346,10 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Create the project first
-        await client.PostAsJsonAsync("/api/1.0/projects", project);
+        await client.PostAsJsonAsync("/api/v1.0/projects", project);
 
         // Act
-        var response = await client.DeleteAsync($"/api/1.0/projects/{projectId}");
+        var response = await client.DeleteAsync($"/api/v1.0/projects/{projectId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -364,7 +364,7 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
 
         // Act - Use valid ObjectId format
         var projectId = ObjectId.GenerateNewId().ToString();
-        var response = await client.DeleteAsync($"/api/1.0/projects/{projectId}");
+        var response = await client.DeleteAsync($"/api/v1.0/projects/{projectId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -390,10 +390,10 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Create the project first
-        await authenticatedClient.PostAsJsonAsync("/api/1.0/projects", project);
+        await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project);
 
         // Act - History endpoint is public
-        var response = await publicClient.GetAsync($"/api/1.0/projects/{projectId}/history");
+        var response = await publicClient.GetAsync($"/api/v1.0/projects/{projectId}/history");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -436,11 +436,11 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Create the projects
-        await authenticatedClient.PostAsJsonAsync("/api/1.0/projects", project1);
-        await authenticatedClient.PostAsJsonAsync("/api/1.0/projects", project2);
+        await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project1);
+        await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project2);
 
         // Act - Tags summary endpoint is public
-        var response = await publicClient.GetAsync("/api/1.0/projects/tags/summary");
+        var response = await publicClient.GetAsync("/api/v1.0/projects/tags/summary");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -469,7 +469,7 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         };
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/1.0/projects", project);
+        var response = await client.PostAsJsonAsync("/api/v1.0/projects", project);
 
         // Assert
         response
@@ -499,7 +499,7 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
                 LastUpdated = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
             };
 
-            var response = await client.PostAsJsonAsync("/api/1.0/projects", project);
+            var response = await client.PostAsJsonAsync("/api/v1.0/projects", project);
             response
                 .StatusCode.Should()
                 .Be(HttpStatusCode.Created, $"Status {validStatuses[i]} should be valid");
