@@ -12,6 +12,7 @@ using Xunit.Abstractions;
 
 namespace AssuranceApi.Test
 {
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
     public class ProfessionsControllerTests
     {
         private readonly ProfessionModelValidator _validator;
@@ -540,3 +541,4 @@ namespace AssuranceApi.Test
         }
     }
 }
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.

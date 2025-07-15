@@ -1,15 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Asp.Versioning;
-using AssuranceApi.Profession.Endpoints;
 using AssuranceApi.Profession.Models;
 using AssuranceApi.Profession.Services;
 using AssuranceApi.Profession.Validators;
-using AssuranceApi.Project.Endpoints;
 using AssuranceApi.Project.Models;
 using AssuranceApi.Project.Services;
 using AssuranceApi.Project.Validators;
-using AssuranceApi.ServiceStandard.Endpoints;
 using AssuranceApi.ServiceStandard.Models;
 using AssuranceApi.ServiceStandard.Services;
 using AssuranceApi.ServiceStandard.Validators;
@@ -63,9 +60,9 @@ static void ConfigureWebApplication(WebApplicationBuilder _builder)
 
     ConfigureMongoDb(_builder);
 
-    ConfigureControllers(_builder);
+    ConfigureServices(_builder);
 
-    ConfigureEndpoints(_builder);
+    ConfigureControllers(_builder);
 
     ConfigureApiDocumentation(_builder, logger);
 
@@ -98,20 +95,14 @@ static WebApplication BuildWebApplication(WebApplicationBuilder _builder)
 
     app.MapHealthChecks("/health");
 
-    app.UseServiceStandardEndpoints();
-    app.UseProjectEndpoints();
-    app.UseProfessionEndpoints();
-
     app.MapControllers();
 
     return app;
 }
 
+[ExcludeFromCodeCoverage]
 static void ConfigureControllers(WebApplicationBuilder _builder)
 {
-    _builder.Services.AddSingleton<IProfessionPersistence, ProfessionPersistence>();
-    _builder.Services.AddSingleton<IProfessionHistoryPersistence, ProfessionHistoryPersistence>();
-    _builder.Services.AddSingleton<IValidator<ProfessionModel>, ProfessionModelValidator>();
     _builder.Services.AddControllers();
 
     _builder.Services.AddApiVersioning(options =>
@@ -121,6 +112,27 @@ static void ConfigureControllers(WebApplicationBuilder _builder)
         options.DefaultApiVersion = new ApiVersion(1, 0);
         options.ApiVersionReader = new QueryStringApiVersionReader("v");
     });
+}
+
+static void ConfigureServices(WebApplicationBuilder _builder)
+{
+    _builder.Services.AddSingleton<IProfessionPersistence, ProfessionPersistence>();
+    _builder.Services.AddSingleton<IProfessionHistoryPersistence, ProfessionHistoryPersistence>();
+    _builder.Services.AddSingleton<IProjectPersistence, ProjectPersistence>();
+    _builder.Services.AddSingleton<IProjectHistoryPersistence, ProjectHistoryPersistence>();
+    _builder.Services.AddSingleton<IValidator<ProfessionModel>, ProfessionModelValidator>();
+    _builder.Services.AddSingleton<IServiceStandardPersistence, ServiceStandardPersistence>();
+    _builder.Services.AddSingleton<IServiceStandardHistoryPersistence, ServiceStandardHistoryPersistence>();
+    _builder.Services.AddSingleton<IProjectStandardsPersistence, ProjectStandardsPersistence>();
+    _builder.Services.AddSingleton<IProjectStandardsHistoryPersistence, ProjectStandardsHistoryPersistence>();
+
+    _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
+    _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();
+
+    _builder.Services.AddScoped<AssuranceApi.Project.Handlers.CreateAssessmentHandler>();
+    _builder.Services.AddScoped<AssuranceApi.Project.Helpers.StandardsSummaryHelper>();
+
+    _builder.Services.AddHealthChecks();
 }
 
 [ExcludeFromCodeCoverage]
@@ -161,36 +173,6 @@ static void ConfigureMongoDb(WebApplicationBuilder _builder)
 
         return new MongoDbClientFactory(connectionString, databaseName);
     });
-}
-
-[ExcludeFromCodeCoverage]
-static void ConfigureEndpoints(WebApplicationBuilder _builder)
-{
-    _builder.Services.AddSingleton<IServiceStandardPersistence, ServiceStandardPersistence>();
-    _builder.Services.AddSingleton<
-        IServiceStandardHistoryPersistence,
-        ServiceStandardHistoryPersistence
-    >();
-
-    _builder.Services.AddSingleton<IProfessionPersistence, ProfessionPersistence>();
-    _builder.Services.AddSingleton<IProfessionHistoryPersistence, ProfessionHistoryPersistence>();
-
-    _builder.Services.AddSingleton<IProjectPersistence, ProjectPersistence>();
-    _builder.Services.AddSingleton<IProjectHistoryPersistence, ProjectHistoryPersistence>();
-
-    _builder.Services.AddSingleton<IProjectStandardsPersistence, ProjectStandardsPersistence>();
-    _builder.Services.AddSingleton<
-        IProjectStandardsHistoryPersistence,
-        ProjectStandardsHistoryPersistence
-    >();
-
-    _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
-    _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();
-
-    _builder.Services.AddScoped<AssuranceApi.Project.Handlers.CreateAssessmentHandler>();
-    _builder.Services.AddScoped<AssuranceApi.Project.Helpers.StandardsSummaryHelper>();
-
-    _builder.Services.AddHealthChecks();
 }
 
 static void ConfigureApiDocumentation(WebApplicationBuilder builder, Logger logger)

@@ -19,6 +19,7 @@ using Xunit.Abstractions;
 
 namespace AssuranceApi.Test
 {
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
     public class ProjectsControllerTests
     {
         private readonly ProjectValidator _validator;
@@ -859,6 +860,7 @@ namespace AssuranceApi.Test
                 null, _validator,
                 _logger
             );
+
             var response = await controller.Update(
                 "3",
                 GetNewInstanceOfProjectModelToDiscardChanges()
@@ -1386,3 +1388,4 @@ namespace AssuranceApi.Test
         }
     }
 }
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
