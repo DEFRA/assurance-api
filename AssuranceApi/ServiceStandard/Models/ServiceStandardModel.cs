@@ -31,6 +31,11 @@ public class ServiceStandardModel
     public string Description { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the guidance check list of the service standard.
+    /// </summary>
+    public string Guidance { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets a value indicating whether the service standard is active.
     /// </summary>
     public bool IsActive { get; set; } = true;

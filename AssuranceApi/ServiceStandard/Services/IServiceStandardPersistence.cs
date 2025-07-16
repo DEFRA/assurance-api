@@ -8,6 +8,13 @@ namespace AssuranceApi.ServiceStandard.Services;
 public interface IServiceStandardPersistence
 {
     /// <summary>
+    /// Creates a new service standard.
+    /// </summary>
+    /// <param name="serviceStandard">The service standard to create.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success.</returns>
+    Task<bool> CreateAsync(ServiceStandardModel serviceStandard);
+
+    /// <summary>
     /// Seeds the database with a list of service standards.
     /// </summary>
     /// <param name="standards">The list of service standards to seed.</param>

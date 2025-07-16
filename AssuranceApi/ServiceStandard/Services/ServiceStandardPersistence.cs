@@ -1,6 +1,6 @@
+using AssuranceApi.Project.Models;
 using AssuranceApi.ServiceStandard.Models;
 using AssuranceApi.Utils.Mongo;
-using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
 namespace AssuranceApi.ServiceStandard.Services;
@@ -41,6 +41,25 @@ public class ServiceStandardPersistence
             ),
             new CreateIndexModel<ServiceStandardModel>(builder.Ascending(x => x.IsActive)),
         };
+    }
+
+    /// <summary>
+    /// Creates a new service standard in the database.
+    /// </summary>
+    /// <param name="serviceStandard">The project to create.</param>
+    /// <returns>True if the service standard was created successfully; otherwise, false.</returns>
+    public async Task<bool> CreateAsync(ServiceStandardModel serviceStandard)
+    {
+        try
+        {
+            await Collection.InsertOneAsync(serviceStandard);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to create service standard");
+            return false;
+        }
     }
 
     /// <summary>

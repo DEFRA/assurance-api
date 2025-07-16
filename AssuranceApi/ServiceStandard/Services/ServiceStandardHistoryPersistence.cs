@@ -9,7 +9,7 @@ namespace AssuranceApi.ServiceStandard.Services;
 /// Provides persistence operations for service standard history, including creating and retrieving history entries.
 /// </summary>
 public class ServiceStandardHistoryPersistence
-    : MongoService<StandardDefinitionHistory>,
+    : MongoService<ServiceStandardHistory>,
         IServiceStandardHistoryPersistence
 {
     /// <summary>
@@ -28,7 +28,7 @@ public class ServiceStandardHistoryPersistence
         );
         try
         {
-            var builder = Builders<StandardDefinitionHistory>.IndexKeys;
+            var builder = Builders<ServiceStandardHistory>.IndexKeys;
             var indexes = DefineIndexes(builder);
             foreach (var index in indexes)
             {
@@ -49,13 +49,13 @@ public class ServiceStandardHistoryPersistence
     /// </summary>
     /// <param name="builder">The index key definition builder.</param>
     /// <returns>A list of index models to be created.</returns>
-    protected override List<CreateIndexModel<StandardDefinitionHistory>> DefineIndexes(
-        IndexKeysDefinitionBuilder<StandardDefinitionHistory> builder
+    protected override List<CreateIndexModel<ServiceStandardHistory>> DefineIndexes(
+        IndexKeysDefinitionBuilder<ServiceStandardHistory> builder
     )
     {
-        return new List<CreateIndexModel<StandardDefinitionHistory>>
+        return new List<CreateIndexModel<ServiceStandardHistory>>
         {
-            new CreateIndexModel<StandardDefinitionHistory>(
+            new CreateIndexModel<ServiceStandardHistory>(
                 builder.Ascending(x => x.StandardId).Ascending(x => x.Timestamp)
             ),
         };
@@ -66,7 +66,7 @@ public class ServiceStandardHistoryPersistence
     /// </summary>
     /// <param name="history">The history entry to create.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success or failure.</returns>
-    public async Task<bool> CreateAsync(StandardDefinitionHistory history)
+    public async Task<bool> CreateAsync(ServiceStandardHistory history)
     {
         try
         {
@@ -90,7 +90,7 @@ public class ServiceStandardHistoryPersistence
     /// </summary>
     /// <param name="standardId">The ID of the service standard.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a collection of history entries.</returns>
-    public async Task<IEnumerable<StandardDefinitionHistory>> GetHistoryAsync(string standardId)
+    public async Task<IEnumerable<ServiceStandardHistory>> GetHistoryAsync(string standardId)
     {
         try
         {
@@ -105,7 +105,7 @@ public class ServiceStandardHistoryPersistence
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to get service standard history");
-            return Enumerable.Empty<StandardDefinitionHistory>();
+            return Enumerable.Empty<ServiceStandardHistory>();
         }
     }
 }

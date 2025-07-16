@@ -1,7 +1,7 @@
 using AssuranceApi.Profession.Models;
 using FluentValidation;
 
-namespace AssuranceApi.Profession.Validators;
+namespace AssuranceApi.Validators;
 
 /// <summary>
 /// Validator for the <see cref="ProfessionModel"/> class.

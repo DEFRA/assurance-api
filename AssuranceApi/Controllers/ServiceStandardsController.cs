@@ -1,8 +1,13 @@
 using Asp.Versioning;
+using AssuranceApi.Project.Models;
 using AssuranceApi.ServiceStandard.Models;
 using AssuranceApi.ServiceStandard.Services;
+using AssuranceApi.Utils;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
+using MongoDB.Driver;
 
 namespace AssuranceApi.Controllers;
 
@@ -16,22 +21,26 @@ public class ServiceStandardsController : ControllerBase
 {
     private readonly IServiceStandardPersistence _persistence;
     private readonly IServiceStandardHistoryPersistence _historyPersistence;
+    private readonly IValidator<ServiceStandardModel> _validator;
     private readonly ILogger<ServiceStandardsController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ServiceStandardsController"/> class.
     /// </summary>
-    /// <param name="persistence">The service standard persistence service.</param>
-    /// <param name="historyPersistence">The service standard history persistence service.</param>
+    /// <param name="persistence">The service newStandard persistence service.</param>
+    /// <param name="historyPersistence">The service newStandard history persistence service.</param>
+    /// <param name="validator">The validator for <see cref="ServiceStandardModel"/> instances.</param>
     /// <param name="logger">The logger instance for logging operations.</param>
     public ServiceStandardsController(
         IServiceStandardPersistence persistence,
         IServiceStandardHistoryPersistence historyPersistence,
+        IValidator<ServiceStandardModel> validator,
         ILogger<ServiceStandardsController> logger
     )
     {
         _persistence = persistence;
         _historyPersistence = historyPersistence;
+        _validator = validator;
         _logger = logger;
 
         _logger.LogDebug("Creating ServiceStandards Controller");
@@ -79,6 +88,85 @@ public class ServiceStandardsController : ControllerBase
     }
 
     /// <summary>
+    /// Creates a new service newStandard.
+    /// </summary>
+    /// <param name="standard">The service newStandard to create.</param>
+    /// <returns>The created service newStandard.</returns>
+    /// <response code="201">Service newStandard created successfully.</response>
+    /// <response code="400">Invalid service newStandard data.</response>
+    /// <response code="500">If an internal server error occurs.</response>
+    [HttpPost]
+    [ProducesResponseType(typeof(ServiceStandardModel), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [Authorize(Policy = "RequireAdmin")]
+    public async Task<IActionResult> Create([FromBody] ServiceStandardModel standard)
+    {
+        _logger.LogDebug("Entering create service standard API call");
+
+        try
+        {
+            if (standard == null)
+            {
+                return BadRequest("Service standard data is required.");
+            }
+
+            var validationResult = await _validator.ValidateAsync(standard);
+            if (!validationResult.IsValid)
+            {
+                var message = ValidationHelper.GetValidationMessage(
+                    "Validation errors occurred whilst creating the standard",
+                    validationResult.Errors
+                );
+                _logger.LogError(message);
+                return BadRequest(message);
+            }
+
+            if (await IsServiceStandardADuplicate(standard))
+            {
+                return Conflict("A service standard with the same number already exists.");
+            }
+
+            standard.CreatedAt = DateTime.UtcNow;
+            standard.UpdatedAt = standard.CreatedAt;
+            standard.IsActive = true;
+
+            var created = await _persistence.CreateAsync(standard);
+            if (!created)
+            {
+                return BadRequest("Failed to create service standard.");
+            }
+
+            var history = new ServiceStandardHistory
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                StandardId = standard.Id,
+                Timestamp = DateTime.UtcNow,
+                ChangedBy = "Service standard created",
+                Changes = new ServiceStandardChanges
+                {
+                    Name = new ServiceStandardNameChange { From = "", To = standard.Name },
+                    Description = new ServiceStandardDescriptionChange { From = "", To = standard.Description },
+                    Guidance = new ServiceStandardGuidanceChange { From = "", To = standard.Guidance }
+                },
+            };
+            await _historyPersistence.CreateAsync(history);
+
+            _logger.LogInformation($"Created service standard with ID='{standard.Id}'");
+            return Created($"/servicestandards/{standard.Id}", standard);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create service standard");
+            return Problem($"Failed to create service standard: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving create service standard API call");
+        }
+    }
+
+    /// <summary>
     /// Deletes all service standards.
     /// </summary>
     /// <returns>Status of the delete operation.</returns>
@@ -111,12 +199,12 @@ public class ServiceStandardsController : ControllerBase
     }
 
     /// <summary>
-    /// Soft deletes a service standard by ID.
+    /// Soft deletes a service newStandard by ID.
     /// </summary>
-    /// <param name="id">The service standard ID.</param>
+    /// <param name="id">The service newStandard ID.</param>
     /// <returns>Status of the delete operation.</returns>
-    /// <response code="200">Service standard soft deleted successfully.</response>
-    /// <response code="404">Service standard not found.</response>
+    /// <response code="200">Service newStandard soft deleted successfully.</response>
+    /// <response code="404">Service newStandard not found.</response>
     /// <response code="500">If an internal server error occurs.</response>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -146,12 +234,12 @@ public class ServiceStandardsController : ControllerBase
     }
 
     /// <summary>
-    /// Restores a soft-deleted service standard by ID.
+    /// Restores a soft-deleted service newStandard by ID.
     /// </summary>
-    /// <param name="id">The service standard ID.</param>
+    /// <param name="id">The service newStandard ID.</param>
     /// <returns>Status of the restore operation.</returns>
-    /// <response code="200">Service standard restored successfully.</response>
-    /// <response code="404">Service standard not found.</response>
+    /// <response code="200">Service newStandard restored successfully.</response>
+    /// <response code="404">Service newStandard not found.</response>
     /// <response code="500">If an internal server error occurs.</response>
     [HttpPost("{id}/restore")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -216,13 +304,13 @@ public class ServiceStandardsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets a service standard by ID.
+    /// Gets a service newStandard by ID.
     /// </summary>
-    /// <param name="id">The service standard ID.</param>
+    /// <param name="id">The service newStandard ID.</param>
     /// <param name="includeInactive">Whether to include inactive service standards.</param>
-    /// <returns>The service standard if found.</returns>
-    /// <response code="200">Returns the service standard.</response>
-    /// <response code="404">Service standard not found.</response>
+    /// <returns>The service newStandard if found.</returns>
+    /// <response code="200">Returns the service newStandard.</response>
+    /// <response code="404">Service newStandard not found.</response>
     /// <response code="500">If an internal server error occurs.</response>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(ServiceStandardModel), StatusCodes.Status200OK)]
@@ -254,29 +342,29 @@ public class ServiceStandardsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the history for a service standard.
+    /// Gets the history for a service newStandard.
     /// </summary>
-    /// <param name="id">The service standard ID.</param>
-    /// <returns>List of service standard history entries.</returns>
-    /// <response code="200">Returns the service standard history.</response>
+    /// <param name="standardId">The service standard ID.</param>
+    /// <returns>List of service newStandard history entries.</returns>
+    /// <response code="200">Returns the service newStandard history.</response>
     /// <response code="500">If an internal server error occurs.</response>
     [HttpGet("{standardId}/history")]
-    [ProducesResponseType(typeof(IEnumerable<StandardDefinitionHistory>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<ServiceStandardHistory>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
-    public async Task<IActionResult> GetHistory(string id)
+    public async Task<IActionResult> GetHistory(string standardId)
     {
         _logger.LogDebug("Entering get service standard history API call");
 
         try
         {
-            _logger.LogInformation($"Getting service standard history by ID='{id}'");
+            _logger.LogInformation($"Getting service standard history by ID='{standardId}'");
 
-            var history = await _historyPersistence.GetHistoryAsync(id);
+            var history = await _historyPersistence.GetHistoryAsync(standardId);
             _logger.LogInformation(
                 "Found {Count} history entries for standard {StandardId}",
                 history.Count(),
-                id
+                standardId
             );
             return Ok(history);
         }
@@ -289,5 +377,10 @@ public class ServiceStandardsController : ControllerBase
         {
             _logger.LogDebug("Leaving get service standard history API call");
         }
+    }
+
+    private async Task<bool> IsServiceStandardADuplicate(ServiceStandardModel newStandard)
+    {
+        return await _persistence.GetByIdAsync(newStandard.Id) != null;
     }
 }
