@@ -1,7 +1,7 @@
 using AssuranceApi.Project.Models;
 using FluentValidation;
 
-namespace AssuranceApi.Project.Validators;
+namespace AssuranceApi.Validators;
 
 /// <summary>
 /// Validator for the <see cref="ProjectModel"/> class.

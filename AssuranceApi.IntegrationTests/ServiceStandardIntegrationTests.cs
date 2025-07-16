@@ -3,8 +3,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AssuranceApi.ServiceStandard.Models;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Xunit;
 
 namespace AssuranceApi.IntegrationTests;
 
@@ -15,6 +13,92 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
     public ServiceStandardIntegrationTests(TestApplicationFactory factory)
     {
         _factory = factory;
+    }
+
+    [Fact]
+    public async Task CreateServiceStandard_ReturnsCreated_AndAValidHistoryIsCreated_WhenAValidModelIsPassed()
+    {
+        // Arrange - Clear database
+        await _factory.ClearDatabaseAsync();
+        var authenticatedClient = _factory.CreateAuthenticatedClient();
+
+        var newModel = new ServiceStandardModel
+        {
+            Id = "1",
+            Number = 1,
+            Name = "Understand users and their needs",
+            Description = "Understand user needs and the problem you're trying to solve.",
+            Guidance = "Guidance for Service Standard 1",
+            IsActive = true,
+        };
+
+        // Act
+        var response = await authenticatedClient.PostAsJsonAsync("/api/v1.0/serviceStandards/", newModel);
+        var historyResponse = await authenticatedClient.GetAsync($"/api/v1.0/serviceStandards/{newModel.Id}/history");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var returnedHistory = JsonSerializer.Deserialize<List<ServiceStandardHistory>>(
+            await historyResponse.Content.ReadAsStringAsync(),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+        returnedHistory.Should().NotBeNull();
+        returnedHistory.Should().HaveCount(1);
+        returnedHistory[0].Changes.Name.To.Should().Be(newModel.Name);
+        returnedHistory[0].Changes.Description.To.Should().Be(newModel.Description);
+        returnedHistory[0].Changes.Guidance.To.Should().Be(newModel.Guidance);
+    }
+
+    [Fact]
+    public async Task CreateServiceStandard_ReturnsConflict_WhenADuplicateModelIsPassed()
+    {
+        // Arrange - Clear database
+        await _factory.ClearDatabaseAsync();
+        var authenticatedClient = _factory.CreateAuthenticatedClient();
+
+        var newModel = new ServiceStandardModel
+        {
+            Id = "1",
+            Number = 1,
+            Name = "Understand users and their needs",
+            Description = "Understand user needs and the problem you're trying to solve.",
+            Guidance = "Guidance for Service Standard 1",
+            IsActive = true,
+        };
+
+        // Act
+        var responseCreated = await authenticatedClient.PostAsJsonAsync("/api/v1.0/serviceStandards/", newModel);
+        var responseConflict = await authenticatedClient.PostAsJsonAsync("/api/v1.0/serviceStandards/", newModel);
+
+        // Assert
+        responseCreated.StatusCode.Should().Be(HttpStatusCode.Created);
+        responseConflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task CreateServiceStandard_RequiresAuthentication()
+    {
+        // Arrange - Clear database
+        await _factory.ClearDatabaseAsync();
+        var unauthenticatedClient = _factory.CreateUnauthenticatedClient();
+
+        var newModel = new ServiceStandardModel
+        {
+            Id = "1",
+            Number = 1,
+            Name = "Understand users and their needs",
+            Description = "Understand user needs and the problem you're trying to solve.",
+            IsActive = true,
+        };
+
+        // Act
+        var response = await unauthenticatedClient.PostAsJsonAsync("/api/v1.0/serviceStandards/", newModel);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -40,7 +124,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
     [Fact]
     public async Task SeedServiceStandards_ReturnsCreated_WhenValidStandardsProvided()
     {
-        // Arrange - Clear database and use authenticated client
+        // Arrange - Clear database and use authenticated unauthenticatedClient
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateAuthenticatedClient(); // Protected endpoint
 
@@ -52,6 +136,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
                 Number = 1,
                 Name = "Understand users and their needs",
                 Description = "Understand user needs and the problem you're trying to solve.",
+                Guidance = "Guidance for Service Standard 1",
                 IsActive = true,
             },
             new ServiceStandardModel
@@ -61,6 +146,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
                 Name = "Solve a whole problem for users",
                 Description =
                     "Work towards creating a service that solves a whole problem for users.",
+                Guidance = "Guidance for Service Standard 1",
                 IsActive = true,
             },
         };
@@ -75,7 +161,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
     [Fact]
     public async Task SeedServiceStandards_RequiresAuthentication()
     {
-        // Arrange - Clear database and use unauthenticated client
+        // Arrange - Clear database and use unauthenticated unauthenticatedClient
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateUnauthenticatedClient();
 
@@ -114,6 +200,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
                 Number = 1,
                 Name = "Test Standard 1",
                 Description = "First test standard",
+                Guidance = "Guidance for Service Standard 1",
                 IsActive = true,
             },
             new ServiceStandardModel
@@ -122,6 +209,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
                 Number = 2,
                 Name = "Test Standard 2",
                 Description = "Second test standard",
+                Guidance = "Guidance for Service Standard 2",
                 IsActive = true,
             },
         };
@@ -129,7 +217,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
         // Seed the standards
         await authenticatedClient.PostAsJsonAsync("/api/v1.0/serviceStandards/seed", standards);
 
-        // Act - Use public client to test read access
+        // Act - Use public unauthenticatedClient to test read access
         var response = await publicClient.GetAsync("/api/v1.0/serviceStandards");
 
         // Assert
@@ -161,6 +249,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
                 Number = 99,
                 Name = "Delete Test Standard",
                 Description = "A standard for testing deletion",
+                Guidance = "Guidance for Service Standard delete",
                 IsActive = true,
             },
         };
@@ -264,6 +353,7 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
                 Number = 88,
                 Name = "Restore Test Standard",
                 Description = "A standard for testing restoration",
+                Guidance = "Guidance for Service Standard Restore",
                 IsActive = true,
             },
         };

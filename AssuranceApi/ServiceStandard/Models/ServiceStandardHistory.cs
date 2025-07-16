@@ -6,7 +6,7 @@ namespace AssuranceApi.ServiceStandard.Models;
 /// <summary>
 /// Represents the history of changes made to a standard definition.
 /// </summary>
-public class StandardDefinitionHistory
+public class ServiceStandardHistory
 {
     /// <summary>
     /// Gets or sets the unique identifier for the history record.
@@ -33,13 +33,13 @@ public class StandardDefinitionHistory
     /// <summary>
     /// Gets or sets the details of the changes made to the standard definition.
     /// </summary>
-    public StandardDefinitionChanges Changes { get; set; } = null!;
+    public ServiceStandardChanges Changes { get; set; } = null!;
 }
 
 /// <summary>
 /// Represents the changes made to a standard definition.
 /// </summary>
-public class StandardDefinitionChanges
+public class ServiceStandardChanges
 {
     /// <summary>
     /// Gets or sets the changes made to the name of the standard.
@@ -54,7 +54,7 @@ public class StandardDefinitionChanges
     /// <summary>
     /// Gets or sets the changes made to the guidance of the standard.
     /// </summary>
-    public GuidanceChange? Guidance { get; set; }
+    public ServiceStandardGuidanceChange? Guidance { get; set; }
 }
 
 /// <summary>
@@ -92,7 +92,7 @@ public class ServiceStandardDescriptionChange
 /// <summary>
 /// Represents a change made to the guidance of a standard.
 /// </summary>
-public class GuidanceChange
+public class ServiceStandardGuidanceChange
 {
     /// <summary>
     /// Gets or sets the original guidance of the standard.

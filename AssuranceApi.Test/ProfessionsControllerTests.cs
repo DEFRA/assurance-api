@@ -1,7 +1,7 @@
 using AssuranceApi.Controllers;
 using AssuranceApi.Profession.Models;
 using AssuranceApi.Profession.Services;
-using AssuranceApi.Profession.Validators;
+using AssuranceApi.Validators;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
