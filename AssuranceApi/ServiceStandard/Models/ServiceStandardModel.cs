@@ -33,7 +33,7 @@ public class ServiceStandardModel
     /// <summary>
     /// Gets or sets the guidance check list of the service standard.
     /// </summary>
-    public string Guidance { get; set; } = null!;
+    public string Guidance { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets a value indicating whether the service standard is active.
