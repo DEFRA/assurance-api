@@ -167,6 +167,77 @@ public class ServiceStandardsController : ControllerBase
     }
 
     /// <summary>
+    /// Updates an existing service standard.
+    /// </summary>
+    /// <param name="id">The ID of the service standard to update.</param>
+    /// <param name="standard">The updated service standard data.</param>
+    /// <returns>The updated service standard if successful.</returns>
+    /// <response code="200">Service standard updated successfully.</response>
+    /// <response code="400">If the service standard is invalid or validation fails.</response>
+    /// <response code="404">Service standard not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
+    [HttpPut("{id}")]
+    [ProducesResponseType(typeof(ProjectModel), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [Authorize(Policy = "RequireAdmin")]
+    public async Task<IActionResult> Update(string id, [FromBody] ServiceStandardModel standard)
+    {
+        _logger.LogDebug("Entering update service standard API call");
+
+        try
+        {
+            _logger.LogInformation($"Updating service standard with ID='{id}'");
+
+            if (standard == null)
+            {
+                return BadRequest("Service standard data is required.");
+            }
+
+            var validationResult = await _validator.ValidateAsync(standard);
+            if (!validationResult.IsValid)
+            {
+                var message = ValidationHelper.GetValidationMessage(
+                    "Validation errors occurred whilst updating the standard",
+                    validationResult.Errors
+                );
+                _logger.LogError(message);
+                return BadRequest(message);
+            }
+
+            var existingServiceStandard = await _persistence.GetByIdAsync(id);
+            if (existingServiceStandard == null)
+            {
+                _logger.LogInformation($"Unable to find the service standard with ID='{id}'");
+                return NotFound();
+            }
+
+            await TrackChanges(id, existingServiceStandard, standard, standard.UpdatedAt);
+
+            standard.UpdatedAt = DateTime.UtcNow;
+
+            var created = await _persistence.UpdateAsync(standard);
+            if (!created)
+            {
+                return BadRequest("Failed to create service standard.");
+            }
+
+            _logger.LogInformation($"Created service standard with ID='{standard.Id}'");
+            return Ok(standard);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create service standard");
+            return Problem($"Failed to create service standard: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving create service standard API call");
+        }
+    }
+
+    /// <summary>
     /// Deletes all service standards.
     /// </summary>
     /// <returns>Status of the delete operation.</returns>
@@ -382,5 +453,54 @@ public class ServiceStandardsController : ControllerBase
     private async Task<bool> IsServiceStandardADuplicate(ServiceStandardModel newStandard)
     {
         return await _persistence.GetByIdAsync(newStandard.Id) != null;
+    }
+
+    private async Task TrackChanges(
+        string id,
+        ServiceStandardModel existing,
+        ServiceStandardModel updated,
+        DateTime? updateDate
+    )
+    {
+        var changes = new ServiceStandardChanges();
+        var hasChanges = false;
+
+        if (existing.Name != updated.Name)
+        {
+            changes.Name = new ServiceStandardNameChange { From = existing.Name, To = updated.Name };
+            hasChanges = true;
+        }
+        if (existing.Description != updated.Description)
+        {
+            changes.Description = new ServiceStandardDescriptionChange { From = existing.Description, To = updated.Description };
+            hasChanges = true;
+        }
+        if (existing.Guidance != updated.Guidance)
+        {
+            changes.Guidance = new ServiceStandardGuidanceChange { From = existing.Guidance, To = updated.Guidance };
+            hasChanges = true;
+        }
+        if (existing.IsActive != updated.IsActive)
+        {
+            changes.IsActive = new ServiceStandardActivityChange
+            {
+                From = existing.IsActive.ToString(),
+                To = updated.IsActive.ToString(),
+            };
+            hasChanges = true;
+        }
+
+        if (hasChanges)
+        { 
+            var history = new ServiceStandardHistory
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                StandardId = id,
+                Timestamp = updateDate ?? DateTime.UtcNow,
+                ChangedBy = "Project Admin",
+                Changes = changes,
+            };
+            await _historyPersistence.CreateAsync(history);
+        }
     }
 }
