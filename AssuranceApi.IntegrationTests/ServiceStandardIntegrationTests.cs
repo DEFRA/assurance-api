@@ -102,6 +102,117 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
     }
 
     [Fact]
+    public async Task UpdateServiceStandard_ReturnsOk_AndHistoryIsUpdated_WhenValidModelIsPassed()
+    {
+        // Arrange - Clear database and seed a standard
+        await _factory.ClearDatabaseAsync();
+        var client = _factory.CreateAuthenticatedClient();
+
+        var originalModel = new ServiceStandardModel
+        {
+            Id = "update-test-standard",
+            Number = 10,
+            Name = "Original Name",
+            Description = "Original Description",
+            Guidance = "Original Guidance",
+            IsActive = true,
+        };
+
+        await client.PostAsJsonAsync("/api/v1.0/serviceStandards/", originalModel);
+
+        var updatedModel = new ServiceStandardModel
+        {
+            Id = "update-test-standard",
+            Number = 10,
+            Name = "Updated Name",
+            Description = "Updated Description",
+            Guidance = "Updated Guidance",
+            IsActive = false,
+        };
+
+        // Act
+        var response = await client.PutAsJsonAsync($"/api/v1.0/serviceStandards/{updatedModel.Id}", updatedModel);
+        var historyResponse = await client.GetAsync($"/api/v1.0/serviceStandards/{updatedModel.Id}/history");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var returnedHistory = JsonSerializer.Deserialize<List<ServiceStandardHistory>>(
+            await historyResponse.Content.ReadAsStringAsync(),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+        returnedHistory.Should().NotBeNull();
+        returnedHistory.Should().HaveCount(2);
+        returnedHistory[0].Changes.Name.To.Should().Be(updatedModel.Name);
+        returnedHistory[0].Changes.Description.To.Should().Be(updatedModel.Description);
+        returnedHistory[0].Changes.Guidance.To.Should().Be(updatedModel.Guidance);
+        returnedHistory[0].Changes.IsActive.To.Should().Be(updatedModel.IsActive.ToString());
+    }
+
+    [Fact]
+    public async Task UpdateServiceStandard_ReturnsNotFound_WhenStandardDoesNotExist()
+    {
+        // Arrange - Clear database
+        await _factory.ClearDatabaseAsync();
+        var client = _factory.CreateAuthenticatedClient();
+
+        var updatedModel = new ServiceStandardModel
+        {
+            Id = "nonexistent-standard",
+            Number = 19,
+            Name = "Does Not Exist",
+            Description = "No Description",
+            Guidance = "No Guidance",
+            IsActive = true,
+        };
+
+        // Act
+        var response = await client.PutAsJsonAsync($"/api/v1.0/serviceStandards/{updatedModel.Id}", updatedModel);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateServiceStandard_RequiresAuthentication()
+    {
+        // Arrange - Clear database and seed a standard
+        await _factory.ClearDatabaseAsync();
+        var authenticatedClient = _factory.CreateAuthenticatedClient();
+        var unauthenticatedClient = _factory.CreateUnauthenticatedClient();
+
+        var originalModel = new ServiceStandardModel
+        {
+            Id = "update-auth-test-standard",
+            Number = 19,
+            Name = "Auth Test Name",
+            Description = "Auth Test Description",
+            Guidance = "Auth Test Guidance",
+            IsActive = true,
+        };
+
+        await authenticatedClient.PostAsJsonAsync("/api/v1.0/serviceStandards/", originalModel);
+
+        var updatedModel = new ServiceStandardModel
+        {
+            Id = "update-auth-test-standard",
+            Number = 20,
+            Name = "Updated Auth Name",
+            Description = "Updated Auth Description",
+            Guidance = "Updated Auth Guidance",
+            IsActive = false,
+        };
+
+        // Act
+        var response = await unauthenticatedClient.PutAsJsonAsync($"/api/v1.0/serviceStandards/{updatedModel.Id}", updatedModel);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task GetServiceStandards_ReturnsEmptyList_WhenNoStandardsExist()
     {
         // Arrange - Clear database for clean test

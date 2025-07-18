@@ -320,7 +320,7 @@ public class ProjectsController : ControllerBase
     /// <summary>
     /// Updates an existing project.
     /// </summary>
-    /// <param name="id">The project ID.</param>
+    /// <param name="id">The ID of the project to update.</param>
     /// <param name="project">The updated project data.</param>
     /// <returns>The updated project if successful.</returns>
     /// <response code="200">Project updated successfully.</response>
@@ -375,7 +375,7 @@ public class ProjectsController : ControllerBase
                     && suppressValue.ToString().Equals("true", StringComparison.OrdinalIgnoreCase);
             }
 
-            var updateDate = ParseUpdateDate(project.UpdateDate);
+            var updateDate = DateHelper.ParseUpdateDate(project.UpdateDate);
 
             if (!suppressHistory)
             {
@@ -808,21 +808,5 @@ public class ProjectsController : ControllerBase
                 updated.UpdateDate = existing.UpdateDate;
             }
         }
-    }
-
-    private static DateTime? ParseUpdateDate(string updateDateStr)
-    {
-        if (
-            !string.IsNullOrEmpty(updateDateStr)
-            && DateTime.TryParse(
-                updateDateStr,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                out var parsedDate
-            )
-            && parsedDate <= DateTime.UtcNow
-        )
-            return parsedDate;
-        return null;
     }
 }

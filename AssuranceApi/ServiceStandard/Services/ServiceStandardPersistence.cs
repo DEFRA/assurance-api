@@ -63,6 +63,65 @@ public class ServiceStandardPersistence
     }
 
     /// <summary>
+    /// Updates an existing service standard.
+    /// </summary>
+    /// <param name="standard">The updated service standard data.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success.</returns>
+    public async Task<bool> UpdateAsync(ServiceStandardModel standard)
+    {
+        if (standard == null)
+        {
+            Logger.LogWarning("Attempted to update a null service standard");
+            return false;
+        }
+
+        var id = standard.Id;
+
+        try
+        {
+            Logger.LogInformation($"Updating service standard with ID='{id}'");
+
+            var updateDef = Builders<ServiceStandardModel>.Update;
+            var updates = new List<UpdateDefinition<ServiceStandardModel>>();
+
+            if (standard.Name != null)
+                updates.Add(updateDef.Set(x => x.Name, standard.Name));
+            if (standard.Description != null)
+                updates.Add(updateDef.Set(x => x.Description, standard.Description));
+            if (standard.Guidance != null)
+                updates.Add(updateDef.Set(x => x.Guidance, standard.Guidance));
+            if (standard.DeletedAt != null)
+                updates.Add(updateDef.Set(x => x.DeletedAt, standard.DeletedAt));
+            if (standard.DeletedBy != null)
+                updates.Add(updateDef.Set(x => x.DeletedBy, standard.DeletedBy));
+            updates.Add(updateDef.Set(x => x.IsActive, standard.IsActive));
+            updates.Add(updateDef.Set(x => x.UpdatedAt, standard.UpdatedAt));
+
+            if (!updates.Any())
+            {
+                Logger.LogWarning($"No fields to update for service standard with ID='{id}'");
+                return false;
+            }
+
+            var result = await Collection.UpdateOneAsync(
+                x => x.Id == id,
+                updateDef.Combine(updates)
+            );
+
+            if (result.ModifiedCount == 0)
+            {
+                Logger.LogWarning($"Nothing was updated for service standard with ID='{id}'");
+            }
+            return result.ModifiedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"Failed to update service standard with ID='{id}'");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Seeds the service standards collection with the provided standards.
     /// </summary>
     /// <param name="standards">The list of service standards to seed.</param>

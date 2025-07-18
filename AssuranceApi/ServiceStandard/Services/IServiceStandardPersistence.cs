@@ -1,3 +1,4 @@
+using AssuranceApi.Project.Models;
 using AssuranceApi.ServiceStandard.Models;
 
 namespace AssuranceApi.ServiceStandard.Services;
@@ -10,9 +11,16 @@ public interface IServiceStandardPersistence
     /// <summary>
     /// Creates a new service standard.
     /// </summary>
-    /// <param name="serviceStandard">The service standard to create.</param>
+    /// <param name="standard">The service standard to create.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success.</returns>
-    Task<bool> CreateAsync(ServiceStandardModel serviceStandard);
+    Task<bool> CreateAsync(ServiceStandardModel standard);
+
+    /// <summary>
+    /// Updates an existing service standard.
+    /// </summary>
+    /// <param name="standard">The updated service standard data.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success.</returns>
+    Task<bool> UpdateAsync(ServiceStandardModel standard);
 
     /// <summary>
     /// Seeds the database with a list of service standards.

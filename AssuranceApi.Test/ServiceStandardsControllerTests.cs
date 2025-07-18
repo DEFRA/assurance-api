@@ -85,7 +85,7 @@ namespace AssuranceApi.Test
                 Description = "Description for Service Standard 3",
                 Guidance = "Guidance for Service Standard 3",
                 Id = "3",
-                IsActive = true,
+                IsActive = false,
                 Name = "Service Standard 3",
                 Number = 3,
                 UpdatedAt = new DateTime(2024, 04, 23),
@@ -98,7 +98,7 @@ namespace AssuranceApi.Test
                 Description = "Description for Service Standard 4",
                 Guidance = "Guidance for Service Standard 4",
                 Id = "4",
-                IsActive = true,
+                IsActive = false,
                 Name = "Service Standard 4",
                 Number = 4,
                 UpdatedAt = new DateTime(2024, 04, 24),
@@ -282,6 +282,89 @@ namespace AssuranceApi.Test
             var response = await controller.Create(duplicateModel);
 
             response.Should().BeOfType<ConflictObjectResult>();
+        }
+
+        [Fact]
+        public async Task Update_ReturnsOkResult_WhenAValidStandardIsPassed()
+        {
+            var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
+            mockServiceStandardPersistence.GetByIdAsync("1").Returns(_activeServiceStandards[0]);
+            mockServiceStandardPersistence.UpdateAsync(Arg.Any<ServiceStandardModel>()).Returns(true);
+
+            var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
+
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _validator,
+                _logger
+            );
+
+            var updatedModel = GetNewInstanceOfServiceStandardModelToDiscardChanges();
+            updatedModel.Name = "Updated Name";
+
+            var response = await controller.Update("1", updatedModel);
+
+            response.Should().BeOfType<OkObjectResult>();
+            response.As<OkObjectResult>().Value.Should().BeEquivalentTo(updatedModel);
+        }
+
+        [Fact]
+        public async Task Update_ReturnsBadRequestResult_WhenModelIsInvalid()
+        {
+            var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
+            var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
+
+            mockServiceStandardPersistence.GetByIdAsync("1").Returns(_activeServiceStandards[0]);
+
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _validator,
+                _logger
+            );
+
+            var invalidModel = GetNewInstanceOfServiceStandardModelToDiscardChanges();
+            invalidModel.Name = ""; // Invalid name
+
+            var response = await controller.Update(invalidModel.Id, invalidModel);
+
+            response.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task Update_ReturnsNotFoundResult_WhenStandardDoesNotExist()
+        {
+            var mockServiceStandardPersistence = GetServiceStandardPersistenceMock();
+            var mockServiceStandardHistoryPersistence = GetServiceStandardHistoryPersistenceMock();
+
+            mockServiceStandardPersistence.GetByIdAsync("99").Returns((ServiceStandardModel?)null);
+
+            var controller = new ServiceStandardsController(
+                mockServiceStandardPersistence,
+                mockServiceStandardHistoryPersistence,
+                _validator,
+                _logger
+            );
+
+            var updatedModel = GetNewInstanceOfServiceStandardModelToDiscardChanges();
+            updatedModel.Id = "99";
+
+            var response = await controller.Update(updatedModel.Id, updatedModel);
+
+            response.Should().BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
+        public async Task Update_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
+        {
+            var controller = new ServiceStandardsController(null, null, _validator, _logger);
+            var updatedModel = GetNewInstanceOfServiceStandardModelToDiscardChanges();
+
+            var response = await controller.Update(updatedModel.Id, updatedModel);
+
+            response.Should().BeOfType<ObjectResult>();
+            response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
 
         [Fact]
@@ -629,9 +712,7 @@ namespace AssuranceApi.Test
             var mockServiceStandardHistoryPersistence =
                 Substitute.For<IServiceStandardHistoryPersistence>();
 
-            mockServiceStandardHistoryPersistence
-                .GetHistoryAsync("1")
-                .Returns(_serviceStandardHistory);
+            mockServiceStandardHistoryPersistence.GetHistoryAsync("1").Returns(_serviceStandardHistory);
             mockServiceStandardHistoryPersistence.GetHistoryAsync("99").Returns([]);
 
             return mockServiceStandardHistoryPersistence;

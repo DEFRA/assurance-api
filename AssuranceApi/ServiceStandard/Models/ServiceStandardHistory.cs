@@ -55,6 +55,11 @@ public class ServiceStandardChanges
     /// Gets or sets the changes made to the guidance of the standard.
     /// </summary>
     public ServiceStandardGuidanceChange? Guidance { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this history entry is active.
+    /// </summary>
+    public ServiceStandardActivityChange? IsActive { get; set; }
 }
 
 /// <summary>
@@ -101,6 +106,22 @@ public class ServiceStandardGuidanceChange
 
     /// <summary>
     /// Gets or sets the new guidance of the standard.
+    /// </summary>
+    public string To { get; set; } = null!;
+}
+
+/// <summary>
+/// Represents a change made to the activity status of a standard.
+/// </summary>
+public class ServiceStandardActivityChange
+{
+    /// <summary>
+    /// Gets or sets the original activity status of the standard.
+    /// </summary>
+    public string From { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the new activity status of the standard.
     /// </summary>
     public string To { get; set; } = null!;
 }
