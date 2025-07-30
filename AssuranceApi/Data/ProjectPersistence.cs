@@ -68,7 +68,10 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
                 ? Builders<ProjectModel>.Filter.Empty
                 : Builders<ProjectModel>.Filter.AnyEq(p => p.Tags, tag);
 
-        return await Collection.Find(filter).ToListAsync();
+        return await Collection
+            .Find(filter)
+            .Sort(Builders<ProjectModel>.Sort.Ascending(x => x.Name))
+            .ToListAsync();
     }
 
     /// <summary>
