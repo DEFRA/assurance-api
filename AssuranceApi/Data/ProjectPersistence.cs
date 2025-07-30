@@ -1,7 +1,5 @@
-using System.Text.Json;
 using AssuranceApi.Project.Models;
 using AssuranceApi.Utils.Mongo;
-using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
 namespace AssuranceApi.Data;
@@ -68,10 +66,23 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
                 ? Builders<ProjectModel>.Filter.Empty
                 : Builders<ProjectModel>.Filter.AnyEq(p => p.Tags, tag);
 
+        var findOptions = new FindOptions
+        {
+            Collation = GetCaseInsensitiveCollation()
+        };
+
         return await Collection
-            .Find(filter)
+            .Find(filter, findOptions)
             .Sort(Builders<ProjectModel>.Sort.Ascending(x => x.Name))
             .ToListAsync();
+    }
+
+    private static Collation GetCaseInsensitiveCollation()
+    {
+        return new Collation(
+            "en", 
+            strength: CollationStrength.Secondary,
+            caseLevel: true);
     }
 
     /// <summary>
