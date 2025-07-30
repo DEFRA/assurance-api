@@ -1,8 +1,9 @@
 using Asp.Versioning;
+using AssuranceApi.Data;
 using AssuranceApi.Project.Models;
 using AssuranceApi.ServiceStandard.Models;
-using AssuranceApi.ServiceStandard.Services;
 using AssuranceApi.Utils;
+using Elastic.CommonSchema;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -91,8 +92,8 @@ public class ServiceStandardsController : ControllerBase
     /// Creates a new service newStandard.
     /// </summary>
     /// <param name="standard">The service newStandard to create.</param>
-    /// <returns>The created service newStandard.</returns>
-    /// <response code="201">Service newStandard created successfully.</response>
+    /// <returns>The updated service newStandard.</returns>
+    /// <response code="201">Service newStandard updated successfully.</response>
     /// <response code="400">Invalid service newStandard data.</response>
     /// <response code="500">If an internal server error occurs.</response>
     [HttpPost]
@@ -192,7 +193,16 @@ public class ServiceStandardsController : ControllerBase
 
             if (standard == null)
             {
-                return BadRequest("Service standard data is required.");
+                var message = $"Invalid service standard with ID '{id}'";
+                _logger.LogError(message);
+                return BadRequest(message);
+            }
+
+            if (id != standard.Id)
+            {
+                var message = "ID in URL does not match ID in body";
+                _logger.LogError(message);
+                return BadRequest(message);
             }
 
             var validationResult = await _validator.ValidateAsync(standard);
@@ -213,17 +223,17 @@ public class ServiceStandardsController : ControllerBase
                 return NotFound();
             }
 
-            await TrackChanges(id, existingServiceStandard, standard, standard.UpdatedAt);
-
             standard.UpdatedAt = DateTime.UtcNow;
 
-            var created = await _persistence.UpdateAsync(standard);
-            if (!created)
+            await TrackChanges(id, existingServiceStandard, standard);
+
+            var updated = await _persistence.UpdateAsync(standard);
+            if (!updated)
             {
                 return BadRequest("Failed to create service standard.");
             }
 
-            _logger.LogInformation($"Created service standard with ID='{standard.Id}'");
+            _logger.LogInformation($"Updated service standard with ID='{standard.Id}'");
             return Ok(standard);
         }
         catch (Exception ex)
@@ -458,8 +468,7 @@ public class ServiceStandardsController : ControllerBase
     private async Task TrackChanges(
         string id,
         ServiceStandardModel existing,
-        ServiceStandardModel updated,
-        DateTime? updateDate
+        ServiceStandardModel updated
     )
     {
         var changes = new ServiceStandardChanges();
@@ -496,7 +505,7 @@ public class ServiceStandardsController : ControllerBase
             {
                 Id = ObjectId.GenerateNewId().ToString(),
                 StandardId = id,
-                Timestamp = updateDate ?? DateTime.UtcNow,
+                Timestamp = updated.UpdatedAt,
                 ChangedBy = "Project Admin",
                 Changes = changes,
             };

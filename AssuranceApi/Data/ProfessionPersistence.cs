@@ -3,7 +3,7 @@ using AssuranceApi.Utils.Mongo;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
-namespace AssuranceApi.Profession.Services;
+namespace AssuranceApi.Data;
 
 /// <summary>
 /// Provides persistence operations for Profession entities in the MongoDB database.
@@ -68,6 +68,45 @@ public class ProfessionPersistence : MongoService<ProfessionModel>, IProfessionP
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to create profession");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Updates an existing profession in the database.
+    /// </summary>
+    /// <param name="profession">The updated profession data.</param>
+    /// <returns>True if the update was successful; otherwise, false.</returns>
+    public async Task<bool> UpdateAsync(ProfessionModel profession)
+    {
+        try
+        {
+            // Set audit field
+            profession.UpdatedAt = DateTime.UtcNow;
+
+            var filter = Builders<ProfessionModel>.Filter.Eq(x => x.Id, profession.Id);
+            var update = Builders<ProfessionModel>.Update
+                .Set(x => x.Name, profession.Name)
+                .Set(x => x.Description, profession.Description)
+                .Set(x => x.IsActive, profession.IsActive)
+                .Set(x => x.UpdatedAt, profession.UpdatedAt);
+
+            if (profession.DeletedAt != null)
+                update = update.Set(x => x.DeletedAt, profession.DeletedAt);
+            else
+                update = update.Unset(x => x.DeletedAt);
+
+            if (!string.IsNullOrEmpty(profession.DeletedBy))
+                update = update.Set(x => x.DeletedBy, profession.DeletedBy);
+            else
+                update = update.Unset(x => x.DeletedBy);
+
+            var result = await Collection.UpdateOneAsync(filter, update);
+            return result.ModifiedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to update profession with ID {Id}", profession.Id);
             return false;
         }
     }

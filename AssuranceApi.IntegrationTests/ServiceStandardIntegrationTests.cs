@@ -130,25 +130,41 @@ public class ServiceStandardIntegrationTests : IClassFixture<TestApplicationFact
             IsActive = false,
         };
 
-        // Act
         var response = await client.PutAsJsonAsync($"/api/v1.0/serviceStandards/{updatedModel.Id}", updatedModel);
-        var historyResponse = await client.GetAsync($"/api/v1.0/serviceStandards/{updatedModel.Id}/history");
-
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var updatedServiceStandardResponse = await client.GetAsync($"/api/v1.0/serviceStandards/{updatedModel.Id}?includeInactive=true");
+        updatedServiceStandardResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var content = await updatedServiceStandardResponse.Content.ReadAsStringAsync();
+        var updatedServiceStandard = JsonSerializer.Deserialize<ServiceStandardModel>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+        updatedServiceStandard.Should().NotBeNull();
+        updatedServiceStandard!.Id.Should().Be(updatedModel.Id);
+        updatedServiceStandard.Number.Should().Be(updatedModel.Number);
+        updatedServiceStandard.Name.Should().Be(updatedModel.Name);
+        updatedServiceStandard.Description.Should().Be(updatedModel.Description);
+        updatedServiceStandard.Guidance.Should().Be(updatedModel.Guidance);
+        updatedServiceStandard.IsActive.Should().Be(updatedModel.IsActive);
+
+        
+        var historyResponse = await client.GetAsync($"/api/v1.0/serviceStandards/{updatedModel.Id}/history");
         historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var returnedHistory = JsonSerializer.Deserialize<List<ServiceStandardHistory>>(
+        var history = JsonSerializer.Deserialize<List<ServiceStandardHistory>>(
             await historyResponse.Content.ReadAsStringAsync(),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
         );
 
-        returnedHistory.Should().NotBeNull();
-        returnedHistory.Should().HaveCount(2);
-        returnedHistory[0].Changes.Name.To.Should().Be(updatedModel.Name);
-        returnedHistory[0].Changes.Description.To.Should().Be(updatedModel.Description);
-        returnedHistory[0].Changes.Guidance.To.Should().Be(updatedModel.Guidance);
-        returnedHistory[0].Changes.IsActive.To.Should().Be(updatedModel.IsActive.ToString());
+        history.Should().NotBeNull();
+        history.Should().HaveCount(2);
+        history[0].Changes.Name.To.Should().Be(updatedModel.Name);
+        history[0].Changes.Description.To.Should().Be(updatedModel.Description);
+        history[0].Changes.Guidance.To.Should().Be(updatedModel.Guidance);
+        history[0].Changes.IsActive.To.Should().Be(updatedModel.IsActive.ToString());
     }
 
     [Fact]

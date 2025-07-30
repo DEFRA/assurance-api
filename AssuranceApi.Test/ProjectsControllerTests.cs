@@ -1,12 +1,10 @@
 using AssuranceApi.Controllers;
+using AssuranceApi.Data;
 using AssuranceApi.Profession.Models;
-using AssuranceApi.Profession.Services;
 using AssuranceApi.Project.Handlers;
 using AssuranceApi.Project.Helpers;
 using AssuranceApi.Project.Models;
-using AssuranceApi.Project.Services;
 using AssuranceApi.ServiceStandard.Models;
-using AssuranceApi.ServiceStandard.Services;
 using AssuranceApi.Validators;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;

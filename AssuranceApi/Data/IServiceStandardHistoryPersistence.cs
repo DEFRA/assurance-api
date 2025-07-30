@@ -1,6 +1,6 @@
 using AssuranceApi.ServiceStandard.Models;
 
-namespace AssuranceApi.ServiceStandard.Services;
+namespace AssuranceApi.Data;
 
 /// <summary>
 /// Interface for persisting and retrieving the history of standard definitions.

@@ -1,10 +1,12 @@
 using Asp.Versioning;
+using AssuranceApi.Data;
 using AssuranceApi.Profession.Models;
-using AssuranceApi.Profession.Services;
+using AssuranceApi.ServiceStandard.Models;
 using AssuranceApi.Utils;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using System;
 
 namespace AssuranceApi.Controllers;
@@ -93,6 +95,86 @@ public class ProfessionsController : ControllerBase
         finally
         {
             _logger.LogDebug("Leaving create profession API call");
+        }
+    }
+
+    /// <summary>
+    /// Updates an existingProfession profession.
+    /// </summary>
+    /// <param name="id">The ID of the profession to update.</param>
+    /// <param name="profession">The updated profession data.</param>
+    /// <returns>The updated profession if successful.</returns>
+    /// <response code="200">Returns the updated profession.</response>
+    /// <response code="400">If the profession is invalid or validation fails.</response>
+    /// <response code="404">If the profession is not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
+    [HttpPut("{id}")]
+    [ProducesResponseType(typeof(ProfessionModel), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [Authorize(Policy = "RequireAdmin")]
+    public async Task<IActionResult> Update(string id, [FromBody] ProfessionModel profession)
+    {
+        _logger.LogDebug("Entering update profession API call");
+
+        try
+        {
+            if (profession == null)
+            {
+                var message = $"Invalid profession with ID '{id}'";
+                _logger.LogError(message);
+                return StatusCode(500, message);
+            }
+
+            if (id != profession.Id)
+            {
+                var message = "ID in URL does not match ID in body";
+                _logger.LogError(message);
+                return BadRequest(message);
+            }
+
+            var validationResult = await _validator.ValidateAsync(profession);
+            if (!validationResult.IsValid)
+            {
+                var message = ValidationHelper.GetValidationMessage(
+                    "Validation errors occurred whilst updating the standard",
+                    validationResult.Errors
+                );
+                _logger.LogError(message);
+                return BadRequest(message);
+            }
+
+            var existingProfession = await _persistence.GetByIdAsync(id);
+            if (existingProfession is null)
+            {
+                _logger.LogWarning($"Profession with ID '{id}' not found for update");
+                return NotFound();
+            }
+
+            profession.UpdatedAt = DateTime.UtcNow;
+
+            await TrackChanges(id, existingProfession, profession);
+
+            var created = await _persistence.UpdateAsync(profession);
+            if (!created)
+            {
+                var message = $"Failed to persist updated profession with ID '{id}'";
+                _logger.LogError(message);
+                return StatusCode(500, message);
+            }
+
+            _logger.LogInformation($"Updated profession '{profession.Name}' with ID '{id}'");
+            return Ok(profession);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred whilst updating the profession");
+            return Problem($"Failed to update the profession: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving update profession API call");
         }
     }
 
@@ -388,5 +470,48 @@ public class ProfessionsController : ControllerBase
         }
 
         return createdCount;
+    }
+
+    private async Task TrackChanges(
+        string id,
+        ProfessionModel existing,
+        ProfessionModel updated
+    )
+    {
+        var changes = new ProfessionChanges();
+        var hasChanges = false;
+
+        if (existing.Name != updated.Name)
+        {
+            changes.Name = new NameChange { From = existing.Name, To = updated.Name };
+            hasChanges = true;
+        }
+        if (existing.Description != updated.Description)
+        {
+            changes.Description = new DescriptionChange { From = existing.Description, To = updated.Description };
+            hasChanges = true;
+        }
+        if (existing.IsActive != updated.IsActive)
+        {
+            changes.IsActive = new ActivityChange
+            {
+                From = existing.IsActive.ToString(),
+                To = updated.IsActive.ToString(),
+            };
+            hasChanges = true;
+        }
+
+        if (hasChanges)
+        {
+            var history = new ProfessionHistory
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                ProfessionId = id,
+                Timestamp = updated.UpdatedAt,
+                ChangedBy = "Project Admin",
+                Changes = changes,
+            };
+            await _historyPersistence.CreateAsync(history);
+        }
     }
 }

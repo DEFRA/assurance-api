@@ -1,3 +1,4 @@
+using AssuranceApi.ServiceStandard.Models;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -50,6 +51,11 @@ public class ProfessionChanges
     /// Gets or sets the description change details, if applicable.
     /// </summary>
     public DescriptionChange? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this history entry is active.
+    /// </summary>
+    public ActivityChange? IsActive { get; set; }
 }
 
 /// <summary>
@@ -80,6 +86,22 @@ public class DescriptionChange
 
     /// <summary>
     /// Gets or sets the new description of the profession.
+    /// </summary>
+    public string To { get; set; } = null!;
+}
+
+/// <summary>
+/// Represents a change made to the activity status of a profession.
+/// </summary>
+public class ActivityChange
+{
+    /// <summary>
+    /// Gets or sets the original activity status of the profession.
+    /// </summary>
+    public string From { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the new activity status of the profession.
     /// </summary>
     public string To { get; set; } = null!;
 }

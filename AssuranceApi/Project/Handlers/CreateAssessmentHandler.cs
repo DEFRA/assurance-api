@@ -1,7 +1,5 @@
-using AssuranceApi.Profession.Services;
+using AssuranceApi.Data;
 using AssuranceApi.Project.Models;
-using AssuranceApi.Project.Services;
-using AssuranceApi.ServiceStandard.Services;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 

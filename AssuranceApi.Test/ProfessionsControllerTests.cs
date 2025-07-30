@@ -1,6 +1,6 @@
 using AssuranceApi.Controllers;
+using AssuranceApi.Data;
 using AssuranceApi.Profession.Models;
-using AssuranceApi.Profession.Services;
 using AssuranceApi.Validators;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
@@ -102,6 +102,18 @@ namespace AssuranceApi.Test
             Description = "This is Test Profession 5",
             IsActive = false,
             UpdatedAt = new DateTime(2024, 04, 25),
+        };
+
+        private static readonly ProfessionModel _nonexistentProfession = new()
+        {
+            Id = "nonexistent",
+            Name = "Updated Name",
+            Description = "Updated Description",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            DeletedAt = null,
+            DeletedBy = ""
         };
 
         private static readonly ProfessionModel _invalidProfessionModel = new()
@@ -290,6 +302,94 @@ namespace AssuranceApi.Test
             var response = await controller.Create(_invalidProfessionModel);
 
             response.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task Update_ReturnsOkResult_WithUpdatedProfession_WhenValidIdAndProfessionArePassed()
+        {
+            var mockProfessionPersistence = GetProfessionPersistenceMock();
+            var existingProfession = _allProfessions[0];
+            mockProfessionPersistence.GetByIdAsync(existingProfession.Id).Returns(existingProfession);
+            mockProfessionPersistence.UpdateAsync(Arg.Any<ProfessionModel>()).Returns(true);
+
+            var mockProfessionHistoryPersistence = GetProfessionHistoryPersistenceMock();
+
+            var updatedProfession = new ProfessionModel
+            {
+                Id = existingProfession.Id,
+                Name = "Updated Name",
+                Description = "Updated Description",
+                IsActive = true,
+                CreatedAt = existingProfession.CreatedAt,
+                UpdatedAt = DateTime.UtcNow,
+                DeletedAt = null,
+                DeletedBy = ""
+            };
+
+            var controller = new ProfessionsController(
+                mockProfessionPersistence,
+                mockProfessionHistoryPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.Update(existingProfession.Id, updatedProfession);
+
+            response.Should().BeOfType<OkObjectResult>()
+                .Which.Value.Should().BeEquivalentTo(updatedProfession, options => options.Excluding(x => x.UpdatedAt));
+        }
+
+        [Fact]
+        public async Task Update_ReturnsNotFoundResult_WhenProfessionDoesNotExist()
+        {
+            var mockProfessionPersistence = GetProfessionPersistenceMock();
+            mockProfessionPersistence.GetByIdAsync(_nonexistentProfession.Id).Returns((ProfessionModel?)null);
+
+            var mockProfessionHistoryPersistence = GetProfessionHistoryPersistenceMock();
+
+            var controller = new ProfessionsController(
+                mockProfessionPersistence,
+                mockProfessionHistoryPersistence,
+                _validator,
+                _logger
+            );
+
+            // Act
+            var response = await controller.Update(_nonexistentProfession.Id, _nonexistentProfession);
+
+            // Assert
+            response.Should().BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
+        public async Task Update_ReturnsBadRequestObjectResult_WhenInvalidProfessionIsPassed()
+        {
+            var mockProfessionPersistence = GetProfessionPersistenceMock();
+            mockProfessionPersistence.GetByIdAsync(_invalidProfessionModel.Id).Returns(_allProfessions[0]);
+
+            var mockProfessionHistoryPersistence = GetProfessionHistoryPersistenceMock();
+
+            var controller = new ProfessionsController(
+                mockProfessionPersistence,
+                mockProfessionHistoryPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.Update(_invalidProfessionModel.Id, _invalidProfessionModel);
+
+            response.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task Update_ObjectResult_With500Result_WhenAnExceptionOccurs()
+        {
+            var controller = new ProfessionsController(null, null, _validator, _logger);
+
+            var response = await controller.Update(_activeProfessions[0].Id, _activeProfessions[0]);
+
+            response.Should().BeOfType<ObjectResult>();
+            response.As<ObjectResult>().StatusCode.Should().Be(500);
         }
 
         [Fact]

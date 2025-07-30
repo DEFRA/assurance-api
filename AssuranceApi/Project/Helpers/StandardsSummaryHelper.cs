@@ -1,5 +1,5 @@
+using AssuranceApi.Data;
 using AssuranceApi.Project.Models;
-using AssuranceApi.Project.Services;
 
 namespace AssuranceApi.Project.Helpers;
 

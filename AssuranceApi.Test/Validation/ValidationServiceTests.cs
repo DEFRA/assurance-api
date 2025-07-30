@@ -1,7 +1,6 @@
+using AssuranceApi.Data;
 using AssuranceApi.Project.Models;
-using AssuranceApi.Project.Services;
 using AssuranceApi.ServiceStandard.Models;
-using AssuranceApi.ServiceStandard.Services;
 using FluentAssertions;
 using NSubstitute;
 

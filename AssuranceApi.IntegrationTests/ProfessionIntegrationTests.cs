@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AssuranceApi.Profession.Models;
+using AssuranceApi.ServiceStandard.Models;
+using Elastic.CommonSchema;
 using FluentAssertions;
 
 namespace AssuranceApi.IntegrationTests;
@@ -168,5 +170,114 @@ public class ProfessionIntegrationTests : IClassFixture<TestApplicationFactory>
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
         );
         professions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UpdateProfession_ReturnsOk_WhenValidUpdateProvided()
+    {
+        await _factory.ClearDatabaseAsync();
+        var authenticatedClient = _factory.CreateAuthenticatedClient();
+
+        var profession = new ProfessionModel
+        {
+            Id = "update-test-profession",
+            Name = "Update Test Profession",
+            Description = "A profession for testing update",
+            IsActive = true,
+        };
+
+        await authenticatedClient.PostAsJsonAsync("/api/v1.0/professions", profession);
+
+        var updatedModel = new ProfessionModel
+        {
+            Id = "update-test-profession",
+            Name = "Updated Profession Name",
+            Description = "Updated description",
+            IsActive = false,
+        };
+
+
+        var response = await authenticatedClient.PutAsJsonAsync($"/api/v1.0/professions/{updatedModel.Id}", updatedModel);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var updatedProfessionResponse = await authenticatedClient.GetAsync("/api/v1.0/professions/update-test-profession?includeInactive=true");
+        updatedProfessionResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var content = await updatedProfessionResponse.Content.ReadAsStringAsync();
+        var updatedProfession = JsonSerializer.Deserialize<ProfessionModel>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+        updatedProfession.Should().NotBeNull();
+        updatedProfession!.Name.Should().Be(updatedModel.Name);
+        updatedProfession.Description.Should().Be(updatedModel.Description);
+        updatedProfession.IsActive.Should().Be(updatedModel.IsActive);
+
+
+        var historyResponse = await authenticatedClient.GetAsync($"/api/v1.0/professions/{updatedModel.Id}/history");
+        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var history = JsonSerializer.Deserialize<List<ServiceStandardHistory>>(
+            await historyResponse.Content.ReadAsStringAsync(),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+        history.Should().NotBeNull();
+        history.Should().HaveCount(1);
+        history[0].Changes.Name.To.Should().Be(updatedModel.Name);
+        history[0].Changes.Description.To.Should().Be(updatedModel.Description);
+        history[0].Changes.IsActive.To.Should().Be(updatedModel.IsActive.ToString());
+    }
+
+    [Fact]
+    public async Task UpdateProfession_ReturnsNotFound_WhenProfessionDoesNotExist()
+    {
+        // Arrange - Clear database
+        await _factory.ClearDatabaseAsync();
+        var authenticatedClient = _factory.CreateAuthenticatedClient();
+
+        var updatedProfession = new ProfessionModel
+        {
+            Id = "non-existent-profession",
+            Name = "Non Existent",
+            Description = "Should not exist",
+        };
+
+        // Act
+        var response = await authenticatedClient.PutAsJsonAsync("/api/v1.0/professions/non-existent-profession", updatedProfession);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateProfession_ReturnsBadRequest_WhenIdMismatch()
+    {
+        // Arrange - Clear database and create profession
+        await _factory.ClearDatabaseAsync();
+        var authenticatedClient = _factory.CreateAuthenticatedClient();
+
+        var profession = new ProfessionModel
+        {
+            Id = "mismatch-profession",
+            Name = "Mismatch Profession",
+            Description = "For ID mismatch test",
+        };
+
+        await authenticatedClient.PostAsJsonAsync("/api/v1.0/professions", profession);
+
+        var updatedProfession = new ProfessionModel
+        {
+            Id = "different-id",
+            Name = "Should Fail",
+            Description = "ID mismatch",
+        };
+
+        // Act
+        var response = await authenticatedClient.PutAsJsonAsync("/api/v1.0/professions/mismatch-profession", updatedProfession);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

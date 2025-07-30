@@ -3,7 +3,7 @@ using AssuranceApi.ServiceStandard.Models;
 using AssuranceApi.Utils.Mongo;
 using MongoDB.Driver;
 
-namespace AssuranceApi.ServiceStandard.Services;
+namespace AssuranceApi.Data;
 
 /// <summary>
 /// Provides persistence operations for service standards, including CRUD operations,
