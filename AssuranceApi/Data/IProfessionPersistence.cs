@@ -1,6 +1,6 @@
 using AssuranceApi.Profession.Models;
 
-namespace AssuranceApi.Profession.Services;
+namespace AssuranceApi.Data;
 
 /// <summary>
 /// Interface for managing persistence operations related to professions.
@@ -39,6 +39,13 @@ public interface IProfessionPersistence
     /// <param name="profession">The profession to create.</param>
     /// <returns>True if the creation was successful; otherwise, false.</returns>
     Task<bool> CreateAsync(ProfessionModel profession);
+
+    /// <summary>
+    /// Updates an existing profession.
+    /// </summary>
+    /// <param name="profession">The updated profession data.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success.</returns>
+    Task<bool> UpdateAsync(ProfessionModel profession);
 
     /// <summary>
     /// Seeds the database with a collection of professions.

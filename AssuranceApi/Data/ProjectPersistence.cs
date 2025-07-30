@@ -4,7 +4,7 @@ using AssuranceApi.Utils.Mongo;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
-namespace AssuranceApi.Project.Services;
+namespace AssuranceApi.Data;
 
 /// <summary>
 /// Provides persistence operations for ProjectModel entities in a MongoDB collection.

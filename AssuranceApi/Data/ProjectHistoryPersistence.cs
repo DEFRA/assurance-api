@@ -2,7 +2,7 @@ using AssuranceApi.Project.Models;
 using AssuranceApi.Utils.Mongo;
 using MongoDB.Driver;
 
-namespace AssuranceApi.Project.Services;
+namespace AssuranceApi.Data;
 
 /// <summary>
 /// Provides persistence operations for project history, including creating, retrieving, and archiving history entries.

@@ -3,7 +3,7 @@ using AssuranceApi.Utils.Mongo;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
-namespace AssuranceApi.ServiceStandard.Services;
+namespace AssuranceApi.Data;
 
 /// <summary>
 /// Provides persistence operations for service standard history, including creating and retrieving history entries.

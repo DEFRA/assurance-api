@@ -1,6 +1,6 @@
 using AssuranceApi.Project.Models;
 
-namespace AssuranceApi.Project.Services;
+namespace AssuranceApi.Data;
 
 /// <summary>
 /// Interface for persisting project history data.

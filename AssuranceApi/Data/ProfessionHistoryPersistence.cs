@@ -1,9 +1,9 @@
 using AssuranceApi.Profession.Models;
+using AssuranceApi.ServiceStandard.Models;
 using AssuranceApi.Utils.Mongo;
-using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
-namespace AssuranceApi.Profession.Services;
+namespace AssuranceApi.Data;
 
 internal class ProfessionHistoryPersistence
     : MongoService<ProfessionHistory>,

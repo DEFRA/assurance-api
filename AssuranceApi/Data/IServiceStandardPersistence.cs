@@ -1,7 +1,7 @@
 using AssuranceApi.Project.Models;
 using AssuranceApi.ServiceStandard.Models;
 
-namespace AssuranceApi.ServiceStandard.Services;
+namespace AssuranceApi.Data;
 
 /// <summary>
 /// Interface for persistence operations related to Service Standards.

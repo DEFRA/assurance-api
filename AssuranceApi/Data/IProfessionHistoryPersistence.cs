@@ -1,6 +1,6 @@
 using AssuranceApi.Profession.Models;
 
-namespace AssuranceApi.Profession.Services;
+namespace AssuranceApi.Data;
 
 /// <summary>
 /// Interface for persisting profession history data.
