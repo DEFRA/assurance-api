@@ -168,20 +168,33 @@ public class ProjectsController : ControllerBase
 
     private static string GetLowestRag(ProjectModel project)
     {
-        var lowestRag = "GREEN";
+        var lowestRag = StandardRatings.Green.ToString().ToUpper();
+
+        foreach (var standard in project.StandardsSummary)
+        {
+            if (standard.AggregatedStatus == StandardRatings.Amber.ToString().ToUpper())
+            {
+                lowestRag = StandardRatings.Amber.ToString().ToUpper();
+            }
+            else if (standard.AggregatedStatus == StandardRatings.Red.ToString().ToUpper())
+            {
+                lowestRag = StandardRatings.Red.ToString().ToUpper();
+                break;
+            }
+        }
+
         return lowestRag;
     }
 
     private static string GetCalculatedRag(double percentageAcrossCompletedStandards)
     {
-        return "GREEN";
-        //if (percentageAcrossCompletedStandards >= 75)
-        //    return "GREEN";
+        if (percentageAcrossCompletedStandards >= 75)
+            return "GREEN";
 
-        //else if (percentageAcrossCompletedStandards >= 50)
-        //    return "AMBER";
+        else if (percentageAcrossCompletedStandards >= 50)
+            return "AMBER";
 
-        //return "RED";
+        return "RED";
     }
 
     private static int CalculateProjectTotalScoreAcrossStandards(ProjectModel project)
