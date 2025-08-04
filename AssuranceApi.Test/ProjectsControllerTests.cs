@@ -460,6 +460,8 @@ namespace AssuranceApi.Test
             project.ProjectStatus.ScoreOfStandardsCompleted.Should().Be(12);
             project.ProjectStatus.PercentageAcrossAllStandards.Should().Be(28.57);
             project.ProjectStatus.PercentageAcrossCompletedStandards.Should().Be(66.67);
+            project.ProjectStatus.CalculatedRag.Should().Be(StandardRatings.Amber.ToString().ToUpper());
+            project.ProjectStatus.LowestRag.Should().Be(StandardRatings.Red.ToString().ToUpper());
         }
 
         [Fact]
