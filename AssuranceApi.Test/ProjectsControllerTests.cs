@@ -12,7 +12,6 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Serilog;
 using Serilog.Extensions.Logging;
-using System.Security.Cryptography.Xml;
 using Xunit.Abstractions;
 
 namespace AssuranceApi.Test
@@ -70,7 +69,7 @@ namespace AssuranceApi.Test
                     new()
                     {
                         AggregatedCommentary = "",
-                        AggregatedStatus = "",
+                        AggregatedStatus = "GREEN",
                         LastUpdated = new DateTime(2024, 04, 22),
                         Professions =
                         [
@@ -90,6 +89,124 @@ namespace AssuranceApi.Test
                 UpdateDate = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
             },
         ];
+
+        private static readonly ProjectModel _calculateProjectStats12PointsAcross6Standards = new()
+        {
+            Commentary = "This is For Calculating Stats",
+            DefCode = "101010",
+            Id = "1",
+            LastUpdated = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+            Name = "Stats Project",
+            Phase = "Alpha",
+            StandardsSummary =
+                [
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "GREEN",
+                        LastUpdated = new DateTime(2024, 04, 22),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 22),
+                                ProfessionId = "1",
+                                Status = "GREEN",
+                            },
+                        ],
+                        StandardId = "1",
+                    },
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "AMBER",
+                        LastUpdated = new DateTime(2024, 04, 22),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 22),
+                                ProfessionId = "1",
+                                Status = "AMBER",
+                            },
+                        ],
+                        StandardId = "2",
+                    },
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "RED",
+                        LastUpdated = new DateTime(2024, 04, 22),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 22),
+                                ProfessionId = "1",
+                                Status = "RED",
+                            },
+                        ],
+                        StandardId = "3",
+                    },
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "GREEN",
+                        LastUpdated = new DateTime(2024, 04, 22),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 22),
+                                ProfessionId = "1",
+                                Status = "GREEN",
+                            },
+                        ],
+                        StandardId = "4",
+                    },
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "AMBER",
+                        LastUpdated = new DateTime(2024, 04, 22),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 22),
+                                ProfessionId = "1",
+                                Status = "AMBER",
+                            },
+                        ],
+                        StandardId = "5",
+                    },
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "RED",
+                        LastUpdated = new DateTime(2024, 04, 22),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 22),
+                                ProfessionId = "1",
+                                Status = "RED",
+                            },
+                        ],
+                        StandardId = "6",
+                    },
+                ],
+            Status = "AMBER",
+            Tags = ["TAG2", "TAG3"],
+            UpdateDate = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+        };
 
         private static readonly List<ProjectHistory> _projectHistory =
         [
@@ -314,6 +431,35 @@ namespace AssuranceApi.Test
             var response = await controller.GetById("2");
 
             response.Should().BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
+        public async Task GetById_ReturnsCorrectStats_WithMatchingProject_WhenAValidIdIsPassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            mockProjectPersistence.GetByIdAsync("23").Returns(_calculateProjectStats12PointsAcross6Standards);
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null, _validator,
+                _logger
+            );
+            var response = await controller.GetById("23");
+
+            response
+                .Should()
+                .BeOfType<OkObjectResult>()
+                .Which.Value.Should()
+                .BeEquivalentTo(_calculateProjectStats12PointsAcross6Standards);
+
+            var project = response.As<OkObjectResult>().Value.As<ProjectModel>();
+
+            project.ProjectStatus.NumberOfStandardsCompleted.Should().Be(6);
+            project.ProjectStatus.ScoreOfStandardsCompleted.Should().Be(12);
+            project.ProjectStatus.PercentageAcrossAllStandards.Should().Be(28.57);
+            project.ProjectStatus.PercentageAcrossCompletedStandards.Should().Be(66.67);
         }
 
         [Fact]

@@ -73,6 +73,9 @@ public class ProjectsController : ControllerBase
             _logger.LogInformation("Getting all of the projects");
 
             var projects = await _persistence.GetAllAsync(tag);
+
+            CalucalateProjectStatistics(projects);
+
             return Ok(projects);
         }
         catch (Exception ex)
@@ -108,7 +111,19 @@ public class ProjectsController : ControllerBase
             _logger.LogInformation($"Getting all of the projects for ID='{id}'");
 
             var project = await _persistence.GetByIdAsync(id);
-            return project is not null ? Ok(project) : NotFound();
+
+            if (project == null)
+            {
+                _logger.LogDebug($"Project with ID='{id}' not found");
+                return NotFound();
+            }
+            
+                
+            _logger.LogDebug($"Found project with ID='{id}'");
+
+            CalucalateProjectStatistics([project]);
+
+            return Ok(project);
         }
         catch (Exception ex)
         {
@@ -119,6 +134,87 @@ public class ProjectsController : ControllerBase
         {
             _logger.LogDebug("Leaving get project by ID API call");
         }
+    }
+
+    private static void CalucalateProjectStatistics(List<ProjectModel> projects)
+    {
+        if (projects == null || projects.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var project in projects)
+        {
+            var projectTotalScore = CalculateProjectTotalScoreAcrossStandards(project);
+
+            var totalNumberOfStandards = 14;
+            var maxNumberStandardsScore = totalNumberOfStandards * (int)StandardRatings.Green;
+
+            var totalNumberOfCompletedStandards = project.StandardsSummary.Count;
+            var maxNumberCompletedStandardsScore = totalNumberOfCompletedStandards * (int)StandardRatings.Green;
+
+            project.ProjectStatus = new ProjectStatus
+            {
+                ScoreOfStandardsCompleted = projectTotalScore,
+                PercentageAcrossAllStandards = CalculatePercentage(projectTotalScore, maxNumberStandardsScore),
+                PercentageAcrossCompletedStandards = CalculatePercentage(projectTotalScore, maxNumberCompletedStandardsScore),
+                NumberOfStandardsCompleted = totalNumberOfCompletedStandards,
+                LowestRag = GetLowestRag(project),
+            };
+
+            project.ProjectStatus.CalculatedRag = GetCalculatedRag(project.ProjectStatus.PercentageAcrossCompletedStandards);
+        }
+    }
+
+    private static string GetLowestRag(ProjectModel project)
+    {
+        var lowestRag = "GREEN";
+        return lowestRag;
+    }
+
+    private static string GetCalculatedRag(double percentageAcrossCompletedStandards)
+    {
+        return "GREEN";
+        //if (percentageAcrossCompletedStandards >= 75)
+        //    return "GREEN";
+
+        //else if (percentageAcrossCompletedStandards >= 50)
+        //    return "AMBER";
+
+        //return "RED";
+    }
+
+    private static int CalculateProjectTotalScoreAcrossStandards(ProjectModel project)
+    {
+        var total = 0;
+
+        foreach (var standard in project.StandardsSummary)
+        {
+            if (standard.AggregatedStatus == "GREEN")
+            {
+                total += (int)StandardRatings.Green;
+            }
+            else if (standard.AggregatedStatus == "AMBER")
+            {
+                total += (int)StandardRatings.Amber;
+            }
+            else if (standard.AggregatedStatus == "RED")
+            {
+                total += (int)StandardRatings.Red;
+            }
+        }
+
+        return total;
+    }
+
+    private static double CalculatePercentage(int top, int bottom)
+    {
+        if (top == 0)
+            return 0;
+
+        ArgumentOutOfRangeException.ThrowIfZero(bottom);
+
+        return Math.Round((double)top / bottom * 100, 2);
     }
 
     /// <summary>

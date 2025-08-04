@@ -59,4 +59,10 @@ public class ProjectModel
     /// Gets or sets the summary of standards associated with the project.
     /// </summary>
     public List<StandardSummaryModel> StandardsSummary { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the summary of standards associated with the project.
+    /// </summary>
+    [BsonIgnore]
+    public ProjectStatus? ProjectStatus { get; set; }
 }
