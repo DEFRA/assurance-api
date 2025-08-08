@@ -15,11 +15,11 @@ public interface IProjectPersistence
     Task<bool> CreateAsync(ProjectModel project);
 
     /// <summary>
-    /// Retrieves all projects asynchronously, optionally filtered by a tag.
+    /// Retrieves all projects asynchronously, optionally filtered by the passed in parameters.
     /// </summary>
-    /// <param name="tag">The optional tag to filter projects.</param>
+    /// <param name="projectQueryParameters">The optional parameters to filter projects.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a list of projects.</returns>
-    Task<List<ProjectModel>> GetAllAsync(string? tag = null);
+    Task<List<ProjectModel>> GetAllAsync(ProjectQueryParameters projectQueryParameters);
 
     /// <summary>
     /// Retrieves a project by its ID asynchronously.

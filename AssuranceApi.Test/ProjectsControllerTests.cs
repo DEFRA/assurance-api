@@ -90,6 +90,170 @@ namespace AssuranceApi.Test
             },
         ];
 
+        private static readonly List<ProjectModel> _activeProjectsWithDateRanges =
+        [
+            new()
+            {
+                Commentary = "Test 1 - 2024-04-21T00:00:00Z",
+                DefCode = "1234",
+                Id = "1",
+                LastUpdated = new DateTime(2024, 04, 21).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                Name = "Test Project 1",
+                Phase = "Discovery",
+                StandardsSummary =
+                [
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "",
+                        LastUpdated = new DateTime(2024, 04, 21),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 21),
+                                ProfessionId = "1",
+                                Status = "Status",
+                            },
+                        ],
+                        StandardId = "1",
+                    },
+                ],
+                Status = "GREEN",
+                Tags = ["TAG1", "TAG2"],
+                UpdateDate = new DateTime(2024, 04, 21).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+            },
+            new()
+            {
+                Commentary = "Test 2 - 2024-04-22T00:00:00Z",
+                DefCode = "2345",
+                Id = "2",
+                LastUpdated = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                Name = "Test Project 2",
+                Phase = "Alpha",
+                StandardsSummary =
+                [
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "GREEN",
+                        LastUpdated = new DateTime(2024, 04, 22),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 22),
+                                ProfessionId = "1",
+                                Status = "Status",
+                            },
+                        ],
+                        StandardId = "2",
+                    },
+                ],
+                Status = "AMBER",
+                Tags = ["TAG2", "TAG3"],
+                UpdateDate = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+            },
+            new()
+            {
+                Commentary = "Test 3 - 2024-04-23T00:00:00Z",
+                DefCode = "2345",
+                Id = "2",
+                LastUpdated = new DateTime(2024, 04, 23).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                Name = "Test Project 3",
+                Phase = "Alpha",
+                StandardsSummary =
+                [
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "GREEN",
+                        LastUpdated = new DateTime(2024, 04, 23),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 23),
+                                ProfessionId = "1",
+                                Status = "Status",
+                            },
+                        ],
+                        StandardId = "2",
+                    },
+                ],
+                Status = "AMBER",
+                Tags = ["TAG2", "TAG3"],
+                UpdateDate = new DateTime(2024, 04, 23).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+            },
+            new()
+            {
+                Commentary = "Test 4 - 2024-04-24T00:00:00Z",
+                DefCode = "2345",
+                Id = "2",
+                LastUpdated = new DateTime(2024, 04, 24).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                Name = "Test Project 4",
+                Phase = "Alpha",
+                StandardsSummary =
+                [
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "GREEN",
+                        LastUpdated = new DateTime(2024, 04, 24),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 24),
+                                ProfessionId = "1",
+                                Status = "Status",
+                            },
+                        ],
+                        StandardId = "2",
+                    },
+                ],
+                Status = "AMBER",
+                Tags = ["TAG2", "TAG3"],
+                UpdateDate = new DateTime(2024, 04, 24).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+            },
+            new()
+            {
+                Commentary = "Test 5 - 2024-04-25T00:00:00Z",
+                DefCode = "2345",
+                Id = "2",
+                LastUpdated = new DateTime(2024, 04, 25).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                Name = "Test Project 5",
+                Phase = "Alpha",
+                StandardsSummary =
+                [
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "GREEN",
+                        LastUpdated = new DateTime(2024, 04, 25),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 25),
+                                ProfessionId = "1",
+                                Status = "Status",
+                            },
+                        ],
+                        StandardId = "2",
+                    },
+                ],
+                Status = "AMBER",
+                Tags = ["TAG2", "TAG3"],
+                UpdateDate = new DateTime(2024, 04, 25).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+            },
+        ];
+
         private static readonly ProjectModel _calculateProjectStats12PointsAcross6Standards = new()
         {
             Commentary = "This is For Calculating Stats",
@@ -358,7 +522,7 @@ namespace AssuranceApi.Test
                 null, _validator,
                 _logger
             );
-            var response = await controller.GetAll(string.Empty);
+            var response = await controller.GetAll(null, null, null);
 
             response
                 .Should()
@@ -379,17 +543,38 @@ namespace AssuranceApi.Test
                 null, _validator,
                 _logger
             );
-            var response = await controller.GetAll("TAG3");
+            var response = await controller.GetAll("TAG3", null, null);
 
             response.Should().BeOfType<OkObjectResult>();
             response.As<OkObjectResult>().Value.As<List<ProjectModel>>().Count.Should().Be(1);
         }
 
         [Fact]
+        public async Task GetAllWithDateRange_ReturnsOkResult_WithListOfProjectsInRange_WhenStartAndEndDatesAreSpecified()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null, _validator,
+                _logger
+            );
+            var startDate = "2024-04-22T00:00:00Z";
+            var endDate = "2024-04-23T00:00:00Z";
+            var response = await controller.GetAll(null, startDate, endDate);
+
+            response.Should().BeOfType<OkObjectResult>();
+            response.As<OkObjectResult>().Value.As<List<ProjectModel>>().Count.Should().Be(1);
+            response.As<OkObjectResult>().Value.As<List<ProjectModel>>()[0].Should().BeEquivalentTo(_activeProjectsWithDateRanges[1]);
+        }
+
+        [Fact]
         public async Task GetAll_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
         {
             var controller = new ProjectsController(null, null, null, _validator, _logger);
-            var response = await controller.GetAll(string.Empty);
+            var response = await controller.GetAll(string.Empty, string.Empty, string.Empty);
 
             response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
@@ -1446,9 +1631,20 @@ namespace AssuranceApi.Test
         {
             var mockProjectPersistence = Substitute.For<IProjectPersistence>();
 
-            mockProjectPersistence.GetAllAsync().Returns(_activeProjects);
-            mockProjectPersistence.GetAllAsync(string.Empty).Returns(_activeProjects);
-            mockProjectPersistence.GetAllAsync("TAG3").Returns([_activeProjects[1]]);
+            mockProjectPersistence.GetAllAsync(Arg.Is<ProjectQueryParameters>(x => x.Tags == "TAG3")).Returns([_activeProjects[1]]);
+
+            var startDate = new DateTime(2024, 04, 22);
+            var endDate = new DateTime(2024, 04, 23);
+            mockProjectPersistence.GetAllAsync(Arg.Is<ProjectQueryParameters>(x =>
+                x.Tags == null &&
+                x.StartDate != null && 
+                x.EndDate != null)).Returns([_activeProjectsWithDateRanges[1]]);
+
+            mockProjectPersistence.GetAllAsync(Arg.Is<ProjectQueryParameters>(x =>
+                x.Tags == null &&
+                x.StartDate == null && 
+                x.EndDate == null)).Returns(_activeProjects);
+
             mockProjectPersistence.GetByIdAsync("1").Returns(_activeProjects[0]);
             mockProjectPersistence
                 .GetByIdAsync("3")

@@ -55,16 +55,35 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
     }
 
     /// <summary>
-    /// Retrieves all projects, optionally filtered by a tag.
+    /// Retrieves all projects, optionally filtered by a tag and date range.
     /// </summary>
-    /// <param name="tag">The tag to filter projects by, or null to retrieve all projects.</param>
+    /// <param name="projectQueryParameters">The optional parameters to filter projects.</param>
     /// <returns>A list of projects.</returns>
-    public async Task<List<ProjectModel>> GetAllAsync(string? tag = null)
+    public async Task<List<ProjectModel>> GetAllAsync(ProjectQueryParameters projectQueryParameters)
     {
-        var filter =
-            tag == null
-                ? Builders<ProjectModel>.Filter.Empty
-                : Builders<ProjectModel>.Filter.AnyEq(p => p.Tags, tag);
+        var filter = Builders<ProjectModel>.Filter.Empty;
+
+        if (projectQueryParameters != null)
+        {
+            var filters = new List<FilterDefinition<ProjectModel>>();
+
+            if (projectQueryParameters.Tags != null)
+            {
+                filters.Add(Builders<ProjectModel>.Filter.AnyEq(p => p.Tags, projectQueryParameters.Tags));
+            }
+
+            if (projectQueryParameters.StartDate != null)
+            {
+                filters.Add(Builders<ProjectModel>.Filter.Gte(p => p.LastUpdated, projectQueryParameters.StartDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")));
+            }
+            if (projectQueryParameters.EndDate != null)
+            {
+                filters.Add(Builders<ProjectModel>.Filter.Lt(p => p.LastUpdated, projectQueryParameters.EndDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")));
+            }
+
+            if (filters.Any())
+                filter = Builders<ProjectModel>.Filter.And(filters);
+        }
 
         var findOptions = new FindOptions
         {

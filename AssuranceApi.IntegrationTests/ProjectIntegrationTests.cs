@@ -3,9 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AssuranceApi.Project.Models;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using MongoDB.Bson;
-using Xunit;
 
 namespace AssuranceApi.IntegrationTests;
 
@@ -196,6 +194,62 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         returnedProjects!.Should().HaveCount(2);
         returnedProjects.Should().Contain(p => p.Id == project1Id);
         returnedProjects.Should().Contain(p => p.Id == project2Id);
+    }
+
+    [Fact]
+    public async Task GetAllProjectsWithDateRange_ReturnsOkResult_WithListOfProjectsInRange_WhenStartAndEndDatesAreSpecified()
+    {
+        // Arrange - Clear database and create projects
+        await _factory.ClearDatabaseAsync();
+        var authenticatedClient = _factory.CreateAuthenticatedClient();
+        var publicClient = _factory.CreateUnauthenticatedClient();
+
+        var dateRangeProjects = GetDateRangeProjects(5);
+
+        foreach (var project in dateRangeProjects.Values)
+        {
+            await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project);
+        }
+
+        var startDate = "2024-04-22T00:00:00Z";
+        var endDate = "2024-04-23T00:00:00Z";
+
+        var response = await publicClient.GetAsync($"/api/v1.0/projects?start_date={startDate}&end_date={endDate}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        var returnedProjects = JsonSerializer.Deserialize<List<ProjectModel>>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+        returnedProjects.Should().NotBeNull();
+        returnedProjects.Should().HaveCount(1);
+    }
+
+    private static Dictionary<string, ProjectModel> GetDateRangeProjects(int numberOfProjects)
+    {
+        var dateRangeProjects = new Dictionary<string, ProjectModel>(numberOfProjects);
+
+        for (var projectNumber = 0; projectNumber < numberOfProjects; projectNumber++)
+        {
+            var projectId = ObjectId.GenerateNewId().ToString();
+
+            var project = new ProjectModel
+            {
+                Id = projectId,
+                Name = $"Project {projectNumber + 1}",
+                Commentary = $"{projectNumber + 1} test project",
+                Status = "RED",
+                Phase = "Alpha",
+                LastUpdated = new DateTime(2024, 04, 21 + projectNumber).ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            };
+
+            dateRangeProjects.Add(projectId, project);
+        }
+
+        return dateRangeProjects;
     }
 
     [Fact]

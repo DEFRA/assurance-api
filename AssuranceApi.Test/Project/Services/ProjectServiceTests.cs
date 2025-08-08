@@ -61,7 +61,7 @@ public class ProjectServiceTests
             },
         };
 
-        _projectPersistence.GetAllAsync(tag).Returns(expectedProjects);
+        _projectPersistence.GetAllAsync(new ProjectQueryParameters(tag, string.Empty, string.Empty)).Returns(expectedProjects);
 
         // Act
         var result = await service.GetProjectsByTagAsync(tag);
@@ -69,7 +69,7 @@ public class ProjectServiceTests
         // Assert
         result.Should().HaveCount(2);
         result.Should().BeEquivalentTo(expectedProjects);
-        await _projectPersistence.Received(1).GetAllAsync(tag);
+        await _projectPersistence.Received(1).GetAllAsync(new ProjectQueryParameters(tag, string.Empty, string.Empty));
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class ProjectServiceTests
             },
         };
 
-        _projectPersistence.GetAllAsync(null).Returns(expectedProjects);
+        _projectPersistence.GetAllAsync(new ProjectQueryParameters(null, null, null)).Returns(expectedProjects);
 
         // Act
         var result = await service.GetAllProjectsAsync();
@@ -250,12 +250,12 @@ public class ProjectService
 
     public async Task<List<ProjectModel>> GetAllProjectsAsync()
     {
-        return await _projectPersistence.GetAllAsync();
+        return await _projectPersistence.GetAllAsync(new ProjectQueryParameters());
     }
 
     public async Task<List<ProjectModel>> GetProjectsByTagAsync(string tag)
     {
-        return await _projectPersistence.GetAllAsync(tag);
+        return await _projectPersistence.GetAllAsync(new ProjectQueryParameters(tag, null, null));
     }
 
     public async Task<ProjectModel?> GetProjectByIdAsync(string id)
