@@ -1,5 +1,6 @@
 // ProjectController.cs
 using System.Globalization;
+using System.Linq.Expressions;
 using Asp.Versioning;
 using AssuranceApi.Data;
 using AssuranceApi.Project.Constants;
@@ -57,6 +58,8 @@ public class ProjectsController : ControllerBase
     /// Gets all projects.
     /// </summary>
     /// <param name="tag">Optional tag to filter projects.</param>
+    /// <param name="startDate">Optional date in UTC format that limits to projects that were created or updated on or after this date</param>
+    /// <param name="endDate">Optional date in UTC format that limits to projects that were created or updated before this date</param>
     /// <returns>A list of projects.</returns>
     /// <response code="200">Returns the list of projects.</response>
     /// <response code="500">If an internal server error occurs.</response>
@@ -64,7 +67,7 @@ public class ProjectsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<ProjectModel>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
-    public async Task<IActionResult> GetAll([FromQuery] string? tag)
+    public async Task<IActionResult> GetAll([FromQuery] string? tag, [FromQuery(Name = "start_date")] string? startDate, [FromQuery(Name = "end_date")] string? endDate)
     {
         _logger.LogDebug("Entering get all projects API call");
 
@@ -72,7 +75,9 @@ public class ProjectsController : ControllerBase
         {
             _logger.LogInformation("Getting all of the projects");
 
-            var projects = await _persistence.GetAllAsync(tag);
+            var projectQueryParameters = new ProjectQueryParameters(tag, startDate, endDate);
+
+            var projects = await _persistence.GetAllAsync(projectQueryParameters);
 
             CalucalateProjectStatistics(projects);
 
@@ -322,7 +327,7 @@ public class ProjectsController : ControllerBase
         {
             _logger.LogInformation("Getting the tags summary information'");
 
-            var projects = await _persistence.GetAllAsync();
+            var projects = await _persistence.GetAllAsync(new ProjectQueryParameters());
             var summary = projects
                 .SelectMany(p => p.Tags)
                 .Select(tag =>
