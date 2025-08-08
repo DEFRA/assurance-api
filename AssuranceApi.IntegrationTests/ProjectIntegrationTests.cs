@@ -149,35 +149,13 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         var authenticatedClient = _factory.CreateAuthenticatedClient();
         var publicClient = _factory.CreateUnauthenticatedClient();
 
-        var project1Id = ObjectId.GenerateNewId().ToString();
-        var project2Id = ObjectId.GenerateNewId().ToString();
+        var numberOfProjects = 2;
+        var dateRangeProjects = GenerateNumberOfProjects(numberOfProjects);
 
-        var project1 = new ProjectModel
+        foreach (var project in dateRangeProjects.Values)
         {
-            Id = project1Id,
-            Name = "Project One",
-            Commentary = "First test project",
-            Status = "GREEN",
-            Phase = "Live",
-            LastUpdated = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-        };
-
-        var project2 = new ProjectModel
-        {
-            Id = project2Id,
-            Name = "Project Two",
-            Commentary = "Second test project",
-            Status = "RED",
-            Phase = "Alpha",
-            LastUpdated = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-        };
-
-        // Create the projects
-        var response1 = await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project1);
-        response1.StatusCode.Should().Be(HttpStatusCode.Created);
-
-        var response2 = await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project2);
-        response2.StatusCode.Should().Be(HttpStatusCode.Created);
+            await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project);
+        }
 
         // Act - Use public client to test read access
         var response = await publicClient.GetAsync("/api/v1.0/projects");
@@ -191,20 +169,23 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         );
 
         returnedProjects.Should().NotBeNull();
-        returnedProjects!.Should().HaveCount(2);
-        returnedProjects.Should().Contain(p => p.Id == project1Id);
-        returnedProjects.Should().Contain(p => p.Id == project2Id);
+        returnedProjects!.Should().HaveCount(numberOfProjects);
+
+        for (var i = 0; i < numberOfProjects; i++)
+        {
+            returnedProjects![i].Id.Should().Be(dateRangeProjects.Values.ElementAt(i).Id);
+        }
     }
 
     [Fact]
-    public async Task GetAllProjectsWithDateRange_ReturnsOkResult_WithListOfProjectsInRange_WhenStartAndEndDatesAreSpecified()
+    public async Task GetAllProjectsWithDateRange_FirstElementIdMatchesExpectedProject()
     {
         // Arrange - Clear database and create projects
         await _factory.ClearDatabaseAsync();
         var authenticatedClient = _factory.CreateAuthenticatedClient();
         var publicClient = _factory.CreateUnauthenticatedClient();
 
-        var dateRangeProjects = GetDateRangeProjects(5);
+        var dateRangeProjects = GenerateNumberOfProjects(5);
 
         foreach (var project in dateRangeProjects.Values)
         {
@@ -226,9 +207,115 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
 
         returnedProjects.Should().NotBeNull();
         returnedProjects.Should().HaveCount(1);
+
+        var expectedProject = dateRangeProjects.Values.ElementAt(1);
+        returnedProjects![0].Id.Should().Be(expectedProject.Id);
     }
 
-    private static Dictionary<string, ProjectModel> GetDateRangeProjects(int numberOfProjects)
+    [Fact]
+    public async Task GetAllProjectsWithReversedDateRange_FirstElementIdMatchesExpectedProject()
+    {
+        // Arrange - Clear database and create projects
+        await _factory.ClearDatabaseAsync();
+        var authenticatedClient = _factory.CreateAuthenticatedClient();
+        var publicClient = _factory.CreateUnauthenticatedClient();
+
+        var dateRangeProjects = GenerateNumberOfProjects(5);
+
+        foreach (var project in dateRangeProjects.Values)
+        {
+            await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project);
+        }
+
+        var endDate = "2024-04-24T00:00:00Z";
+        var startDate = "2024-04-23T00:00:00Z";
+
+        var response = await publicClient.GetAsync($"/api/v1.0/projects?start_date={startDate}&end_date={endDate}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        var returnedProjects = JsonSerializer.Deserialize<List<ProjectModel>>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+        returnedProjects.Should().NotBeNull();
+        returnedProjects.Should().HaveCount(1);
+
+        var expectedProject = dateRangeProjects.Values.ElementAt(2);
+        returnedProjects![0].Id.Should().Be(expectedProject.Id);
+    }
+
+    [Fact]
+    public async Task GetAllProjectsWithNoEndDateRange_FirstElementIdMatchesExpectedProject()
+    {
+        // Arrange - Clear database and create projects
+        await _factory.ClearDatabaseAsync();
+        var authenticatedClient = _factory.CreateAuthenticatedClient();
+        var publicClient = _factory.CreateUnauthenticatedClient();
+
+        var dateRangeProjects = GenerateNumberOfProjects(5);
+
+        foreach (var project in dateRangeProjects.Values)
+        {
+            await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project);
+        }
+
+        var startDate = "2024-04-22T00:00:00Z";
+
+        var response = await publicClient.GetAsync($"/api/v1.0/projects?start_date={startDate}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        var returnedProjects = JsonSerializer.Deserialize<List<ProjectModel>>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+        returnedProjects.Should().NotBeNull();
+        returnedProjects.Should().HaveCount(4);
+
+        var expectedProject = dateRangeProjects.Values.ElementAt(1);
+        returnedProjects![0].Id.Should().Be(expectedProject.Id);
+    }
+
+    [Fact]
+    public async Task GetAllProjectsWithNoStartDateRange_FirstElementIdMatchesExpectedProject()
+    {
+        // Arrange - Clear database and create projects
+        await _factory.ClearDatabaseAsync();
+        var authenticatedClient = _factory.CreateAuthenticatedClient();
+        var publicClient = _factory.CreateUnauthenticatedClient();
+
+        var dateRangeProjects = GenerateNumberOfProjects(5);
+
+        foreach (var project in dateRangeProjects.Values)
+        {
+            await authenticatedClient.PostAsJsonAsync("/api/v1.0/projects", project);
+        }
+
+        var endDate = "2024-04-23T00:00:00Z";
+
+        var response = await publicClient.GetAsync($"/api/v1.0/projects?end_date={endDate}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        var returnedProjects = JsonSerializer.Deserialize<List<ProjectModel>>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+        returnedProjects.Should().NotBeNull();
+        returnedProjects.Should().HaveCount(2);
+
+        var expectedProject = dateRangeProjects.Values.ElementAt(0);
+        returnedProjects![0].Id.Should().Be(expectedProject.Id);
+    }
+
+    private static Dictionary<string, ProjectModel> GenerateNumberOfProjects(int numberOfProjects)
     {
         var dateRangeProjects = new Dictionary<string, ProjectModel>(numberOfProjects);
 
