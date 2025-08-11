@@ -550,7 +550,7 @@ namespace AssuranceApi.Test
         }
 
         [Fact]
-        public async Task GetAllWithDateRange_ReturnsOkResult_WithListOfProjectsInRange_WhenStartAndEndDatesAreSpecified()
+        public async Task GetAllWithUtcDateRange_ReturnsOkResult_WithListOfProjectsInRange_WhenStartAndEndDatesAreSpecified()
         {
             var mockProjectPersistence = GetProjectPersistenceMock();
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
@@ -563,6 +563,27 @@ namespace AssuranceApi.Test
             );
             var startDate = "2024-04-22T00:00:00Z";
             var endDate = "2024-04-23T00:00:00Z";
+            var response = await controller.GetAll(null, startDate, endDate);
+
+            response.Should().BeOfType<OkObjectResult>();
+            response.As<OkObjectResult>().Value.As<List<ProjectModel>>().Count.Should().Be(1);
+            response.As<OkObjectResult>().Value.As<List<ProjectModel>>()[0].Should().BeEquivalentTo(_activeProjectsWithDateRanges[1]);
+        }
+
+        [Fact]
+        public async Task GetAllWithDateRange_ReturnsOkResult_WithListOfProjectsInRange_WhenStartAndEndDatesAreSpecified()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null, _validator,
+                _logger
+            );
+            var startDate = "2024-04-22";
+            var endDate = "2024-04-23";
             var response = await controller.GetAll(null, startDate, endDate);
 
             response.Should().BeOfType<OkObjectResult>();
