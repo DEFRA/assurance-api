@@ -2,13 +2,24 @@ using System.Globalization;
 
 namespace AssuranceApi.Data
 {
+    /// <summary>
+    /// Represents query parameters for filtering projects.
+    /// </summary>
     public class ProjectQueryParameters
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ProjectQueryParameters"/> class.
+        /// </summary>
         public ProjectQueryParameters()
         {
-
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ProjectQueryParameters"/> class with specified tags and date range.
+        /// </summary>
+        /// <param name="tags">A comma-separated list of tags to filter projects.</param>
+        /// <param name="startDate">The start date of the date range in ISO 8601 format.</param>
+        /// <param name="endDate">The end date of the date range in ISO 8601 format.</param>
         public ProjectQueryParameters(string? tags, string? startDate, string? endDate)
         {
             Tags = tags;
@@ -23,12 +34,26 @@ namespace AssuranceApi.Data
             }
         }
 
+        /// <summary>
+        /// Gets or sets a comma-separated list of tags to filter projects.
+        /// </summary>
         public string? Tags { get; set; }
 
+        /// <summary>
+        /// Gets or sets the start date of the date range.
+        /// </summary>
         public DateTime? StartDate { get; set; }
 
+        /// <summary>
+        /// Gets or sets the end date of the date range.
+        /// </summary>
         public DateTime? EndDate { get; set; }
 
+        /// <summary>
+        /// Parses a date string into a <see cref="DateTime"/> object.
+        /// </summary>
+        /// <param name="date">The date string to parse.</param>
+        /// <returns>A nullable <see cref="DateTime"/> object if parsing is successful; otherwise, null.</returns>
         private static DateTime? ParseDateTime(string? date)
         {
             if (string.IsNullOrEmpty(date))
@@ -45,7 +70,7 @@ namespace AssuranceApi.Data
             {
                 return parsedDate;
             }
-           
+
             if (DateTime.TryParse(
                     date,
                     CultureInfo.InvariantCulture,
