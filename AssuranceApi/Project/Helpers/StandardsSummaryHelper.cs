@@ -82,7 +82,7 @@ public class StandardsSummaryHelper
             }
         );
 
-        var order = new[] { "RED", "AMBER", "GREEN", "TBC" };
+        var order = new[] { "RED", "AMBER", "GREEN", "TBC", "PENDING" };
         return mappedStatuses.OrderBy(s => Array.IndexOf(order, s)).FirstOrDefault()
             ?? "NOT_UPDATED";
     }

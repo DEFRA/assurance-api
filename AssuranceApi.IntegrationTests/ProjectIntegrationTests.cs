@@ -625,7 +625,7 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         await _factory.ClearDatabaseAsync();
         var client = _factory.CreateAuthenticatedClient();
 
-        var validStatuses = new[] { "RED", "AMBER_RED", "AMBER", "GREEN_AMBER", "GREEN", "TBC" };
+        var validStatuses = new[] { "RED", "AMBER_RED", "AMBER", "GREEN_AMBER", "GREEN", "TBC", "PENDING", "EXCLUDED" };
 
         // Act & Assert
         for (int i = 0; i < validStatuses.Length; i++)

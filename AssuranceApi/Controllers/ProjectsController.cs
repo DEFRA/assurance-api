@@ -2,7 +2,6 @@
 using System.Globalization;
 using Asp.Versioning;
 using AssuranceApi.Data;
-using AssuranceApi.Project.Constants;
 using AssuranceApi.Project.Handlers;
 using AssuranceApi.Project.Helpers;
 using AssuranceApi.Project.Models;
@@ -150,11 +149,11 @@ public class ProjectsController : ControllerBase
         foreach (var project in projects)
         {
             var projectTotalScore = CalculateProjectTotalScoreAcrossStandards(project);
+            var totalNumberOfCompletedStandards = CalculateTotalNumberOfCompletedStandards(project);
 
             var totalNumberOfStandards = 14;
             var maxNumberStandardsScore = totalNumberOfStandards * (int)StandardRatings.Green;
 
-            var totalNumberOfCompletedStandards = project.StandardsSummary.Count;
             var maxNumberCompletedStandardsScore = totalNumberOfCompletedStandards * (int)StandardRatings.Green;
 
             project.ProjectStatus = new ProjectStatus
@@ -193,12 +192,12 @@ public class ProjectsController : ControllerBase
     private static string GetCalculatedRag(double percentageAcrossCompletedStandards)
     {
         if (percentageAcrossCompletedStandards >= 75)
-            return "GREEN";
+            return StandardRatings.Green.ToString().ToUpper();
 
         else if (percentageAcrossCompletedStandards >= 50)
-            return "AMBER";
+            return StandardRatings.Amber.ToString().ToUpper();
 
-        return "RED";
+        return StandardRatings.Red.ToString().ToUpper();
     }
 
     private static int CalculateProjectTotalScoreAcrossStandards(ProjectModel project)
@@ -207,17 +206,34 @@ public class ProjectsController : ControllerBase
 
         foreach (var standard in project.StandardsSummary)
         {
-            if (standard.AggregatedStatus == "GREEN")
+            if (standard.AggregatedStatus == StandardRatings.Green.ToString().ToUpper())
             {
                 total += (int)StandardRatings.Green;
             }
-            else if (standard.AggregatedStatus == "AMBER")
+            else if (standard.AggregatedStatus == StandardRatings.Amber.ToString().ToUpper())
             {
                 total += (int)StandardRatings.Amber;
             }
-            else if (standard.AggregatedStatus == "RED")
+            else if (standard.AggregatedStatus == StandardRatings.Red.ToString().ToUpper())
             {
                 total += (int)StandardRatings.Red;
+            }
+        }
+
+        return total;
+    }
+
+    private static int CalculateTotalNumberOfCompletedStandards(ProjectModel project)
+    {
+        var total = 0;
+
+        foreach (var standard in project.StandardsSummary)
+        {
+            if (standard.AggregatedStatus != StandardRatings.Pending.ToString().ToUpper()
+                && standard.AggregatedStatus != StandardRatings.Tbc.ToString().ToUpper()
+                && standard.AggregatedStatus != StandardRatings.Excluded.ToString().ToUpper())
+            {
+                total ++;
             }
         }
 
@@ -377,13 +393,6 @@ public class ProjectsController : ControllerBase
         {
             _logger.LogInformation($"Creating new project '{project.Name}'");
 
-            if (!ProjectConstants.IsValidProjectStatus(project.Status))
-            {
-                var message = $"Validation failed for project status '{project.Status}'";
-                _logger.LogError(message);
-                return BadRequest(message);
-            }
-
             var validationResult = await _validator.ValidateAsync(project);
             if (!validationResult.IsValid)
             {
@@ -453,13 +462,6 @@ public class ProjectsController : ControllerBase
         try
         {
             _logger.LogInformation($"Updating the project '{project.Name}' with ID='{id}'");
-
-            if (!ProjectConstants.IsValidProjectStatus(project.Status))
-            {
-                var message = $"Validation failed for project status '{project.Status}'";
-                _logger.LogError(message);
-                return BadRequest(message);
-            }
 
             var validationResult = await _validator.ValidateAsync(project);
             if (!validationResult.IsValid)
