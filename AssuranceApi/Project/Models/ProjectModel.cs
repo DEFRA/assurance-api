@@ -21,7 +21,7 @@ public class ProjectModel
     public string Name { get; set; } = null!;
 
     /// <summary>
-    /// Gets or sets the status of the project. Possible values: RED, AMBER_RED, AMBER, GREEN_AMBER, GREEN, TBC.
+    /// Gets or sets the status of the project. Possible values: RED, AMBER_RED, AMBER, GREEN_AMBER, GREEN, TBC/PENDING, EXCLUDED.
     /// </summary>
     public string Status { get; set; } = null!;
 

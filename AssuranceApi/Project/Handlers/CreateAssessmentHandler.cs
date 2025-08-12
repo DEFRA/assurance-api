@@ -155,12 +155,14 @@ public class CreateAssessmentHandler
             return AssessmentResult.BadRequest("Assessment status is required");
         }
 
-        // Validate status
-        if (!ValidServiceStandardStatuses.Contains(assessment.Status))
+        if (!Enum.TryParse<StandardRatings>(assessment.Status, true, out _))
         {
-            _logger.LogWarning("Invalid service standard status: {Status}", assessment.Status);
+            _logger.LogWarning($"Invalid service standard status: {assessment.Status}");
+
+            var ratings = GetEnumNamesCsv<StandardRatings>();
+
             return AssessmentResult.BadRequest(
-                $"Invalid status: {assessment.Status}. Valid statuses are: RED, AMBER, GREEN, TBC"
+                $"Invalid status: {assessment.Status}. Valid statuses are: {ratings}"
             );
         }
 
@@ -255,6 +257,11 @@ public class CreateAssessmentHandler
 
         await _historyPersistence.AddAsync(history);
         _logger.LogInformation("Assessment history entry created successfully");
+    }
+
+    private static string GetEnumNamesCsv<TEnum>() where TEnum : Enum
+    {
+        return string.Join(", ", Enum.GetNames(typeof(TEnum)).Select(n => n.ToUpperInvariant()));
     }
 }
 

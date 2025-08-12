@@ -1,3 +1,4 @@
+using AssuranceApi.Data;
 using AssuranceApi.Project.Models;
 using FluentValidation;
 
@@ -11,21 +12,16 @@ public class ProjectValidator : AbstractValidator<ProjectModel>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectValidator"/> class.
-    /// Defines validation rules for the <see cref="ProjectModel"/>.
     /// </summary>
     public ProjectValidator()
     {
         // For updates, we need to be more lenient as fields might be partial
         RuleFor(x => x.Name).NotEmpty().When(x => !string.IsNullOrEmpty(x.Name));
+
         RuleFor(x => x.Status)
-            .Must(x => string.IsNullOrEmpty(x) ||
-                x == "RED"
-                || x == "AMBER_RED"
-                || x == "AMBER"
-                || x == "GREEN_AMBER"
-                || x == "GREEN"
-                || x == "TBC"
-            );
+            .Must(status => !string.IsNullOrEmpty(status) && Enum.TryParse<ProjectRatings>(status, true, out _))
+            .WithMessage("Status must be a valid ProjectRatings value.");
+
         RuleFor(x => x.Commentary).NotNull();
         RuleFor(x => x.Phase)
             .Must(x => string.IsNullOrEmpty(x) ||

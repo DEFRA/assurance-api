@@ -10,6 +10,12 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Project\Constants\**" />
+    <Content Remove="Project\Constants\**" />
+    <EmbeddedResource Remove="Project\Constants\**" />
+    <None Remove="Project\Constants\**" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="..\.dockerignore">
       <Link>.dockerignore</Link>
     </Content>

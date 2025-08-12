@@ -254,7 +254,7 @@ namespace AssuranceApi.Test
             },
         ];
 
-        private static readonly ProjectModel _calculateProjectStats12PointsAcross6Standards = new()
+        private static readonly ProjectModel _oneProjectWithAll8StandardStatuses = new()
         {
             Commentary = "This is For Calculating Stats",
             DefCode = "101010",
@@ -365,6 +365,40 @@ namespace AssuranceApi.Test
                             },
                         ],
                         StandardId = "6",
+                    },
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "PENDING",
+                        LastUpdated = new DateTime(2024, 04, 22),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 22),
+                                ProfessionId = "1",
+                                Status = "PENDING",
+                            },
+                        ],
+                        StandardId = "7",
+                    },
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "EXCLUDED",
+                        LastUpdated = new DateTime(2024, 04, 22),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 22),
+                                ProfessionId = "1",
+                                Status = "EXCLUDED",
+                            },
+                        ],
+                        StandardId = "8",
                     },
                 ],
             Status = "AMBER",
@@ -643,7 +677,7 @@ namespace AssuranceApi.Test
         public async Task GetById_ReturnsCorrectStats_WithMatchingProject_WhenAValidIdIsPassed()
         {
             var mockProjectPersistence = GetProjectPersistenceMock();
-            mockProjectPersistence.GetByIdAsync("23").Returns(_calculateProjectStats12PointsAcross6Standards);
+            mockProjectPersistence.GetByIdAsync("23").Returns(_oneProjectWithAll8StandardStatuses);
             var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
 
             var controller = new ProjectsController(
@@ -658,7 +692,7 @@ namespace AssuranceApi.Test
                 .Should()
                 .BeOfType<OkObjectResult>()
                 .Which.Value.Should()
-                .BeEquivalentTo(_calculateProjectStats12PointsAcross6Standards);
+                .BeEquivalentTo(_oneProjectWithAll8StandardStatuses);
 
             var project = response.As<OkObjectResult>().Value.As<ProjectModel>();
 
@@ -914,7 +948,7 @@ namespace AssuranceApi.Test
             );
             var response = await controller.Create(invalidModel);
 
-            var errorMessage = "Validation failed for project status 'Invalid'";
+            var errorMessage = "Validation errors occurred whilst creating the project:\n  Status must be a valid ProjectRatings value.";
 
             response
                 .Should()
@@ -1363,7 +1397,7 @@ namespace AssuranceApi.Test
                 .Should()
                 .BeOfType<BadRequestObjectResult>();
             response.As<BadRequestObjectResult>().StatusCode.Should().Be(400);
-            response.As<BadRequestObjectResult>().Value.Should().Be("Referenced project does not exist"); 
+            response.As<BadRequestObjectResult>().Value.Should().Be("Referenced project does not exist");
         }
 
         [Fact]
