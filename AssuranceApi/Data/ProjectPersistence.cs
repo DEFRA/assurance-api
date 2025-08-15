@@ -87,21 +87,13 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
 
         var findOptions = new FindOptions
         {
-            Collation = GetCaseInsensitiveCollation()
+            Collation = MongoDbHelpers.GetCaseInsensitiveCollation()
         };
 
         return await Collection
             .Find(filter, findOptions)
             .Sort(Builders<ProjectModel>.Sort.Ascending(x => x.Name))
             .ToListAsync();
-    }
-
-    private static Collation GetCaseInsensitiveCollation()
-    {
-        return new Collation(
-            "en", 
-            strength: CollationStrength.Secondary,
-            caseLevel: true);
     }
 
     /// <summary>

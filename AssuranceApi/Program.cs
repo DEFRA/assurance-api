@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Asp.Versioning;
 using AssuranceApi.Data;
+using AssuranceApi.Data.Models;
 using AssuranceApi.Profession.Models;
 using AssuranceApi.Project.Models;
 using AssuranceApi.ServiceStandard.Models;
@@ -121,9 +122,11 @@ static void ConfigureServices(WebApplicationBuilder _builder)
     _builder.Services.AddSingleton<IServiceStandardHistoryPersistence, ServiceStandardHistoryPersistence>();
     _builder.Services.AddSingleton<IProjectStandardsPersistence, ProjectStandardsPersistence>();
     _builder.Services.AddSingleton<IProjectStandardsHistoryPersistence, ProjectStandardsHistoryPersistence>();
+    _builder.Services.AddSingleton<IDeliveryPartnerPersistence, DeliveryPartnerPersistence>();
 
     _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
     _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();
+    _builder.Services.AddScoped<IValidator<DeliveryPartnerModel>, DeliveryPartnerValidator>();
 
     _builder.Services.AddScoped<AssuranceApi.Project.Handlers.CreateAssessmentHandler>();
     _builder.Services.AddScoped<AssuranceApi.Project.Helpers.StandardsSummaryHelper>();
