@@ -123,10 +123,12 @@ static void ConfigureServices(WebApplicationBuilder _builder)
     _builder.Services.AddSingleton<IProjectStandardsPersistence, ProjectStandardsPersistence>();
     _builder.Services.AddSingleton<IProjectStandardsHistoryPersistence, ProjectStandardsHistoryPersistence>();
     _builder.Services.AddSingleton<IDeliveryPartnerPersistence, DeliveryPartnerPersistence>();
+    _builder.Services.AddSingleton<IDeliveryGroupPersistence, DeliveryGroupPersistence>();
 
     _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
     _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();
     _builder.Services.AddScoped<IValidator<DeliveryPartnerModel>, DeliveryPartnerValidator>();
+    _builder.Services.AddScoped<IValidator<DeliveryGroupModel>, DeliveryGroupValidator>();
 
     _builder.Services.AddScoped<AssuranceApi.Project.Handlers.CreateAssessmentHandler>();
     _builder.Services.AddScoped<AssuranceApi.Project.Helpers.StandardsSummaryHelper>();
