@@ -107,7 +107,7 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var controller = new DeliveryGroupsController(
-                null,
+                null!,
                 _validator,
                 _logger
             );
@@ -164,7 +164,7 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var controller = new DeliveryGroupsController(
-                null,
+                null!,
                 _validator,
                 _logger
             );
@@ -220,7 +220,7 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var controller = new DeliveryGroupsController(
-                null,
+                null!,
                 _validator,
                 _logger
             );
@@ -279,7 +279,7 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var controller = new DeliveryGroupsController(
-                null,
+                null!,
                 _validator,
                 _logger
             );
@@ -335,7 +335,7 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var controller = new DeliveryGroupsController(
-                null,
+                null!,
                 _validator,
                 _logger
             );
@@ -346,6 +346,152 @@ namespace AssuranceApi.Test
             // Assert
             response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
+        }
+
+        [Fact]
+        public async Task Create_DeliveryGroupWithEmptyName_ReturnsBadRequestObjectResult()
+        {
+            // Arrange
+            var controller = new DeliveryGroupsController(
+                _persistence,
+                _validator,
+                _logger
+            );
+
+            var deliveryGroup = new DeliveryGroupModel
+            {
+                Id = "test-id",
+                Name = "", // Empty name should fail validation
+                Status = "Pending",
+                Lead = "Test Lead",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            // Act
+            var response = await controller.Create(deliveryGroup);
+
+            // Assert
+            response.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task Create_DeliveryGroupWithEmptyStatus_ReturnsBadRequestObjectResult()
+        {
+            // Arrange
+            var controller = new DeliveryGroupsController(
+                _persistence,
+                _validator,
+                _logger
+            );
+
+            var deliveryGroup = new DeliveryGroupModel
+            {
+                Id = "test-id",
+                Name = "Test Group",
+                Status = "", // Empty status should fail validation
+                Lead = "Test Lead",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            // Act
+            var response = await controller.Create(deliveryGroup);
+
+            // Assert
+            response.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task Create_DeliveryGroupWithNullName_ReturnsBadRequestObjectResult()
+        {
+            // Arrange
+            var controller = new DeliveryGroupsController(
+                _persistence,
+                _validator,
+                _logger
+            );
+
+            var deliveryGroup = new DeliveryGroupModel
+            {
+                Id = "test-id",
+                Name = null!, // Null name should fail validation
+                Status = "Pending",
+                Lead = "Test Lead",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            // Act
+            var response = await controller.Create(deliveryGroup);
+
+            // Assert
+            response.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task Update_DeliveryGroupWithMismatchedId_ReturnsBadRequestObjectResult()
+        {
+            // Arrange
+            var controller = new DeliveryGroupsController(
+                _persistence,
+                _validator,
+                _logger
+            );
+
+            var deliveryGroup = new DeliveryGroupModel
+            {
+                Id = "DIFFERENT-ID", // ID mismatch should fail
+                Name = "Updated Group",
+                Status = "Active",
+                Lead = "Updated Lead",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            // Act
+            var response = await controller.Update("ID-1", deliveryGroup);
+
+            // Assert
+            response.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task GetById_WithWhitespaceId_ReturnsNotFound()
+        {
+            // Arrange
+            var controller = new DeliveryGroupsController(
+                _persistence,
+                _validator,
+                _logger
+            );
+
+            // Act
+            var response = await controller.GetById("   "); // Whitespace-only ID
+
+            // Assert
+            response.Should().BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
+        public async Task Delete_WithWhitespaceId_ReturnsNotFound()
+        {
+            // Arrange
+            var controller = new DeliveryGroupsController(
+                _persistence,
+                _validator,
+                _logger
+            );
+
+            // Act
+            var response = await controller.Delete("   "); // Whitespace-only ID
+
+            // Assert
+            response.Should().BeOfType<NotFoundResult>();
         }
 
         private static IDeliveryGroupPersistence GetDeliveryGroupPersistenceMock()

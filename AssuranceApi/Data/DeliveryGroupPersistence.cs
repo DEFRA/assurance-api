@@ -22,6 +22,11 @@ namespace AssuranceApi.Data
         )
             : base(connectionFactory, "deliveryGroups", loggerFactory) { }
 
+        /// <summary>
+        /// Defines the indexes for the delivery groups collection.
+        /// </summary>
+        /// <param name="builder">The index keys definition builder.</param>
+        /// <returns>A list of index models to be created on the collection.</returns>
         protected override List<CreateIndexModel<DeliveryGroupModel>> DefineIndexes(
             IndexKeysDefinitionBuilder<DeliveryGroupModel> builder
         )
