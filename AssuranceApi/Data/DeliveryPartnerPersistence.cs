@@ -17,6 +17,11 @@ namespace AssuranceApi.Data
         public DeliveryPartnerPersistence(IMongoDbClientFactory connectionFactory, ILoggerFactory loggerFactory)
             : base(connectionFactory, "deliveryPartners", loggerFactory) { }
 
+        /// <summary>
+        /// Defines the indexes for the delivery partners collection.
+        /// </summary>
+        /// <param name="builder">The index keys definition builder.</param>
+        /// <returns>A list of index models to be created on the collection.</returns>
         protected override List<CreateIndexModel<DeliveryPartnerModel>> DefineIndexes(
             IndexKeysDefinitionBuilder<DeliveryPartnerModel> builder
         )
