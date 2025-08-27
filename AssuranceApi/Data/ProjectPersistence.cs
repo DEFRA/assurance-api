@@ -248,4 +248,26 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
             return false;
         }
     }
+
+    /// <summary>
+    /// Retrieves all projects associated with a specific delivery group.
+    /// </summary>
+    /// <param name="deliveryGroupId">The ID of the delivery group.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a list of projects.</returns>
+    public async Task<List<ProjectModel>> GetByDeliveryGroupAsync(string deliveryGroupId)
+    {
+        Logger.LogDebug("Getting projects with Delivery Group ID: {DeliveryGroupId}", deliveryGroupId);
+
+        try
+        {
+            return await Collection
+                .Find(x => x.DeliveryGroupId == deliveryGroupId)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to get projects for Delivery Group ID: {DeliveryGroupId}", deliveryGroupId);
+            throw;
+        }
+    }
 }

@@ -716,6 +716,66 @@ namespace AssuranceApi.Test
         }
 
         [Fact]
+        public async Task GetByDeliveryGroup_ReturnsOkResult_WithMatchingProjects_WhenAValidDeliveryGroupIdIsPassed()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            // Setup mock to return projects with specific delivery group ID
+            var deliveryGroupId = "test-delivery-group";
+            var expectedProjects = _activeProjects.Where(p => p.DeliveryGroupId == deliveryGroupId).ToList();
+            mockProjectPersistence.GetByDeliveryGroupAsync(deliveryGroupId).Returns(expectedProjects);
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.GetByDeliveryGroup(deliveryGroupId);
+
+            response.Should().BeOfType<OkObjectResult>();
+            response.As<OkObjectResult>().Value.Should().BeEquivalentTo(expectedProjects);
+        }
+
+        [Fact]
+        public async Task GetByDeliveryGroup_ReturnsEmptyList_WhenNoProjectsExistForDeliveryGroup()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            // Setup mock to return empty list
+            var deliveryGroupId = "non-existent-delivery-group";
+            var emptyList = new List<ProjectModel>();
+            mockProjectPersistence.GetByDeliveryGroupAsync(deliveryGroupId).Returns(emptyList);
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.GetByDeliveryGroup(deliveryGroupId);
+
+            response.Should().BeOfType<OkObjectResult>();
+            response.As<OkObjectResult>().Value.Should().BeEquivalentTo(emptyList);
+        }
+
+        [Fact]
+        public async Task GetByDeliveryGroup_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
+        {
+            var controller = new ProjectsController(null!, null!, null, _validator, _logger);
+            var response = await controller.GetByDeliveryGroup("test-delivery-group");
+
+            response.Should().BeOfType<ObjectResult>();
+            response.As<ObjectResult>().StatusCode.Should().Be(500);
+        }
+
+        [Fact]
         public async Task GetHistory_ReturnsOkResult_WithMatchingProjectHistory_WhenAValidIdIsPassed()
         {
             var mockProjectPersistence = GetProjectPersistenceMock();
@@ -1735,6 +1795,12 @@ namespace AssuranceApi.Test
             mockProjectPersistence
                 .UpdateAsync(Arg.Any<string>(), Arg.Any<ProjectModel>())
                 .Returns(true);
+
+            // Mock for GetByDeliveryGroupAsync - return projects that match the delivery group ID
+            mockProjectPersistence.GetByDeliveryGroupAsync("test-delivery-group")
+                .Returns(_activeProjects.Where(p => p.DeliveryGroupId == "test-delivery-group").ToList());
+            mockProjectPersistence.GetByDeliveryGroupAsync("non-existent-delivery-group")
+                .Returns(new List<ProjectModel>());
 
             return mockProjectPersistence;
         }
