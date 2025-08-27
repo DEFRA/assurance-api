@@ -162,9 +162,12 @@ public class ProjectsController : ControllerBase
 
             _logger.LogDebug("Found {Count} projects for Delivery Group ID='{DeliveryGroupId}'", projects.Count, deliveryGroupId);
 
-            CalucalateProjectStatistics(projects);
+            // Sort projects alphabetically by name
+            var sortedProjects = projects.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
-            return Ok(projects);
+            CalucalateProjectStatistics(sortedProjects);
+
+            return Ok(sortedProjects);
         }
         catch (Exception ex)
         {

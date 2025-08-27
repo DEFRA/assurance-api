@@ -741,6 +741,43 @@ namespace AssuranceApi.Test
         }
 
         [Fact]
+        public async Task GetByDeliveryGroup_ReturnsProjectsInAlphabeticalOrder_WhenMultipleProjectsExist()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            // Create test projects with names that should be sorted alphabetically
+            var deliveryGroupId = "alphabet-test-group";
+            var unsortedProjects = new List<ProjectModel>
+            {
+                new() { Id = "3", Name = "Zebra Project", DeliveryGroupId = deliveryGroupId, Status = "GREEN", Commentary = "Test", LastUpdated = DateTime.Now.ToString() },
+                new() { Id = "1", Name = "Alpha Project", DeliveryGroupId = deliveryGroupId, Status = "GREEN", Commentary = "Test", LastUpdated = DateTime.Now.ToString() },
+                new() { Id = "2", Name = "Beta Project", DeliveryGroupId = deliveryGroupId, Status = "GREEN", Commentary = "Test", LastUpdated = DateTime.Now.ToString() }
+            };
+
+            mockProjectPersistence.GetByDeliveryGroupAsync(deliveryGroupId).Returns(unsortedProjects);
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.GetByDeliveryGroup(deliveryGroupId);
+
+            response.Should().BeOfType<OkObjectResult>();
+            var returnedProjects = response.As<OkObjectResult>().Value.As<List<ProjectModel>>();
+            
+            // Verify that projects are sorted alphabetically by name
+            returnedProjects.Should().HaveCount(3);
+            returnedProjects[0].Name.Should().Be("Alpha Project");
+            returnedProjects[1].Name.Should().Be("Beta Project");
+            returnedProjects[2].Name.Should().Be("Zebra Project");
+        }
+
+        [Fact]
         public async Task GetByDeliveryGroup_ReturnsEmptyList_WhenNoProjectsExistForDeliveryGroup()
         {
             var mockProjectPersistence = GetProjectPersistenceMock();
