@@ -169,9 +169,20 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
     /// <summary>
     /// Deletes all projects from the database.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the delete operation fails.</exception>
     public async Task DeleteAllAsync()
     {
-        await Collection.DeleteManyAsync(Builders<ProjectModel>.Filter.Empty);
+        try
+        {
+            Logger.LogInformation("Deleting all projects from the database");
+            await Collection.DeleteManyAsync(Builders<ProjectModel>.Filter.Empty);
+            Logger.LogInformation("Successfully deleted all projects from the database");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete all projects from the database");
+            throw new InvalidOperationException("Unable to delete all projects from the database. See inner exception for details.", ex);
+        }
     }
 
     /// <summary>
@@ -267,7 +278,7 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to get projects for Delivery Group ID: {DeliveryGroupId}", deliveryGroupId);
-            throw;
+            throw new InvalidOperationException($"Unable to retrieve projects for delivery group '{deliveryGroupId}'. See inner exception for details.", ex);
         }
     }
 }
