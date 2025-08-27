@@ -28,6 +28,7 @@ namespace AssuranceApi.Test
             {
                 Commentary = "This is Test Project 1",
                 DefCode = "1234",
+                DeliveryGroupId = "test-delivery-group",
                 Id = "1",
                 LastUpdated = new DateTime(2024, 04, 21).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                 Name = "Test Project 1",
@@ -1179,6 +1180,31 @@ namespace AssuranceApi.Test
         }
 
         [Fact]
+        public async Task Update_ReturnsOkObjectResult_WithSuccessMessage_WhenAValidProjectIsPassedThatHasChangedDeliveryGroup()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            var changedModel = GetNewInstanceOfProjectModelToDiscardChanges();
+            changedModel.DeliveryGroupId = "new-delivery-group-id";
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null,
+                _validator,
+                _logger
+            );
+            var response = await controller.Update(_activeProjects[0].Id, changedModel);
+
+            response
+                .Should()
+                .BeOfType<OkObjectResult>()
+                .Which.Value.Should()
+                .BeEquivalentTo(changedModel);
+        }
+
+        [Fact]
         public async Task Update_ReturnsOkObjectResult_WithSuccessMessage_WhenAValidProjectIsPassedWithInvalidUpdateDate()
         {
             var mockProjectPersistence = GetProjectPersistenceMock();
@@ -1740,6 +1766,7 @@ namespace AssuranceApi.Test
             {
                 Commentary = _activeProjects[0].Commentary,
                 DefCode = _activeProjects[0].DefCode,
+                DeliveryGroupId = _activeProjects[0].DeliveryGroupId,
                 Id = "3",
                 LastUpdated = _activeProjects[0].LastUpdated,
                 Name = _activeProjects[0].Name,
