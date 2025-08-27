@@ -46,6 +46,11 @@ public class ProjectModel
     public string? DefCode { get; set; }
 
     /// <summary>
+    /// Gets or sets the delivery group identifier associated with the project. This field is optional.
+    /// </summary>
+    public string? DeliveryGroupId { get; set; }
+
+    /// <summary>
     /// Gets or sets the list of tags associated with the project.
     /// </summary>
     public List<string> Tags { get; set; } = new();

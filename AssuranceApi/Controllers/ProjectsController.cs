@@ -881,6 +881,15 @@ public class ProjectsController : ControllerBase
             };
             hasChanges = true;
         }
+        if (existing.DeliveryGroupId != updated.DeliveryGroupId)
+        {
+            changes.DeliveryGroup = new DeliveryGroupChange
+            {
+                From = existing.DeliveryGroupId,
+                To = updated.DeliveryGroupId,
+            };
+            hasChanges = true;
+        }
 
         if (hasChanges)
         {

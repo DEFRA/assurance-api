@@ -127,6 +127,8 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
                 updates.Add(updateDef.Set(x => x.Phase, project.Phase));
             if (project.DefCode != null)
                 updates.Add(updateDef.Set(x => x.DefCode, project.DefCode));
+            if (project.DeliveryGroupId != null)
+                updates.Add(updateDef.Set(x => x.DeliveryGroupId, project.DeliveryGroupId));
             if (project.Status != null)
                 updates.Add(updateDef.Set(x => x.Status, project.Status));
             if (project.Commentary != null)

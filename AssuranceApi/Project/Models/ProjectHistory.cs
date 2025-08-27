@@ -67,6 +67,11 @@ public class Changes
     public CommentaryChange? Commentary { get; set; }
 
     /// <summary>
+    /// Gets or sets the delivery group change details, if applicable.
+    /// </summary>
+    public DeliveryGroupChange? DeliveryGroup { get; set; }
+
+    /// <summary>
     /// Gets or sets the tags change details, if applicable.
     /// </summary>
     public TagsChange? Tags { get; set; }
@@ -134,6 +139,22 @@ public class CommentaryChange
     /// Gets or sets the new commentary.
     /// </summary>
     public string To { get; set; } = null!;
+}
+
+/// <summary>
+/// Represents a change in the project's delivery group.
+/// </summary>
+public class DeliveryGroupChange
+{
+    /// <summary>
+    /// Gets or sets the previous delivery group identifier.
+    /// </summary>
+    public string? From { get; set; }
+
+    /// <summary>
+    /// Gets or sets the new delivery group identifier.
+    /// </summary>
+    public string? To { get; set; }
 }
 
 /// <summary>
