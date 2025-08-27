@@ -448,4 +448,124 @@ public class ProjectPersistenceTests
     }
 
     #endregion
+
+    #region GetByDeliveryGroupAsync Tests
+
+    [Fact]
+    public async Task GetByDeliveryGroupAsync_ShouldReturnProjects_WhenDeliveryGroupExists()
+    {
+        // Arrange
+        var deliveryGroupId = "test-delivery-group";
+        var expectedProjects = new List<ProjectModel>
+        {
+            new()
+            {
+                Id = "1",
+                Name = "Project1",
+                DeliveryGroupId = deliveryGroupId,
+                Status = "GREEN",
+                LastUpdated = "2024-01-01",
+                Commentary = "Test1",
+            },
+            new()
+            {
+                Id = "2", 
+                Name = "Project2",
+                DeliveryGroupId = deliveryGroupId,
+                Status = "AMBER",
+                LastUpdated = "2024-01-02",
+                Commentary = "Test2",
+            },
+        };
+
+        var findFluent = Substitute.For<IFindFluent<ProjectModel, ProjectModel>>();
+        findFluent.ToListAsync().Returns(expectedProjects);
+        
+        _collectionMock
+            .Find(Arg.Any<ExpressionFilterDefinition<ProjectModel>>())
+            .Returns(findFluent);
+
+        // Act
+        var result = await _persistence.GetByDeliveryGroupAsync(deliveryGroupId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCount(2);
+        result.Should().BeEquivalentTo(expectedProjects);
+    }
+
+    [Fact]
+    public async Task GetByDeliveryGroupAsync_ShouldReturnEmptyList_WhenNoProjectsFound()
+    {
+        // Arrange
+        var deliveryGroupId = "nonexistent-delivery-group";
+        var emptyList = new List<ProjectModel>();
+
+        var findFluent = Substitute.For<IFindFluent<ProjectModel, ProjectModel>>();
+        findFluent.ToListAsync().Returns(emptyList);
+        
+        _collectionMock
+            .Find(Arg.Any<ExpressionFilterDefinition<ProjectModel>>())
+            .Returns(findFluent);
+
+        // Act
+        var result = await _persistence.GetByDeliveryGroupAsync(deliveryGroupId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetByDeliveryGroupAsync_ShouldThrowInvalidOperationException_WhenExceptionOccurs()
+    {
+        // Arrange
+        var loggerFactoryMock = Substitute.For<ILoggerFactory>();
+        var logMock = Substitute.For<ILogger<ProjectPersistence>>();
+        loggerFactoryMock.CreateLogger<ProjectPersistence>().Returns(logMock);
+
+        var deliveryGroupId = "test-delivery-group";
+        var originalException = new Exception("Database connection failed");
+
+        _collectionMock
+            .Find(Arg.Any<ExpressionFilterDefinition<ProjectModel>>())
+            .Returns(_ => throw originalException);
+
+        var persistence = new ProjectPersistence(_conFactoryMock, loggerFactoryMock);
+
+        // Act & Assert
+        var act = async () => await persistence.GetByDeliveryGroupAsync(deliveryGroupId);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
+        exception.WithMessage($"Unable to retrieve projects for delivery group '{deliveryGroupId}'. See inner exception for details.");
+        exception.WithInnerException<Exception>().WithMessage("Database connection failed");
+    }
+
+    #endregion
+
+    #region DeleteAllAsync Tests - Exception Handling
+
+    [Fact]
+    public async Task DeleteAllAsync_ShouldThrowInvalidOperationException_WhenExceptionOccurs()
+    {
+        // Arrange
+        var loggerFactoryMock = Substitute.For<ILoggerFactory>();
+        var logMock = Substitute.For<ILogger<ProjectPersistence>>();
+        loggerFactoryMock.CreateLogger<ProjectPersistence>().Returns(logMock);
+
+        var originalException = new Exception("Database connection failed");
+        
+        _collectionMock
+            .DeleteManyAsync(Arg.Any<FilterDefinition<ProjectModel>>())
+            .Returns(Task.FromException<DeleteResult>(originalException));
+
+        var persistence = new ProjectPersistence(_conFactoryMock, loggerFactoryMock);
+
+        // Act & Assert
+        var act = async () => await persistence.DeleteAllAsync();
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
+        exception.WithMessage("Unable to delete all projects from the database. See inner exception for details.");
+        exception.WithInnerException<Exception>().WithMessage("Database connection failed");
+    }
+
+    #endregion
 }

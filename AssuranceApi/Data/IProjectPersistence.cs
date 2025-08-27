@@ -62,4 +62,11 @@ public interface IProjectPersistence
     /// <param name="projects">The list of projects to add.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success.</returns>
     Task<bool> AddProjectsAsync(List<ProjectModel> projects);
+
+    /// <summary>
+    /// Retrieves all projects associated with a specific delivery group.
+    /// </summary>
+    /// <param name="deliveryGroupId">The ID of the delivery group.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a list of projects.</returns>
+    Task<List<ProjectModel>> GetByDeliveryGroupAsync(string deliveryGroupId);
 }

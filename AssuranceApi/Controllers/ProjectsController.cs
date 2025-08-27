@@ -139,6 +139,44 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Retrieves all projects associated with a specific delivery group.
+    /// </summary>
+    /// <param name="deliveryGroupId">The unique identifier of the delivery group.</param>
+    /// <returns>A list of projects belonging to the specified delivery group.</returns>
+    /// <response code="200">Returns the list of projects for the delivery group.</response>
+    /// <response code="500">If an internal server error occurs.</response>
+    [HttpGet("bydeliverygroup/{deliveryGroupId}")]
+    [ProducesResponseType(typeof(IEnumerable<ProjectModel>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetByDeliveryGroup(string deliveryGroupId)
+    {
+        _logger.LogDebug("Entering get projects by delivery group API call");
+
+        try
+        {
+            _logger.LogInformation("Getting all projects for Delivery Group ID='{DeliveryGroupId}'", deliveryGroupId);
+
+            var projects = await _persistence.GetByDeliveryGroupAsync(deliveryGroupId);
+
+            _logger.LogDebug("Found {Count} projects for Delivery Group ID='{DeliveryGroupId}'", projects.Count, deliveryGroupId);
+
+            CalucalateProjectStatistics(projects);
+
+            return Ok(projects);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred whilst getting projects by delivery group");
+            return Problem($"Failed to get projects by delivery group: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving get projects by delivery group API call");
+        }
+    }
+
     private static void CalucalateProjectStatistics(List<ProjectModel> projects)
     {
         if (projects == null || projects.Count == 0)
