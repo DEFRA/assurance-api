@@ -84,12 +84,14 @@ public class CreateAssessmentHandler
     /// <param name="standardId">The service standard ID.</param>
     /// <param name="professionId">The profession ID.</param>
     /// <param name="assessment">The assessment details.</param>
+    /// <param name="userMakingChange">The user making the change.</param>
     /// <returns>An <see cref="AssessmentResult"/> indicating the outcome.</returns>
     public async Task<AssessmentResult> HandleAsync(
         string projectId,
         string standardId,
         string professionId,
-        ProjectStandards assessment
+        ProjectStandards assessment,
+        string userMakingChange
     )
     {
         try
@@ -119,7 +121,7 @@ public class CreateAssessmentHandler
             );
 
             // Prepare and save assessment
-            PrepareAssessment(assessment, existingAssessment, projectId, standardId, professionId);
+            PrepareAssessment(assessment, existingAssessment, projectId, standardId, professionId, userMakingChange);
             await _assessmentPersistence.UpsertAsync(assessment);
 
             // Create history entry
@@ -200,13 +202,15 @@ public class CreateAssessmentHandler
         ProjectStandards? existingAssessment,
         string projectId,
         string standardId,
-        string professionId
+        string professionId,
+        string userMakingChange
     )
     {
         assessment.ProjectId = projectId;
         assessment.StandardId = standardId;
         assessment.ProfessionId = professionId;
         assessment.LastUpdated = DateTime.UtcNow;
+        assessment.ChangedBy = userMakingChange;
 
         if (existingAssessment != null)
         {
