@@ -508,7 +508,7 @@ public class ProfessionsController : ControllerBase
                 Id = ObjectId.GenerateNewId().ToString(),
                 ProfessionId = id,
                 Timestamp = updated.UpdatedAt,
-                ChangedBy = "Project Admin",
+                ChangedBy = User.GetEmail() ?? "Unknown User",
                 Changes = changes,
             };
             await _historyPersistence.CreateAsync(history);

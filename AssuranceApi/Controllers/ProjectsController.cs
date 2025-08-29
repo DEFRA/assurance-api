@@ -458,7 +458,7 @@ public class ProjectsController : ControllerBase
                 Id = ObjectId.GenerateNewId().ToString(),
                 ProjectId = project.Id,
                 Timestamp = DateTime.UtcNow,
-                ChangedBy = "Project created",
+                ChangedBy = User.GetEmail() ?? "Unknown User",
                 Changes = new Changes
                 {
                     Status = new StatusChange { From = "", To = project.Status },
@@ -683,7 +683,8 @@ public class ProjectsController : ControllerBase
                         projectId,
                         standardId,
                         professionId,
-                        assessment
+                        assessment,
+                        User.GetEmail() ?? "Unknown User"
                     );
 
             if (!result.IsValid)
@@ -943,7 +944,7 @@ public class ProjectsController : ControllerBase
                 Id = ObjectId.GenerateNewId().ToString(),
                 ProjectId = id,
                 Timestamp = updateDate ?? DateTime.UtcNow,
-                ChangedBy = "Project Admin",
+                ChangedBy = User.GetEmail() ?? "Unknown User",
                 Changes = changes,
             };
             await _historyPersistence.CreateAsync(history);
