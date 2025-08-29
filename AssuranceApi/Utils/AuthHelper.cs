@@ -16,7 +16,7 @@ namespace AssuranceApi.Utils
         {
             return user?.FindFirst(ClaimTypes.Email)?.Value
                 ?? user?.FindFirst("email")?.Value
-                ?? user?.FindFirst("preferred_username").Value;
+                ?? user?.FindFirst("preferred_username")?.Value;
         }
     }
 }
