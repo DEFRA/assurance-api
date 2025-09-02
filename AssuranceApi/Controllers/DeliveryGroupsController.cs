@@ -2,13 +2,10 @@ using Asp.Versioning;
 using AssuranceApi.Data.Models;
 using AssuranceApi.Utils;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using AssuranceApi.Controllers;
 using AssuranceApi.Data;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using AssuranceApi.Project.Models;
 
 namespace AssuranceApi.Controllers;
 
@@ -24,6 +21,7 @@ namespace AssuranceApi.Controllers;
 public class DeliveryGroupsController : ControllerBase
 {
     private readonly IDeliveryGroupPersistence _persistence;
+    private readonly IProjectPersistence _projectPersistence;
     private readonly IValidator<DeliveryGroupModel> _validator;
     private readonly ILogger<DeliveryGroupsController> _logger;
 
@@ -31,15 +29,18 @@ public class DeliveryGroupsController : ControllerBase
     /// Initializes a new instance of the <see cref="DeliveryGroupsController"/> class.
     /// </summary>
     /// <param name="persistence">The persistence layer for delivery groups.</param>
+    /// <param name="projectPersistence"></param>
     /// <param name="validator">The validator for <see cref="DeliveryGroupModel"/>.</param>
     /// <param name="logger">The logger instance for logging operations.</param>
     public DeliveryGroupsController(
         IDeliveryGroupPersistence persistence,
-        IValidator<DeliveryGroupModel> validator,
+        IProjectPersistence projectPersistence,
+        IValidator<DeliveryGroupModel> validator, 
         ILogger<DeliveryGroupsController> logger
     )
     {
         _persistence = persistence;
+        _projectPersistence = projectPersistence;
         _validator = validator;
         _logger = logger;
 
@@ -173,6 +174,46 @@ public class DeliveryGroupsController : ControllerBase
         finally
         {
             _logger.LogDebug("Leaving get delivery group by ID API call");
+        }
+    }
+
+    /// <summary>
+    /// Retrieves all projects associated with a specific delivery group.
+    /// </summary>
+    /// <param name="deliveryGroupId">The unique identifier of the delivery group.</param>
+    /// <returns>A list of projects associated with the delivery group.</returns>
+    /// <response code="200">Returns the list of projects associated with the delivery group.</response>
+    /// <response code="404">Delivery group not found.</response>
+    /// <response code="500">An error occurred while retrieving the projects.</response>
+    [HttpGet("{deliveryGroupId}/projects")]
+    [ProducesResponseType(typeof(List<ProjectModel>), 200)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(typeof(string), 500)]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetDeliveryGroupProjects(string deliveryGroupId)
+    {
+        _logger.LogDebug($"Entering get delivery group projects API call for delivery group ID {deliveryGroupId}");
+        try
+        {
+            _logger.LogInformation($"Getting delivery group projects for ID='{deliveryGroupId}'");
+
+            var projectQueryParameters = new ProjectQueryParameters
+            {
+                DeliveryGroupId = deliveryGroupId
+            };
+
+            var deliveryGroupProjects = await _projectPersistence.GetAllAsync(projectQueryParameters);
+
+            return Ok(deliveryGroupProjects);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"An error occurred whilst getting the delivery group projects for delivery group ID {deliveryGroupId}");
+            return Problem($"Failed to get the delivery group projects: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving get delivery group projects API call");
         }
     }
 

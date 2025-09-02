@@ -76,9 +76,15 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
             {
                 filters.Add(Builders<ProjectModel>.Filter.Gte(p => p.LastUpdated, projectQueryParameters.StartDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")));
             }
+
             if (projectQueryParameters.EndDate != null)
             {
                 filters.Add(Builders<ProjectModel>.Filter.Lt(p => p.LastUpdated, projectQueryParameters.EndDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")));
+            }
+
+            if (projectQueryParameters.DeliveryGroupId != null)
+            {
+                filters.Add(Builders<ProjectModel>.Filter.Eq(p => p.DeliveryGroupId, projectQueryParameters.DeliveryGroupId));
             }
 
             if (filters.Any())

@@ -20,7 +20,8 @@ namespace AssuranceApi.Data
         /// <param name="tags">A comma-separated list of tags to filter projects.</param>
         /// <param name="startDate">The start date of the date range in ISO 8601 format.</param>
         /// <param name="endDate">The end date of the date range in ISO 8601 format.</param>
-        public ProjectQueryParameters(string? tags, string? startDate, string? endDate)
+        /// <param name="deliveryGroupId">The ID of the delivery group to filter by.</param>
+        public ProjectQueryParameters(string? tags, string? startDate, string? endDate, string? deliveryGroupId)
         {
             Tags = tags;
             StartDate = ParseDateTime(startDate);
@@ -32,12 +33,19 @@ namespace AssuranceApi.Data
                 StartDate = EndDate;
                 EndDate = tempDate;
             }
+
+            DeliveryGroupId = deliveryGroupId;
         }
 
         /// <summary>
         /// Gets or sets a comma-separated list of tags to filter projects.
         /// </summary>
         public string? Tags { get; set; }
+
+        /// <summary>
+        /// Gets or sets the ID of the delivery group to filter by.
+        /// </summary>
+        public string? DeliveryGroupId { get; set; }
 
         /// <summary>
         /// Gets or sets the start date of the date range.

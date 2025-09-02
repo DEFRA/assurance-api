@@ -65,6 +65,7 @@ namespace AssuranceApi.Test
                 LastUpdated = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                 Name = "Test Project 2",
                 Phase = "Alpha",
+                DeliveryGroupId = "test-delivery-group-2",
                 StandardsSummary =
                 [
                     new()
@@ -101,6 +102,7 @@ namespace AssuranceApi.Test
                 LastUpdated = new DateTime(2024, 04, 21).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                 Name = "Test Project 1",
                 Phase = "Discovery",
+                DeliveryGroupId = "test-delivery-group",
                 StandardsSummary =
                 [
                     new()
@@ -133,6 +135,7 @@ namespace AssuranceApi.Test
                 LastUpdated = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                 Name = "Test Project 2",
                 Phase = "Alpha",
+                DeliveryGroupId = "test-delivery-group-2",
                 StandardsSummary =
                 [
                     new()
@@ -165,6 +168,7 @@ namespace AssuranceApi.Test
                 LastUpdated = new DateTime(2024, 04, 23).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                 Name = "Test Project 3",
                 Phase = "Alpha",
+                DeliveryGroupId = "test-delivery-group-3",
                 StandardsSummary =
                 [
                     new()
@@ -197,6 +201,7 @@ namespace AssuranceApi.Test
                 LastUpdated = new DateTime(2024, 04, 24).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                 Name = "Test Project 4",
                 Phase = "Alpha",
+                DeliveryGroupId = "test-delivery-group-4",
                 StandardsSummary =
                 [
                     new()
@@ -229,6 +234,7 @@ namespace AssuranceApi.Test
                 LastUpdated = new DateTime(2024, 04, 25).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                 Name = "Test Project 5",
                 Phase = "Alpha",
+                DeliveryGroupId = "test-delivery-group-5",
                 StandardsSummary =
                 [
                     new()
@@ -557,7 +563,7 @@ namespace AssuranceApi.Test
                 null, _validator,
                 _logger
             );
-            var response = await controller.GetAll(null, null, null);
+            var response = await controller.GetAll(null, null, null, null);
 
             response
                 .Should()
@@ -578,7 +584,7 @@ namespace AssuranceApi.Test
                 null, _validator,
                 _logger
             );
-            var response = await controller.GetAll("TAG3", null, null);
+            var response = await controller.GetAll("TAG3", null, null, null);
 
             response.Should().BeOfType<OkObjectResult>();
             response.As<OkObjectResult>().Value.As<List<ProjectModel>>().Count.Should().Be(1);
@@ -598,7 +604,7 @@ namespace AssuranceApi.Test
             );
             var startDate = "2024-04-22T00:00:00Z";
             var endDate = "2024-04-23T00:00:00Z";
-            var response = await controller.GetAll(null, startDate, endDate);
+            var response = await controller.GetAll(null, startDate, endDate, null);
 
             response.Should().BeOfType<OkObjectResult>();
             response.As<OkObjectResult>().Value.As<List<ProjectModel>>().Count.Should().Be(1);
@@ -619,7 +625,7 @@ namespace AssuranceApi.Test
             );
             var startDate = "2024-04-22";
             var endDate = "2024-04-23";
-            var response = await controller.GetAll(null, startDate, endDate);
+            var response = await controller.GetAll(null, startDate, endDate, null);
 
             response.Should().BeOfType<OkObjectResult>();
             response.As<OkObjectResult>().Value.As<List<ProjectModel>>().Count.Should().Be(1);
@@ -627,10 +633,31 @@ namespace AssuranceApi.Test
         }
 
         [Fact]
+        public async Task GetAllWithDeliveryGroupId_ReturnsOkResult_WithListOfMatchingProjects_WhenDeliveryGroupIdIsSpecified()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null, _validator,
+                _logger
+            );
+
+            var deliveryGroupId = "test-delivery-group";
+            var response = await controller.GetAll(null, null, null, deliveryGroupId);
+
+            response.Should().BeOfType<OkObjectResult>();
+            response.As<OkObjectResult>().Value.As<List<ProjectModel>>().Count.Should().Be(1);
+            response.As<OkObjectResult>().Value.As<List<ProjectModel>>()[0].Should().BeEquivalentTo(_activeProjects[1]);
+        }
+
+        [Fact]
         public async Task GetAll_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
         {
             var controller = new ProjectsController(null, null, null, _validator, _logger);
-            var response = await controller.GetAll(string.Empty, string.Empty, string.Empty);
+            var response = await controller.GetAll(string.Empty, string.Empty, string.Empty, string.Empty);
 
             response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
@@ -1810,6 +1837,11 @@ namespace AssuranceApi.Test
             var mockProjectPersistence = Substitute.For<IProjectPersistence>();
 
             mockProjectPersistence.GetAllAsync(Arg.Is<ProjectQueryParameters>(x => x.Tags == "TAG3")).Returns([_activeProjects[1]]);
+            mockProjectPersistence.GetAllAsync(Arg.Is<ProjectQueryParameters>(x =>
+                x.Tags == null &&
+                x.StartDate == null &&
+                x.EndDate == null &&
+                x.DeliveryGroupId == "test-delivery-group")).Returns([_activeProjects[1]]);
 
             var startDate = new DateTime(2024, 04, 22);
             var endDate = new DateTime(2024, 04, 23);
@@ -1821,7 +1853,8 @@ namespace AssuranceApi.Test
             mockProjectPersistence.GetAllAsync(Arg.Is<ProjectQueryParameters>(x =>
                 x.Tags == null &&
                 x.StartDate == null && 
-                x.EndDate == null)).Returns(_activeProjects);
+                x.EndDate == null &&
+                x.DeliveryGroupId == null)).Returns(_activeProjects);
 
             mockProjectPersistence.GetByIdAsync("1").Returns(_activeProjects[0]);
             mockProjectPersistence
