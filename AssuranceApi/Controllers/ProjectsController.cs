@@ -58,6 +58,7 @@ public class ProjectsController : ControllerBase
     /// <param name="tag">Optional tag to filter projects.</param>
     /// <param name="startDate">Optional date in UTC format that limits to projects that were created or updated on or after this date</param>
     /// <param name="endDate">Optional date in UTC format that limits to projects that were created or updated before this date</param>
+    /// <param name="deliveryGroupId">Optional delivery group ID to filter projects.</param>
     /// <returns>A list of projects.</returns>
     /// <response code="200">Returns the list of projects.</response>
     /// <response code="500">If an internal server error occurs.</response>
@@ -65,7 +66,11 @@ public class ProjectsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<ProjectModel>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
-    public async Task<IActionResult> GetAll([FromQuery] string? tag, [FromQuery(Name = "start_date")] string? startDate, [FromQuery(Name = "end_date")] string? endDate)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? tag, 
+        [FromQuery(Name = "start_date")] string? startDate, 
+        [FromQuery(Name = "end_date")] string? endDate, 
+        [FromQuery(Name = "delivery-group-id")] string? deliveryGroupId)
     {
         _logger.LogDebug("Entering get all projects API call");
 
@@ -73,7 +78,7 @@ public class ProjectsController : ControllerBase
         {
             _logger.LogInformation("Getting all of the projects");
 
-            var projectQueryParameters = new ProjectQueryParameters(tag, startDate, endDate);
+            var projectQueryParameters = new ProjectQueryParameters(tag, startDate, endDate, deliveryGroupId);
 
             var projects = await _persistence.GetAllAsync(projectQueryParameters);
 
@@ -150,6 +155,7 @@ public class ProjectsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<ProjectModel>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
+    [Obsolete("This endpoint is deprecated. Please use the main GET /projects endpoint with the delivery-group-id query parameter instead, or deliverygroups/{deliveryGroupId}/projects.")]
     public async Task<IActionResult> GetByDeliveryGroup(string deliveryGroupId)
     {
         _logger.LogDebug("Entering get projects by delivery group API call");

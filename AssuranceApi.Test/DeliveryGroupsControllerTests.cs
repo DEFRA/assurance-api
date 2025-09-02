@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 using NSubstitute;
 using FluentAssertions;
+using AssuranceApi.Project.Models;
 
 namespace AssuranceApi.Test
 {
@@ -71,6 +72,76 @@ namespace AssuranceApi.Test
             }
         ];
 
+        private static readonly List<ProjectModel> _activeProjects =
+        [
+            new()
+            {
+                Commentary = "This is Test Project 1",
+                DefCode = "1234",
+                DeliveryGroupId = "ID-1",
+                Id = "1",
+                LastUpdated = new DateTime(2024, 04, 21).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                Name = "Test Project 1",
+                Phase = "Discovery",
+                StandardsSummary =
+                [
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "",
+                        LastUpdated = new DateTime(2024, 04, 21),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 21),
+                                ProfessionId = "1",
+                                Status = "Status",
+                            },
+                        ],
+                        StandardId = "1",
+                    },
+                ],
+                Status = "GREEN",
+                Tags = ["TAG1", "TAG2"],
+                UpdateDate = new DateTime(2024, 04, 21).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+            },
+            new()
+            {
+                Commentary = "This is Test Project 2",
+                DefCode = "2345",
+                Id = "2",
+                LastUpdated = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                Name = "Test Project 2",
+                Phase = "Alpha",
+                DeliveryGroupId = "ID-2",
+                StandardsSummary =
+                [
+                    new()
+                    {
+                        AggregatedCommentary = "",
+                        AggregatedStatus = "GREEN",
+                        LastUpdated = new DateTime(2024, 04, 22),
+                        Professions =
+                        [
+                            new()
+                            {
+                                Commentary = "Profession Update",
+                                LastUpdated = new DateTime(2024, 04, 22),
+                                ProfessionId = "1",
+                                Status = "Status",
+                            },
+                        ],
+                        StandardId = "2",
+                    },
+                ],
+                Status = "AMBER",
+                Tags = ["TAG2", "TAG3"],
+                UpdateDate = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+            },
+        ];
+
         public DeliveryGroupsControllerTests(ITestOutputHelper output)
         {
             _validator = new DeliveryGroupValidator();
@@ -87,9 +158,11 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
+                mockProjectPersistence, 
                 _validator,
                 _logger
             );
@@ -108,6 +181,7 @@ namespace AssuranceApi.Test
             // Arrange
             var controller = new DeliveryGroupsController(
                 null!,
+                null!,
                 _validator,
                 _logger
             );
@@ -125,9 +199,11 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
+                mockProjectPersistence, 
                 _validator,
                 _logger
             );
@@ -145,9 +221,11 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
+                mockProjectPersistence,
                 _validator,
                 _logger
             );
@@ -165,6 +243,7 @@ namespace AssuranceApi.Test
             // Arrange
             var controller = new DeliveryGroupsController(
                 null!,
+                null!, 
                 _validator,
                 _logger
             );
@@ -178,13 +257,38 @@ namespace AssuranceApi.Test
         }
 
         [Fact]
+        public async Task GetDeliveryGroupProjects_ReturnsOkResult_WithListOfDeliveryGroups()
+        {
+            // Arrange
+            var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
+
+            var controller = new DeliveryGroupsController(
+                mockDeliveryGroupPersistence,
+                mockProjectPersistence,
+                _validator,
+                _logger
+            );
+
+            // Act
+            var response = await controller.GetDeliveryGroupProjects("ID-1");
+
+            // Assert
+            response.Should().BeOfType<OkObjectResult>();
+            response.As<OkObjectResult>().Value.As<List<ProjectModel>>().Count.Should().Be(1);
+            response.As<OkObjectResult>().Value.As<List<ProjectModel>>()[0].Should().BeEquivalentTo(_activeProjects[0]);
+        }
+
+        [Fact]
         public async Task Create_InvalidDeliveryGroup_ReturnsBadRequestObjectResult()
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
+                mockProjectPersistence, 
                 _validator,
                 _logger
             );
@@ -201,9 +305,11 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
+                mockProjectPersistence, 
                 _validator,
                 _logger
             );
@@ -221,6 +327,7 @@ namespace AssuranceApi.Test
             // Arrange
             var controller = new DeliveryGroupsController(
                 null!,
+                null!, 
                 _validator,
                 _logger
             );
@@ -238,9 +345,11 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
+                mockProjectPersistence, 
                 _validator,
                 _logger
             );
@@ -259,9 +368,11 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
+                mockProjectPersistence, 
                 _validator,
                 _logger
             );
@@ -280,6 +391,7 @@ namespace AssuranceApi.Test
             // Arrange
             var controller = new DeliveryGroupsController(
                 null!,
+                null!, 
                 _validator,
                 _logger
             );
@@ -297,9 +409,11 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
+                mockProjectPersistence, 
                 _validator,
                 _logger
             );
@@ -319,6 +433,7 @@ namespace AssuranceApi.Test
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
+                null!, 
                 _validator,
                 _logger
             );
@@ -336,6 +451,7 @@ namespace AssuranceApi.Test
             // Arrange
             var controller = new DeliveryGroupsController(
                 null!,
+                null!, 
                 _validator,
                 _logger
             );
@@ -354,6 +470,7 @@ namespace AssuranceApi.Test
             // Arrange
             var controller = new DeliveryGroupsController(
                 GetDeliveryGroupPersistenceMock(),
+                null!, 
                 _validator,
                 _logger
             );
@@ -382,6 +499,7 @@ namespace AssuranceApi.Test
             // Arrange
             var controller = new DeliveryGroupsController(
                 GetDeliveryGroupPersistenceMock(),
+                null!, 
                 _validator,
                 _logger
             );
@@ -410,6 +528,7 @@ namespace AssuranceApi.Test
             // Arrange
             var controller = new DeliveryGroupsController(
                 GetDeliveryGroupPersistenceMock(),
+                null!, 
                 _validator,
                 _logger
             );
@@ -438,6 +557,7 @@ namespace AssuranceApi.Test
             // Arrange  
             var controller = new DeliveryGroupsController(
                 GetDeliveryGroupPersistenceMock(),
+                null!, 
                 _validator,
                 _logger
             );
@@ -467,6 +587,7 @@ namespace AssuranceApi.Test
             // Arrange
             var controller = new DeliveryGroupsController(
                 GetDeliveryGroupPersistenceMock(),
+                null!, 
                 _validator,
                 _logger
             );
@@ -484,6 +605,7 @@ namespace AssuranceApi.Test
             // Arrange
             var controller = new DeliveryGroupsController(
                 GetDeliveryGroupPersistenceMock(),
+                null!, 
                 _validator,
                 _logger
             );
@@ -509,6 +631,19 @@ namespace AssuranceApi.Test
             mockDeliveryGroupPersistence.DeleteAsync("INVALID").Returns(false);
 
             return mockDeliveryGroupPersistence;
+        }
+
+        private static IProjectPersistence GetProjectPersistenceMock()
+        {
+            var mockProjectPersistence = Substitute.For<IProjectPersistence>();
+
+            mockProjectPersistence.GetAllAsync(Arg.Is<ProjectQueryParameters>(x =>
+                x.Tags == null &&
+                x.StartDate == null &&
+                x.EndDate == null &&
+                x.DeliveryGroupId == "ID-1")).Returns([_activeProjects[0]]);
+
+            return mockProjectPersistence;
         }
     }
 }

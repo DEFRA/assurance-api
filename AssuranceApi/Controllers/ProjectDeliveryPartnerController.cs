@@ -9,6 +9,9 @@ using MongoDB.Bson;
 
 namespace AssuranceApi.Controllers
 {
+    /// <summary>
+    /// Controller for managing project delivery partner associations.
+    /// </summary>
     [ApiController]
     [ApiVersion(1.0)]
     [Route("api/v{version:ApiVersion}/projects/")]
