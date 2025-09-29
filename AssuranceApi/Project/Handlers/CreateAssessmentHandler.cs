@@ -84,14 +84,16 @@ public class CreateAssessmentHandler
     /// <param name="standardId">The service standard ID.</param>
     /// <param name="professionId">The profession ID.</param>
     /// <param name="assessment">The assessment details.</param>
-    /// <param name="userMakingChange">The user making the change.</param>
+    /// <param name="userIdentityMakingChange">The identity of the user making the change.</param>
+    /// <param name="userNameMakingChange">The name of the user making the change.</param>
     /// <returns>An <see cref="AssessmentResult"/> indicating the outcome.</returns>
     public async Task<AssessmentResult> HandleAsync(
         string projectId,
         string standardId,
         string professionId,
         ProjectStandards assessment,
-        string userMakingChange
+        string userIdentityMakingChange,
+        string userNameMakingChange
     )
     {
         try
@@ -121,7 +123,7 @@ public class CreateAssessmentHandler
             );
 
             // Prepare and save assessment
-            PrepareAssessment(assessment, existingAssessment, projectId, standardId, professionId, userMakingChange);
+            PrepareAssessment(assessment, existingAssessment, projectId, standardId, professionId, userIdentityMakingChange, userNameMakingChange);
             await _assessmentPersistence.UpsertAsync(assessment);
 
             // Create history entry
@@ -203,14 +205,16 @@ public class CreateAssessmentHandler
         string projectId,
         string standardId,
         string professionId,
-        string userMakingChange
+        string userIdentityMakingChange,
+        string userNameMakingChange
     )
     {
         assessment.ProjectId = projectId;
         assessment.StandardId = standardId;
         assessment.ProfessionId = professionId;
         assessment.LastUpdated = DateTime.UtcNow;
-        assessment.ChangedBy = userMakingChange;
+        assessment.ChangedBy = userIdentityMakingChange;
+        assessment.ChangedByName = userNameMakingChange;
 
         if (existingAssessment != null)
         {
@@ -243,6 +247,7 @@ public class CreateAssessmentHandler
             ProfessionId = professionId,
             Timestamp = DateTime.UtcNow,
             ChangedBy = assessment.ChangedBy,
+            ChangedByName = assessment.ChangedByName,
             Changes = new AssessmentChanges
             {
                 Status = new StatusChange

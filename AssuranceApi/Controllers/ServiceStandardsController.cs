@@ -143,7 +143,8 @@ public class ServiceStandardsController : ControllerBase
                 Id = ObjectId.GenerateNewId().ToString(),
                 StandardId = standard.Id,
                 Timestamp = DateTime.UtcNow,
-                ChangedBy = User.GetEmail() ?? "Unknown User",
+                ChangedBy = User.GetEmail(),
+                ChangedByName = User.GetName(),
                 Changes = new ServiceStandardChanges
                 {
                     Name = new ServiceStandardNameChange { From = "", To = standard.Name },
@@ -506,7 +507,8 @@ public class ServiceStandardsController : ControllerBase
                 Id = ObjectId.GenerateNewId().ToString(),
                 StandardId = id,
                 Timestamp = updated.UpdatedAt,
-                ChangedBy = User.GetEmail() ?? "Unknown User",
+                ChangedBy = User.GetEmail(),
+                ChangedByName = User.GetName(),
                 Changes = changes,
             };
             await _historyPersistence.CreateAsync(history);

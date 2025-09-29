@@ -50,4 +50,9 @@ public class ProjectStandards
     /// Gets or sets the identifier of the user who last changed the project standard.
     /// </summary>
     public string ChangedBy { get; set; } = "";
+
+    /// <summary>
+    /// Gets or sets the name of the user who last changed the project standard.
+    /// </summary>
+    public string ChangedByName { get; set; } = "";
 }
