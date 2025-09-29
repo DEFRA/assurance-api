@@ -26,9 +26,14 @@ public class ServiceStandardHistory
     public DateTime Timestamp { get; set; }
 
     /// <summary>
-    /// Gets or sets the user who made the change.
+    /// Gets or sets the identity of the user who made the change.
     /// </summary>
     public string ChangedBy { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the full name of the user who made the change.
+    /// </summary>
+    public string ChangedByName { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the details of the changes made to the standard definition.

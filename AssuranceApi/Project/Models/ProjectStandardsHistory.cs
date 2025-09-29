@@ -41,6 +41,11 @@ public class ProjectStandardsHistory
     public string ChangedBy { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the name of the user who made the change.
+    /// </summary>
+    public string ChangedByName { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets the details of the changes made.
     /// </summary>
     public AssessmentChanges Changes { get; set; } = null!;

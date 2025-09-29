@@ -32,6 +32,11 @@ public class ProfessionHistory
     public string ChangedBy { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the full name of the user who made the change.
+    /// </summary>
+    public string ChangedByName { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets the details of the changes made to the profession.
     /// </summary>
     public ProfessionChanges Changes { get; set; } = null!;
