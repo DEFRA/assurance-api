@@ -36,7 +36,8 @@ namespace AssuranceApi.Data.Models
 
         /// <summary>
         /// Gets or sets the date and time when the delivery partner's engagement ended with the project.
+        /// Null indicates an active engagement.
         /// </summary>
-        public DateTime EngagementEnded { get; set; } = DateTime.UtcNow;
+        public DateTime? EngagementEnded { get; set; } = null;
     }
 }
