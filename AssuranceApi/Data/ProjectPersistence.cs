@@ -113,6 +113,20 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
     }
 
     /// <summary>
+    /// Retrieves a list of projects by their IDs.
+    /// </summary>
+    /// <param name="projectIds">The list of project IDs to retrieve.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a list of projects.</returns>
+    public async Task<List<ProjectModel>> GetByIdsAsync(List<string> projectIds)
+    {
+        if (projectIds == null || projectIds.Count == 0)
+            return [];
+
+        var filter = Builders<ProjectModel>.Filter.In(x => x.Id, projectIds);
+        return await Collection.Find(filter).ToListAsync();
+    }
+
+    /// <summary>
     /// Updates an existing project in the database.
     /// </summary>
     /// <param name="id">The ID of the project to update.</param>

@@ -23,6 +23,13 @@ namespace AssuranceApi.Data
         Task<List<ProjectDeliveryPartnerModel>> GetByProjectAsync(string projectId);
 
         /// <summary>
+        /// Retrieves all Project Delivery Partners associated with a specific delivery partner.
+        /// </summary>
+        /// <param name="deliveryPartnerId">The ID of the delivery partner.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a list of ProjectDeliveryPartnerModel objects.</returns>
+        Task<List<ProjectDeliveryPartnerModel>> GetByDeliveryPartnerAsync(string deliveryPartnerId);
+
+        /// <summary>
         /// Inserts or updates a Project Delivery Partner record.
         /// </summary>
         /// <param name="projectDeliveryPartner">The ProjectDeliveryPartnerModel object to upsert.</param>
