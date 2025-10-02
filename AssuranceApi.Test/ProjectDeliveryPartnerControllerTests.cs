@@ -274,6 +274,75 @@ namespace AssuranceApi.Test
         }
 
         [Fact]
+        public async Task GetProjectsByDeliveryPartnerId_ReturnsOkResult_WhenDeliveryPartnerIdIsValid()
+        {
+            var mockProjectDeliveryPartnerPersistence = Substitute.For<IProjectDeliveryPartnerPersistence>();
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockDeliveryPartnerPersistence = GetDeliveryPartnerPersistenceMock();
+
+            var deliveryPartnerId = "2";
+            var expectedList = GetValidProjectDeliveryPartnerModelList()
+                .Where(x => x.DeliveryPartnerId == deliveryPartnerId)
+                .ToList();
+            mockProjectDeliveryPartnerPersistence.GetByDeliveryPartnerAsync(deliveryPartnerId).Returns(expectedList);
+
+            var controller = new ProjectDeliveryPartnerController(
+                mockProjectDeliveryPartnerPersistence,
+                mockProjectPersistence,
+                mockDeliveryPartnerPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.GetProjectsByDeliveryPartnerId(deliveryPartnerId);
+
+            response.Should().BeOfType<OkObjectResult>();
+            var okResult = response as OkObjectResult;
+            okResult!.Value.Should().BeEquivalentTo(GetValidProjectModels());
+        }
+
+        [Fact]
+        public async Task GetProjectsByDeliveryPartnerId_ReturnsBadRequest_WhenDeliveryPartnerIdIsEmpty()
+        {
+            var mockProjectDeliveryPartnerPersistence = GetProjectDeliveryPartnerPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockDeliveryPartnerPersistence = GetDeliveryPartnerPersistenceMock();
+
+            var controller = new ProjectDeliveryPartnerController(
+                mockProjectDeliveryPartnerPersistence,
+                mockProjectPersistence,
+                mockDeliveryPartnerPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.GetProjectsByDeliveryPartnerId(string.Empty);
+
+            response.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
+        public async Task GetProjectsByDeliveryPartnerId_ReturnsInternalServerError_WhenExceptionIsThrown()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockDeliveryPartnerPersistence = GetDeliveryPartnerPersistenceMock();
+
+            var controller = new ProjectDeliveryPartnerController(
+                null,
+                mockProjectPersistence,
+                mockDeliveryPartnerPersistence,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.GetProjectsByDeliveryPartnerId("1");
+
+            response.Should().BeOfType<ObjectResult>();
+            var objectResult = response as ObjectResult;
+            objectResult!.StatusCode.Should().Be(500);
+        }
+
+        [Fact]
         public async Task GetProjectDeliveryPartner_ReturnsOkResult_WhenProjectIdAndDeliveryPartnerIdAreValid()
         {
             var mockProjectDeliveryPartnerPersistence = GetProjectDeliveryPartnerPersistenceMock();
@@ -622,6 +691,9 @@ namespace AssuranceApi.Test
         {
             var mockProjectPersistence = Substitute.For<IProjectPersistence>();
             mockProjectPersistence.GetByIdAsync("1").Returns(GetValidProjectModel());
+            mockProjectPersistence
+                .GetByIdsAsync(Arg.Is<List<string>>(ids => ids != null && ids.Count == 3 && ids.Contains("2") && ids.Contains("3") && ids.Contains("4")))
+                .Returns(GetValidProjectModels());
 
             return mockProjectPersistence;
         }
@@ -670,6 +742,8 @@ namespace AssuranceApi.Test
             };
         }
 
+
+
         private static DeliveryPartnerModel GetValidDeliveryPartnerModel()
         {
             return new()
@@ -693,6 +767,154 @@ namespace AssuranceApi.Test
                 EngagementStarted = new DateTime(2024, 04, 21, 0, 0, 0, 0),
                 EngagementEnded = DateTime.MinValue,
             };
+        }
+
+        private static List<ProjectDeliveryPartnerModel> GetValidProjectDeliveryPartnerModelList()
+        {
+            return
+            [
+                new () {
+                    Id = "2",
+                    ProjectId = "2",
+                    DeliveryPartnerId = "2",
+                    EngagementManager = "Manager 2",
+                    EngagementStarted = new DateTime(2024, 04, 22, 0, 0, 0, 0),
+                    EngagementEnded = DateTime.MinValue,
+                },
+                new () {
+                    Id = "3",
+                    ProjectId = "3",
+                    DeliveryPartnerId = "2",
+                    EngagementManager = "Manager 2",
+                    EngagementStarted = new DateTime(2024, 04, 23, 0, 0, 0, 0),
+                    EngagementEnded = DateTime.MinValue,
+                },
+                new () {
+                    Id = "4",
+                    ProjectId = "4",
+                    DeliveryPartnerId = "2",
+                    EngagementManager = "Manager 2",
+                    EngagementStarted = new DateTime(2024, 04, 24, 0, 0, 0, 0),
+                    EngagementEnded = DateTime.MinValue,
+                },
+                new () {
+                    Id = "5",
+                    ProjectId = "4",
+                    DeliveryPartnerId = "3",
+                    EngagementManager = "Manager 5",
+                    EngagementStarted = new DateTime(2024, 04, 25, 0, 0, 0, 0),
+                    EngagementEnded = DateTime.MinValue,
+                },
+                new() {
+                    Id = "6",
+                    ProjectId = "5",
+                    DeliveryPartnerId = "3",
+                    EngagementManager = "Manager 1",
+                    EngagementStarted = new DateTime(2024, 04, 21, 0, 0, 0, 0),
+                    EngagementEnded = DateTime.MinValue,
+                }
+            ];
+        }
+
+        private static List<ProjectModel> GetValidProjectModels()
+        {
+            return
+            [
+                new() {
+                    Commentary = "This is Test Project 2",
+                    DefCode = "1234",
+                    Id = "2",
+                    LastUpdated = new DateTime(2024, 04, 21).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    Name = "Test Project 2",
+                    Phase = "Discovery",
+                    StandardsSummary =
+                    [
+                        new StandardSummaryModel
+                        {
+                            AggregatedCommentary = "",
+                            AggregatedStatus = "",
+                            LastUpdated = new DateTime(2024, 04, 21),
+                            Professions =
+                            [
+                                new StandardSummaryProfessionModel
+                                {
+                                    Commentary = "Profession Update",
+                                    LastUpdated = new DateTime(2024, 04, 21),
+                                    ProfessionId = "1",
+                                    Status = "Status",
+                                },
+                            ],
+                            StandardId = "1",
+                        },
+                    ],
+                    Status = "GREEN",
+                    Tags = ["TAG1", "TAG2"],
+                    UpdateDate = new DateTime(2024, 04, 21).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                },
+                new()
+                {
+                    Commentary = "This is Test Project 3",
+                    DefCode = "5678",
+                    Id = "3",
+                    LastUpdated = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    Name = "Test Project 3",
+                    Phase = "Alpha",
+                    StandardsSummary =
+                    [
+                        new() {
+                            AggregatedCommentary = "Commentary 3",
+                            AggregatedStatus = "AMBER",
+                            LastUpdated = new DateTime(2024, 04, 22),
+                            Professions =
+                            [
+                                new StandardSummaryProfessionModel
+                                {
+                                    Commentary = "Profession Update 3",
+                                    LastUpdated = new DateTime(2024, 04, 22),
+                                    ProfessionId = "3",
+                                    Status = "Status 3",
+                                },
+                            ],
+                            StandardId = "3",
+                        },
+                    ],
+                    Status = "AMBER",
+                    Tags = ["TAG3", "TAG4"],
+                    UpdateDate = new DateTime(2024, 04, 22).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                },
+                new()
+                {
+                    Commentary = "This is Test Project 4",
+                    DefCode = "9101",
+                    Id = "4",
+                    LastUpdated = new DateTime(2024, 04, 23).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    Name = "Test Project 4",
+                    Phase = "Beta",
+                    StandardsSummary =
+                    [
+                        new StandardSummaryModel
+                        {
+                            AggregatedCommentary = "Commentary 4",
+                            AggregatedStatus = "RED",
+                            LastUpdated = new DateTime(2024, 04, 23),
+                            Professions =
+                            [
+                                new StandardSummaryProfessionModel
+                                {
+                                    Commentary = "Profession Update 4",
+                                    LastUpdated = new DateTime(2024, 04, 23),
+                                    ProfessionId = "4",
+                                    Status = "Status 4",
+                                },
+                            ],
+                            StandardId = "4",
+                        },
+                    ],
+                    Status = "RED",
+                    Tags = ["TAG5", "TAG6"],
+                    UpdateDate = new DateTime(2024, 04, 23).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                }
+            ];
         }
     }
 }

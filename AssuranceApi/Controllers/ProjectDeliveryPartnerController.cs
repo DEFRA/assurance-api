@@ -14,7 +14,7 @@ namespace AssuranceApi.Controllers
     /// </summary>
     [ApiController]
     [ApiVersion(1.0)]
-    [Route("api/v{version:ApiVersion}/projects/")]
+    [Route("api/v{version:ApiVersion}/")]
     public class ProjectDeliveryPartnerController : ControllerBase
     {
         private readonly IProjectDeliveryPartnerPersistence _persistence;
@@ -56,7 +56,7 @@ namespace AssuranceApi.Controllers
         /// <response code="200">Returns the list of delivery partners.</response>
         /// <response code="400">If the project ID is null or empty.</response>
         /// <response code="500">If an internal server error occurs.</response>
-        [HttpGet("{projectId}/deliverypartners")]
+        [HttpGet("projects/{projectId}/deliverypartners")]
         [ProducesResponseType(typeof(IEnumerable<ProjectDeliveryPartnerModel>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
@@ -91,6 +91,46 @@ namespace AssuranceApi.Controllers
         }
 
         /// <summary>
+        /// Gets all projects associated with a specific delivery partner.
+        /// </summary>
+        /// <param name="deliveryPartnerId">The unique identifier of the delivery partner.</param>
+        /// <returns>A list of projects for the specified delivery partner.</returns>
+        /// <response code="200">Returns the list of projects.</response>
+        /// <response code="400">If the delivery partner ID is null or empty.</response>
+        /// <response code="500">If an internal server error occurs.</response>
+        [HttpGet("deliverypartners/{deliveryPartnerId}/projects")]
+        public async Task<IActionResult> GetProjectsByDeliveryPartnerId(string deliveryPartnerId)
+        {
+            _logger.LogDebug("Entering get projects by delivery partners ID API call");
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(deliveryPartnerId))
+                {
+                    _logger.LogWarning("Delivery Partner ID is null or empty");
+                    return BadRequest("Delivery Partner ID cannot be null or empty.");
+                }
+
+                _logger.LogInformation("Getting all of the get projects by delivery partner");
+
+                var projectDeliveryPartners = await _persistence.GetByDeliveryPartnerAsync(deliveryPartnerId);
+                var projectIds = projectDeliveryPartners.Select(p => p.ProjectId).Distinct().ToList();
+                var projects = await _projectPersistence.GetByIdsAsync(projectIds);
+
+                return Ok(projects);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred whilst getting the delivery partners by project ID");
+                return Problem($"Failed to get all the delivery partners: {ex.Message}");
+            }
+            finally
+            {
+                _logger.LogDebug("Leaving get delivery partners by project ID API call");
+            }
+        }
+
+        /// <summary>
         /// Gets a specific delivery partner associated with a project.
         /// </summary>
         /// <param name="projectId">The unique identifier of the project.</param>
@@ -100,7 +140,7 @@ namespace AssuranceApi.Controllers
         /// <response code="400">If the project ID or delivery partner ID is null or empty.</response>
         /// <response code="404">If the delivery partner is not found for the project.</response>
         /// <response code="500">If an internal server error occurs.</response>
-        [HttpGet("{projectId}/deliverypartners/{deliveryPartnerId}")]
+        [HttpGet("projects/{projectId}/deliverypartners/{deliveryPartnerId}")]
         [ProducesResponseType(typeof(ProjectDeliveryPartnerModel), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -156,7 +196,7 @@ namespace AssuranceApi.Controllers
         /// <response code="400">The input is invalid, such as missing required fields or validation errors.</response>
         /// <response code="404">The specified project or delivery partner does not exist.</response>
         /// <response code="500">An internal server error occurred while processing the request.</response>
-        [HttpPost("{projectId}/deliverypartners")]
+        [HttpPost("projects/{projectId}/deliverypartners")]
         [ProducesResponseType(typeof(ProjectDeliveryPartnerModel), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -203,7 +243,7 @@ namespace AssuranceApi.Controllers
         /// <response code="400">The input is invalid, such as missing required fields or validation errors.</response>
         /// <response code="404">The specified project or delivery partner association does not exist.</response>
         /// <response code="500">An internal server error occurred while processing the request.</response>
-        [HttpPut("{projectId}/deliverypartners/{deliveryPartnerId}")]
+        [HttpPut("projects/{projectId}/deliverypartners/{deliveryPartnerId}")]
         [ProducesResponseType(typeof(ProjectDeliveryPartnerModel), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -298,7 +338,7 @@ namespace AssuranceApi.Controllers
         /// <response code="400">If the project ID or delivery partner ID is null or empty.</response>
         /// <response code="404">If the delivery partner association is not found.</response>
         /// <response code="500">If an internal server error occurs.</response>
-        [HttpDelete("{projectId}/deliverypartners/{deliveryPartnerId}")]
+        [HttpDelete("projects/{projectId}/deliverypartners/{deliveryPartnerId}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

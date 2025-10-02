@@ -28,6 +28,14 @@ public interface IProjectPersistence
     /// <returns>A task that represents the asynchronous operation. The task result contains the project, or null if not found.</returns>
     Task<ProjectModel?> GetByIdAsync(string id);
 
+
+    /// <summary>
+    /// Retrieves a list of projects by their IDs.
+    /// </summary>
+    /// <param name="projectIds">The list of project IDs to retrieve.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a list of projects.</returns>
+    Task<List<ProjectModel>> GetByIdsAsync(List<string> projectIds);
+
     /// <summary>
     /// Updates an existing project asynchronously.
     /// </summary>

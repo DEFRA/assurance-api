@@ -86,7 +86,29 @@ namespace AssuranceApi.Data
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Failed to get the Project Delivery Partner");
+                Logger.LogError(ex, "Failed to get the Delivery Partners by Project ID");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves all Project Delivery Partners associated with a specific delivery partner.
+        /// </summary>
+        /// <param name="deliveryPartnerId">The ID of the delivery partner.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a list of ProjectDeliveryPartnerModel objects.</returns>
+        public async Task<List<ProjectDeliveryPartnerModel>> GetByDeliveryPartnerAsync(string deliveryPartnerId)
+        {
+            Logger.LogDebug($"Getting delivery partners with Delivery partner ID: {deliveryPartnerId}");
+
+            try
+            {
+                return await Collection
+                    .Find(x => x.DeliveryPartnerId == deliveryPartnerId)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to get the Projects by Delivery Partner ID");
                 throw;
             }
         }
