@@ -35,6 +35,21 @@ namespace AssuranceApi.Data.Models
         public string Lead { get; set; } = null!;
 
         /// <summary>
+        /// Gets or sets the overall outcome for the delivery group.
+        /// </summary>
+        public string? Outcome { get; set; } = null;
+
+        /// <summary>
+        /// Gets or sets the name for the delivery group's roadmap.
+        /// </summary>
+        public string? RoadmapName { get; set; } = null;
+
+        /// <summary>
+        /// Gets or sets the link to the delivery group's roadmap.
+        /// </summary>
+        public string? RoadmapLink { get; set; } = null;
+
+        /// <summary>
         /// Gets or sets the date and time when the delivery group was created.
         /// </summary>
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Asp.Versioning;
 using AssuranceApi.Data;
+using AssuranceApi.Data.ChangeHistory;
 using AssuranceApi.Data.Models;
 using AssuranceApi.Profession.Models;
 using AssuranceApi.Project.Models;
@@ -125,6 +126,7 @@ static void ConfigureServices(WebApplicationBuilder _builder)
     _builder.Services.AddSingleton<IDeliveryPartnerPersistence, DeliveryPartnerPersistence>();
     _builder.Services.AddSingleton<IProjectDeliveryPartnerPersistence, ProjectDeliveryPartnerPersistence>();
     _builder.Services.AddSingleton<IDeliveryGroupPersistence, DeliveryGroupPersistence>();
+    _builder.Services.AddSingleton<IHistoryPersistence<DeliveryGroupChanges>, DeliveryGroupHistoryPersistence>();
 
     _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
     _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();
