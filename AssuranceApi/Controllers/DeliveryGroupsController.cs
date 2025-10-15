@@ -6,6 +6,8 @@ using AssuranceApi.Data;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using AssuranceApi.Project.Models;
+using AssuranceApi.Data.ChangeHistory;
+using MongoDB.Bson;
 
 namespace AssuranceApi.Controllers;
 
@@ -22,6 +24,7 @@ public class DeliveryGroupsController : ControllerBase
 {
     private readonly IDeliveryGroupPersistence _persistence;
     private readonly IProjectPersistence _projectPersistence;
+    private readonly IHistoryPersistence<DeliveryGroupChanges> _historyPersistence;
     private readonly IValidator<DeliveryGroupModel> _validator;
     private readonly ILogger<DeliveryGroupsController> _logger;
 
@@ -31,16 +34,19 @@ public class DeliveryGroupsController : ControllerBase
     /// <param name="persistence">The persistence layer for delivery groups.</param>
     /// <param name="projectPersistence"></param>
     /// <param name="validator">The validator for <see cref="DeliveryGroupModel"/>.</param>
+    /// <param name="historyPersistence">The persistence layer for tracking delivery group changes.</param>
     /// <param name="logger">The logger instance for logging operations.</param>
     public DeliveryGroupsController(
         IDeliveryGroupPersistence persistence,
         IProjectPersistence projectPersistence,
-        IValidator<DeliveryGroupModel> validator, 
+        IHistoryPersistence<DeliveryGroupChanges> historyPersistence,
+        IValidator<DeliveryGroupModel> validator,
         ILogger<DeliveryGroupsController> logger
     )
     {
         _persistence = persistence;
         _projectPersistence = projectPersistence;
+        _historyPersistence = historyPersistence;
         _validator = validator;
         _logger = logger;
 
@@ -252,14 +258,15 @@ public class DeliveryGroupsController : ControllerBase
                 return BadRequest(message);
             }
 
-            var existingGroup = await _persistence.GetByIdAsync(id);
-            if (existingGroup == null)
+            var existingDeliveryGroup = await _persistence.GetByIdAsync(id);
+            if (existingDeliveryGroup == null)
             {
                 _logger.LogInformation("Unable to find the delivery group with ID='{Id}'", id);
                 return NotFound();
             }
 
             deliveryGroup.UpdatedAt = DateTime.UtcNow;
+            await TrackChanges(id, existingDeliveryGroup, deliveryGroup);
 
             var updated = await _persistence.UpdateAsync(id, deliveryGroup);
             return updated ? Ok(deliveryGroup) : NotFound();
@@ -307,6 +314,58 @@ public class DeliveryGroupsController : ControllerBase
         finally
         {
             _logger.LogDebug("Leaving delete delivery group API call");
+        }
+    }
+
+    private async Task TrackChanges(string id, DeliveryGroupModel existing, DeliveryGroupModel updated
+    )
+    {
+        var changes = new DeliveryGroupChanges();
+        var hasChanges = false;
+
+        if (existing.Name != updated.Name)
+        {
+            changes.Name = new Change<string> { From = existing.Name, To = updated.Name };
+            hasChanges = true;
+        }
+        if (existing.Lead != updated.Lead)
+        {
+            changes.Lead = new Change<string> { From = existing.Lead, To = updated.Lead };
+            hasChanges = true;
+        }
+        if (existing.Outcome != updated.Outcome)
+        {
+            changes.Outcome = new Change<string> { From = existing.Outcome, To = updated.Outcome };
+            hasChanges = true;
+        }
+        if (existing.RoadmapName != updated.RoadmapName)
+        {
+            changes.Outcome = new Change<string> { From = existing.RoadmapName, To = updated.RoadmapName };
+            hasChanges = true;
+        }
+        if (existing.RoadmapLink != updated.RoadmapLink)
+        {
+            changes.Outcome = new Change<string> { From = existing.RoadmapLink, To = updated.RoadmapLink };
+            hasChanges = true;
+        }
+        if (existing.IsActive != updated.IsActive)
+        {
+            changes.IsActive = new Change<bool> { From = existing.IsActive, To = updated.IsActive };
+            hasChanges = true;
+        }
+
+        if (hasChanges)
+        {
+            var history = new History<DeliveryGroupChanges>
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                ItemId = id,
+                Timestamp = updated.UpdatedAt,
+                ChangedBy = User.GetEmail(),
+                ChangedByName = User.GetName(),
+                Changes = changes,
+            };
+            await _historyPersistence.CreateAsync(history);
         }
     }
 }

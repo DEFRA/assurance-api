@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 using NSubstitute;
 using FluentAssertions;
 using AssuranceApi.Project.Models;
+using AssuranceApi.Data.ChangeHistory;
 
 namespace AssuranceApi.Test
 {
@@ -27,6 +28,9 @@ namespace AssuranceApi.Test
                 IsActive = true,
                 Status = "Active",
                 Lead = "John Doe",
+                Outcome = "Outcome 1",
+                RoadmapName = "Roadmap 1",
+                RoadmapLink = "https://roadmaplink1.com",
                 CreatedAt = new DateTime(2024, 04, 21).ToUniversalTime(),
                 UpdatedAt = new DateTime(2024, 04, 21).ToUniversalTime()
             },
@@ -37,6 +41,9 @@ namespace AssuranceApi.Test
                 IsActive = true,
                 Status = "Active",
                 Lead = "Jane Smith",
+                Outcome = "Outcome 2",
+                RoadmapName = "Roadmap 2",
+                RoadmapLink = "https://roadmaplink2.com",
                 CreatedAt = new DateTime(2024, 04, 22).ToUniversalTime(),
                 UpdatedAt = new DateTime(2024, 04, 22).ToUniversalTime()
             },
@@ -47,6 +54,9 @@ namespace AssuranceApi.Test
                 IsActive = true,
                 Status = "Inactive",
                 Lead = "Bob Johnson",
+                Outcome = "Outcome 3",
+                RoadmapName = "Roadmap 3",
+                RoadmapLink = "https://roadmaplink3.com",
                 CreatedAt = new DateTime(2024, 04, 23).ToUniversalTime(),
                 UpdatedAt = new DateTime(2024, 04, 23).ToUniversalTime()
             },
@@ -57,6 +67,9 @@ namespace AssuranceApi.Test
                 IsActive = true,
                 Status = "Active",
                 Lead = "Alice Brown",
+                Outcome = "Outcome 4",
+                RoadmapName = "Roadmap 4",
+                RoadmapLink = "https://roadmaplink4.com",
                 CreatedAt = new DateTime(2024, 04, 24).ToUniversalTime(),
                 UpdatedAt = new DateTime(2024, 04, 24).ToUniversalTime()
             },
@@ -67,6 +80,9 @@ namespace AssuranceApi.Test
                 IsActive = true,
                 Status = "Pending",
                 Lead = "Charlie Wilson",
+                Outcome = "Outcome 5",
+                RoadmapName = "Roadmap 5",
+                RoadmapLink = "https://roadmaplink5.com",
                 CreatedAt = new DateTime(2024, 04, 25).ToUniversalTime(),
                 UpdatedAt = new DateTime(2024, 04, 25).ToUniversalTime()
             }
@@ -158,11 +174,13 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
             var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
                 mockProjectPersistence, 
+                mockDeliveryGroupHistoryPersistence,
                 _validator,
                 _logger
             );
@@ -182,6 +200,7 @@ namespace AssuranceApi.Test
             var controller = new DeliveryGroupsController(
                 null!,
                 null!,
+                null!,
                 _validator,
                 _logger
             );
@@ -199,11 +218,13 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
             var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
                 mockProjectPersistence, 
+                mockDeliveryGroupHistoryPersistence,
                 _validator,
                 _logger
             );
@@ -221,11 +242,13 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
             var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
                 mockProjectPersistence,
+                mockDeliveryGroupHistoryPersistence,
                 _validator,
                 _logger
             );
@@ -244,6 +267,7 @@ namespace AssuranceApi.Test
             var controller = new DeliveryGroupsController(
                 null!,
                 null!, 
+                null!,
                 _validator,
                 _logger
             );
@@ -261,11 +285,13 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
             var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
                 mockProjectPersistence,
+                mockDeliveryGroupHistoryPersistence,
                 _validator,
                 _logger
             );
@@ -284,11 +310,13 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
             var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
                 mockProjectPersistence, 
+                mockDeliveryGroupHistoryPersistence,
                 _validator,
                 _logger
             );
@@ -305,11 +333,13 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
             var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
                 mockProjectPersistence, 
+                mockDeliveryGroupHistoryPersistence,
                 _validator,
                 _logger
             );
@@ -328,6 +358,7 @@ namespace AssuranceApi.Test
             var controller = new DeliveryGroupsController(
                 null!,
                 null!, 
+                null!,
                 _validator,
                 _logger
             );
@@ -345,11 +376,13 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
             var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
                 mockProjectPersistence, 
+                mockDeliveryGroupHistoryPersistence,
                 _validator,
                 _logger
             );
@@ -368,11 +401,13 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
             var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
                 mockProjectPersistence, 
+                mockDeliveryGroupHistoryPersistence,
                 _validator,
                 _logger
             );
@@ -392,6 +427,7 @@ namespace AssuranceApi.Test
             var controller = new DeliveryGroupsController(
                 null!,
                 null!, 
+                null!,
                 _validator,
                 _logger
             );
@@ -409,11 +445,13 @@ namespace AssuranceApi.Test
         {
             // Arrange
             var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
             var mockProjectPersistence = GetProjectPersistenceMock();
 
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
                 mockProjectPersistence, 
+                mockDeliveryGroupHistoryPersistence,
                 _validator,
                 _logger
             );
@@ -434,6 +472,7 @@ namespace AssuranceApi.Test
             var controller = new DeliveryGroupsController(
                 mockDeliveryGroupPersistence,
                 null!, 
+                null!,
                 _validator,
                 _logger
             );
@@ -452,6 +491,7 @@ namespace AssuranceApi.Test
             var controller = new DeliveryGroupsController(
                 null!,
                 null!, 
+                null!,
                 _validator,
                 _logger
             );
@@ -471,6 +511,7 @@ namespace AssuranceApi.Test
             var controller = new DeliveryGroupsController(
                 GetDeliveryGroupPersistenceMock(),
                 null!, 
+                null!,
                 _validator,
                 _logger
             );
@@ -500,6 +541,7 @@ namespace AssuranceApi.Test
             var controller = new DeliveryGroupsController(
                 GetDeliveryGroupPersistenceMock(),
                 null!, 
+                null!,
                 _validator,
                 _logger
             );
@@ -529,6 +571,7 @@ namespace AssuranceApi.Test
             var controller = new DeliveryGroupsController(
                 GetDeliveryGroupPersistenceMock(),
                 null!, 
+                null!,
                 _validator,
                 _logger
             );
@@ -558,6 +601,7 @@ namespace AssuranceApi.Test
             var controller = new DeliveryGroupsController(
                 GetDeliveryGroupPersistenceMock(),
                 null!, 
+                GetDeliveryGroupHistoryPersistenceMock(),
                 _validator,
                 _logger
             );
@@ -588,6 +632,7 @@ namespace AssuranceApi.Test
             var controller = new DeliveryGroupsController(
                 GetDeliveryGroupPersistenceMock(),
                 null!, 
+                null!,
                 _validator,
                 _logger
             );
@@ -606,6 +651,7 @@ namespace AssuranceApi.Test
             var controller = new DeliveryGroupsController(
                 GetDeliveryGroupPersistenceMock(),
                 null!, 
+                null!,
                 _validator,
                 _logger
             );
@@ -629,6 +675,13 @@ namespace AssuranceApi.Test
             mockDeliveryGroupPersistence.CreateAsync(_deliveryGroups[0]).Returns(true);
             mockDeliveryGroupPersistence.DeleteAsync("ID-1").Returns(true);
             mockDeliveryGroupPersistence.DeleteAsync("INVALID").Returns(false);
+
+            return mockDeliveryGroupPersistence;
+        }
+
+        private static IHistoryPersistence<DeliveryGroupChanges> GetDeliveryGroupHistoryPersistenceMock()
+        {
+            var mockDeliveryGroupPersistence = Substitute.For<IHistoryPersistence<DeliveryGroupChanges>>();
 
             return mockDeliveryGroupPersistence;
         }
