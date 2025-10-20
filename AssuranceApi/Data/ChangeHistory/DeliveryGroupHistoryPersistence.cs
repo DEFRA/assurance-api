@@ -1,3 +1,4 @@
+using AssuranceApi.Project.Models;
 using AssuranceApi.Utils.Mongo;
 using MongoDB.Driver;
 
@@ -89,7 +90,44 @@ namespace AssuranceApi.Data.ChangeHistory
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Failed to get project history");
-                return Enumerable.Empty<History<DeliveryGroupChanges>>();
+                return [];
+            }
+        }
+
+        /// <summary>
+        /// Archives a specific delivery group history entry by marking it as archived.
+        /// </summary>
+        /// <param name="deliveryGroupId">The ID of the delivery group to which the history entry belongs.</param>
+        /// <param name="historyId">The ID of the history entry to archive.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating whether the operation was successful.</returns>
+        public async Task<bool> ArchiveHistoryEntryAsync(string deliveryGroupId, string historyId)
+        {
+            try
+            {
+                Logger.LogInformation($"Archiving history entry {historyId} for delivery group {deliveryGroupId}");
+
+                var filter = Builders<History<DeliveryGroupChanges>>.Filter.And(
+                    Builders<History<DeliveryGroupChanges>>.Filter.Eq(h => h.Id, historyId),
+                    Builders<History<DeliveryGroupChanges>>.Filter.Eq(h => h.ItemId, deliveryGroupId)
+                );
+
+                var update = Builders<History<DeliveryGroupChanges>>.Update.Set(h => h.IsArchived, true);
+
+                var result = await Collection.UpdateOneAsync(filter, update);
+
+                if (result.ModifiedCount > 0)
+                {
+                    Logger.LogInformation("Successfully archived history entry");
+                    return true;
+                }
+
+                Logger.LogWarning("No history entry found to archive");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to archive project history entry");
+                return false;
             }
         }
     }

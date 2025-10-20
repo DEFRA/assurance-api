@@ -1,3 +1,4 @@
+using AssuranceApi.Data.ChangeHistory;
 using AssuranceApi.Data.Models;
 using FluentAssertions;
 using MongoDB.Bson;
@@ -179,7 +180,7 @@ namespace AssuranceApi.IntegrationTests
         }
 
         [Fact]
-        public async Task UpdateDeliveryGroup_ReturnsOk_WhenValidUpdateProvided()
+        public async Task UpdateDeliveryGroup_ReturnsOk_AndManagedHistoryCorrectly_WhenValidUpdateProvided()
         {
             // Arrange - Clear database and create delivery group
             await _factory.ClearDatabaseAsync();
@@ -228,6 +229,34 @@ namespace AssuranceApi.IntegrationTests
             fetchedDeliveryGroup!.Name.Should().Be("Updated Delivery Group Name");
             fetchedDeliveryGroup.Status.Should().Be("Inactive");
             fetchedDeliveryGroup.Lead.Should().Be("Updated Lead");
+
+            // Verify the change history was recorded correctly
+            var getHistoryResponse = await client.GetAsync($"/api/v1.0/deliverygroups/{deliveryGroupId}/history");
+            var historyContent = await getHistoryResponse.Content.ReadAsStringAsync();
+            var fetchedDeliveryGroupHistory = JsonSerializer.Deserialize<List<History<DeliveryGroupChanges>>>(
+                historyContent,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+
+            fetchedDeliveryGroupHistory!.Count.Should().Be(1);
+            fetchedDeliveryGroupHistory[0].Changes!.Name!.From.Should().Be("Original Delivery Group Name");
+            fetchedDeliveryGroupHistory[0].Changes!.Name!.To.Should().Be("Updated Delivery Group Name");
+            fetchedDeliveryGroupHistory[0].Changes!.Lead!.From.Should().Be("Original Lead");
+            fetchedDeliveryGroupHistory[0].Changes!.Lead!.To.Should().Be("Updated Lead");
+
+
+            // Verify the change history can be deleted correctly
+            var deleteHistoryResponse = await client.PutAsync($"/api/v1.0/deliverygroups/{deliveryGroupId}/history/{fetchedDeliveryGroupHistory[0].Id}", null);
+            deleteHistoryResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var getUpdatedHistoryResponse = await client.GetAsync($"/api/v1.0/deliverygroups/{deliveryGroupId}/history");
+            var updatedHistoryContent = await getUpdatedHistoryResponse.Content.ReadAsStringAsync();
+            var fetchedUpdatedDeliveryGroupHistory = JsonSerializer.Deserialize<List<History<DeliveryGroupChanges>>>(
+                updatedHistoryContent,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+
+            fetchedUpdatedDeliveryGroupHistory!.Count.Should().Be(0);
         }
 
         [Fact]

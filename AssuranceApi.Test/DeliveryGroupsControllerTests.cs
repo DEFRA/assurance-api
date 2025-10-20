@@ -158,6 +158,92 @@ namespace AssuranceApi.Test
             },
         ];
 
+        private static readonly List<History<DeliveryGroupChanges>> _deliveryGroupHistory =
+        [
+            new()
+            {
+                Id = "1-a",
+                Changes = new DeliveryGroupChanges()
+                {
+                    Name = new Change<string>()
+                    {
+                        From = "Before name update 1",
+                        To = "After name update 1",
+                    },
+                    Status = new Change<string>()
+                    {
+                        From = "Before status update 1",
+                        To = "After status update 1",
+                    },
+                    Lead = new Change<string>()
+                    {
+                        From = "Before lead update 1",
+                        To = "After lead update 1",
+                    },
+                    Outcome = new Change<string>()
+                    {
+                        From = "Before outcome update 1",
+                        To = "After outcome update 1",
+                    },
+                    RoadmapName = new Change<string>()
+                    {
+                        From = "Before roadmap name update 1",
+                        To = "After roadmap name update 1",
+                    },
+                    RoadmapLink = new Change<string>()
+                    {
+                        From = "Before roadmap link update 1",
+                        To = "After roadmap link update 1",
+                    }
+                },
+                ChangedBy = "System",
+                IsArchived = false,
+                ItemId = "1",
+                Timestamp = new DateTime(2024, 04, 21),
+            },
+            new()
+            {
+                Id = "1-b",
+                Changes = new DeliveryGroupChanges()
+                {
+                    Name = new Change<string>()
+                    {
+                        From = "Before name update 2",
+                        To = "After name update 2",
+                    },
+                    Status = new Change<string>()
+                    {
+                        From = "Before status update 2",
+                        To = "After status update 2",
+                    },
+                    Lead = new Change<string>()
+                    {
+                        From = "Before lead update 2",
+                        To = "After lead update 2",
+                    },
+                    Outcome = new Change<string>()
+                    {
+                        From = "Before outcome update 2",
+                        To = "After outcome update 2",
+                    },
+                    RoadmapName = new Change<string>()
+                    {
+                        From = "Before roadmap name update 2",
+                        To = "After roadmap name update 2",
+                    },
+                    RoadmapLink = new Change<string>()
+                    {
+                        From = "Before roadmap link update 2",
+                        To = "After roadmap link update 2",
+                    }
+                },
+                ChangedBy = "System",
+                IsArchived = false,
+                ItemId = "1",
+                Timestamp = new DateTime(2024, 04, 21),
+            },
+        ];
+
         public DeliveryGroupsControllerTests(ITestOutputHelper output)
         {
             _validator = new DeliveryGroupValidator();
@@ -662,6 +748,123 @@ namespace AssuranceApi.Test
             // Assert
             response.Should().BeOfType<NotFoundResult>();
         }
+        [Fact]
+        public async Task GetHistory_ReturnsOkResult_WithMatchingProjectHistory_WhenAValidIdIsPassed()
+        {
+            var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
+
+            var controller = new DeliveryGroupsController(
+                mockDeliveryGroupPersistence,
+                mockProjectPersistence,
+                mockDeliveryGroupHistoryPersistence,
+                _validator,
+                _logger
+            );
+            var response = await controller.GetHistory("1");
+
+            response
+                .Should()
+                .BeOfType<OkObjectResult>()
+                .Which.Value.Should()
+                .BeEquivalentTo(_deliveryGroupHistory);
+        }
+
+        [Fact]
+        public async Task GetHistory_ReturnsOkResult__WithEmptyCollection_WhenThereIsNoMatchingProjectHistory()
+        {
+            var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
+
+            var controller = new DeliveryGroupsController(
+                mockDeliveryGroupPersistence,
+                mockProjectPersistence,
+                mockDeliveryGroupHistoryPersistence,
+                _validator,
+                _logger
+            );
+            var response = await controller.GetHistory("2");
+
+            response.Should().BeOfType<OkObjectResult>();
+            response
+                .As<OkObjectResult>()
+                .Value.As<IEnumerable<History<DeliveryGroupChanges>>>()
+                .Count()
+                .Should()
+                .Be(0);
+        }
+
+        [Fact]
+        public async Task GetHistory_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
+        {
+            var controller = new DeliveryGroupsController(
+                null,
+                null,
+                null,
+                _validator,
+                _logger
+            );
+            var response = await controller.GetHistory("1");
+
+            response.Should().BeOfType<ObjectResult>();
+            response.As<ObjectResult>().StatusCode.Should().Be(500);
+        }
+
+        [Fact]
+        public async Task DeleteHistory_ReturnsOkResult_WhenThereIsAValidProjectHistory()
+        {
+            var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
+
+            var controller = new DeliveryGroupsController(
+                mockDeliveryGroupPersistence,
+                mockProjectPersistence,
+                mockDeliveryGroupHistoryPersistence,
+                _validator,
+                _logger
+            );
+            var response = await controller.DeleteHistory("1", "1");
+
+            response.Should().BeOfType<OkResult>();
+        }
+
+        [Fact]
+        public async Task DeleteHistory_ReturnsNotFoundResult_WhenThereIsAnInvalidProjectHistory()
+        {
+            var mockDeliveryGroupPersistence = GetDeliveryGroupPersistenceMock();
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockDeliveryGroupHistoryPersistence = GetDeliveryGroupHistoryPersistenceMock();
+
+            var controller = new DeliveryGroupsController(
+                mockDeliveryGroupPersistence,
+                mockProjectPersistence,
+                mockDeliveryGroupHistoryPersistence,
+                _validator,
+                _logger
+            );
+            var response = await controller.DeleteHistory("INVALID", "INVALID");
+
+            response.Should().BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
+        public async Task DeleteHistory_ReturnsObjectResult_With500Result_WhenAnExceptionOccurs()
+        {
+            var controller = new DeliveryGroupsController(
+                null!,
+                null!,
+                null!,
+                _validator,
+                _logger
+            );
+            var response = await controller.DeleteHistory("INVALID", "INVALID");
+
+            response.Should().BeOfType<ObjectResult>();
+            response.As<ObjectResult>().StatusCode.Should().Be(500);
+        }
 
         private static IDeliveryGroupPersistence GetDeliveryGroupPersistenceMock()
         {
@@ -682,6 +885,10 @@ namespace AssuranceApi.Test
         private static IHistoryPersistence<DeliveryGroupChanges> GetDeliveryGroupHistoryPersistenceMock()
         {
             var mockDeliveryGroupPersistence = Substitute.For<IHistoryPersistence<DeliveryGroupChanges>>();
+
+            mockDeliveryGroupPersistence.GetHistoryAsync("1").Returns(_deliveryGroupHistory);
+            mockDeliveryGroupPersistence.GetHistoryAsync("2").Returns([]);
+            mockDeliveryGroupPersistence.ArchiveHistoryEntryAsync("1", "1").Returns(true);
 
             return mockDeliveryGroupPersistence;
         }
