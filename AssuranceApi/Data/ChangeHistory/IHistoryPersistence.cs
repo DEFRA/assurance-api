@@ -21,5 +21,13 @@ namespace AssuranceApi.Data.ChangeHistory
         /// <param name="id">The ID of the item.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a collection of history entries.</returns>
         Task<IEnumerable<History<T>>> GetHistoryAsync(string id);
+
+        /// <summary>
+        /// Archives a specific history entry for the passed in item.
+        /// </summary>
+        /// <param name="itemId">The ID of the item.</param>
+        /// <param name="historyId">The ID of the history entry to archive.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success.</returns>
+        Task<bool> ArchiveHistoryEntryAsync(string itemId, string historyId);
     }
 }

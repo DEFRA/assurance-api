@@ -317,6 +317,80 @@ public class DeliveryGroupsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets the history for a delivery group.
+    /// </summary>
+    /// <param name="deliveryGroupId">The delivery group ID.</param>
+    /// <returns>List of delivery group history entries.</returns>
+    /// <response code="200">Returns the delivery group history.</response>
+    /// <response code="500">If an internal server error occurs.</response>
+    [HttpGet("{deliveryGroupId}/history")]
+    [ProducesResponseType(typeof(IEnumerable<History<DeliveryGroupChanges>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetHistory(string deliveryGroupId)
+    {
+        _logger.LogDebug("Entering get delivery group history API call");
+
+        try
+        {
+            _logger.LogInformation($"Getting the delivery group history for delivery group for ID='{deliveryGroupId}'");
+
+            var history = await _historyPersistence.GetHistoryAsync(deliveryGroupId);
+            return Ok(history);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred whilst getting the delivery group history");
+            return Problem($"Failed to get the delivery group history: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving get delivery group history API call");
+        }
+    }
+
+    /// <summary>
+    /// Archives a delivery group history entry.
+    /// </summary>
+    /// <param name="deliveryGroupId">The delivery group ID.</param>
+    /// <param name="historyId">The history entry ID.</param>
+    /// <returns>Status of the archive operation.</returns>
+    /// <response code="200">History entry archived successfully.</response>
+    /// <response code="404">History entry not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
+    [HttpPut("{deliveryGroupId}/history/{historyId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [AllowAnonymous]
+    public async Task<IActionResult> DeleteHistory(string deliveryGroupId, string historyId)
+    {
+        // TODO: This should be a DELETE verb
+        _logger.LogDebug("Entering delete delivery group history API call");
+
+        try
+        {
+            _logger.LogInformation($"Deleting the project history for project ID='{deliveryGroupId}' AND history ID='{historyId}'");
+
+            var success = await _historyPersistence.ArchiveHistoryEntryAsync(
+                        deliveryGroupId,
+                        historyId
+                    );
+
+            return success ? Ok() : NotFound();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred deleting the delivery group history");
+            return Problem($"Failed to delete the delivery group history: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving delete delivery group history API call");
+        }
+    }
+
     private async Task TrackChanges(string id, DeliveryGroupModel existing, DeliveryGroupModel updated
     )
     {
@@ -335,17 +409,17 @@ public class DeliveryGroupsController : ControllerBase
         }
         if (existing.Outcome != updated.Outcome)
         {
-            changes.Outcome = new Change<string> { From = existing.Outcome, To = updated.Outcome };
+            changes.Outcome = new Change<string> { From = existing.Outcome!, To = updated.Outcome! };
             hasChanges = true;
         }
         if (existing.RoadmapName != updated.RoadmapName)
         {
-            changes.Outcome = new Change<string> { From = existing.RoadmapName, To = updated.RoadmapName };
+            changes.Outcome = new Change<string> { From = existing.RoadmapName!, To = updated.RoadmapName! };
             hasChanges = true;
         }
         if (existing.RoadmapLink != updated.RoadmapLink)
         {
-            changes.Outcome = new Change<string> { From = existing.RoadmapLink, To = updated.RoadmapLink };
+            changes.Outcome = new Change<string> { From = existing.RoadmapLink!, To = updated.RoadmapLink! };
             hasChanges = true;
         }
         if (existing.IsActive != updated.IsActive)
