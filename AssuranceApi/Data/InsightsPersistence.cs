@@ -100,7 +100,7 @@ public class InsightsPersistence : IInsightsPersistence
             var standardChanges = new List<StandardChange>();
 
             // Get all non-archived history for this project, grouped by standard
-            var historyByStandard = await GetHistoryByStandardAsync(project.Id, cutoffDate);
+            var historyByStandard = await GetHistoryByStandardAsync(project.Id);
 
             foreach (var kvp in historyByStandard)
             {
@@ -120,17 +120,15 @@ public class InsightsPersistence : IInsightsPersistence
                     .ToList();
 
                 // Check if the most recent change was a worsening (or first-time RED/AMBER)
-                if (IsWorseningChange(history))
+                // and the standard exists in our lookup
+                if (IsWorseningChange(history) && standardLookup.TryGetValue(standardId, out var standard))
                 {
-                    if (standardLookup.TryGetValue(standardId, out var standard))
+                    standardChanges.Add(new StandardChange
                     {
-                        standardChanges.Add(new StandardChange
-                        {
-                            StandardNumber = standard.Number,
-                            StandardName = standard.Name,
-                            StatusHistory = statusHistory
-                        });
-                    }
+                        StandardNumber = standard.Number,
+                        StandardName = standard.Name,
+                        StatusHistory = statusHistory
+                    });
                 }
             }
 
@@ -149,7 +147,7 @@ public class InsightsPersistence : IInsightsPersistence
         return result;
     }
 
-    private async Task<Dictionary<string, List<ProjectStandardsHistory>>> GetHistoryByStandardAsync(string projectId, DateTime since)
+    private async Task<Dictionary<string, List<ProjectStandardsHistory>>> GetHistoryByStandardAsync(string projectId)
     {
         var history = await _standardsHistoryCollection
             .Find(h => h.ProjectId == projectId && !h.Archived)
