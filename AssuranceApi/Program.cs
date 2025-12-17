@@ -128,8 +128,10 @@ static void ConfigureServices(WebApplicationBuilder _builder)
     _builder.Services.AddSingleton<IDeliveryGroupPersistence, DeliveryGroupPersistence>();
     _builder.Services.AddSingleton<IHistoryPersistence<DeliveryGroupChanges>, DeliveryGroupHistoryPersistence>();
     _builder.Services.AddSingleton<IInsightsPersistence, InsightsPersistence>();
+    _builder.Services.AddSingleton<IThemePersistence, ThemePersistence>();
 
     _builder.Services.AddScoped<IValidator<ServiceStandardModel>, ServiceStandardValidator>();
+    _builder.Services.AddScoped<IValidator<ThemeModel>, ThemeValidator>();
     _builder.Services.AddScoped<IValidator<ProjectModel>, ProjectValidator>();
     _builder.Services.AddScoped<IValidator<DeliveryPartnerModel>, DeliveryPartnerValidator>();
     _builder.Services.AddScoped<IValidator<ProjectDeliveryPartnerModel>, ProjectDeliveryPartnerModelValidator>();
