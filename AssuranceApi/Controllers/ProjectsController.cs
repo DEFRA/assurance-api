@@ -1,5 +1,6 @@
 // ProjectController.cs
 using System.Globalization;
+using System.Security.Claims;
 using Asp.Versioning;
 using AssuranceApi.Data;
 using AssuranceApi.Project.Handlers;
@@ -59,6 +60,7 @@ public class ProjectsController : ControllerBase
     /// <param name="startDate">Optional date in UTC format that limits to projects that were created or updated on or after this date</param>
     /// <param name="endDate">Optional date in UTC format that limits to projects that were created or updated before this date</param>
     /// <param name="deliveryGroupId">Optional delivery group ID to filter projects.</param>
+    /// <param name="includeArchived">Whether to include archived projects.</param>
     /// <returns>A list of projects.</returns>
     /// <response code="200">Returns the list of projects.</response>
     /// <response code="500">If an internal server error occurs.</response>
@@ -70,7 +72,8 @@ public class ProjectsController : ControllerBase
         [FromQuery] string? tag, 
         [FromQuery(Name = "start_date")] string? startDate, 
         [FromQuery(Name = "end_date")] string? endDate, 
-        [FromQuery(Name = "delivery-group-id")] string? deliveryGroupId)
+        [FromQuery(Name = "delivery-group-id")] string? deliveryGroupId,
+        [FromQuery] bool includeArchived = false)
     {
         _logger.LogDebug("Entering get all projects API call");
 
@@ -78,7 +81,14 @@ public class ProjectsController : ControllerBase
         {
             _logger.LogInformation("Getting all of the projects");
 
-            var projectQueryParameters = new ProjectQueryParameters(tag, startDate, endDate, deliveryGroupId);
+            var effectiveIncludeArchived = GetEffectiveIncludeArchived(includeArchived);
+            var projectQueryParameters = new ProjectQueryParameters(
+                tag,
+                startDate,
+                endDate,
+                deliveryGroupId,
+                effectiveIncludeArchived
+            );
 
             var projects = await _persistence.GetAllAsync(projectQueryParameters);
 
@@ -101,6 +111,7 @@ public class ProjectsController : ControllerBase
     /// Gets a project by its ID.
     /// </summary>
     /// <param name="id">The project ID.</param>
+    /// <param name="includeArchived">Whether archived projects should be included.</param>
     /// <returns>The project if found.</returns>
     /// <response code="200">Returns the project.</response>
     /// <response code="404">Project not found.</response>
@@ -110,7 +121,7 @@ public class ProjectsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
-    public async Task<IActionResult> GetById(string id)
+    public async Task<IActionResult> GetById(string id, [FromQuery] bool includeArchived = false)
     {
         _logger.LogDebug("Entering get project by ID API call");
 
@@ -118,7 +129,7 @@ public class ProjectsController : ControllerBase
         {
             _logger.LogInformation($"Getting all of the projects for ID='{id}'");
 
-            var project = await _persistence.GetByIdAsync(id);
+            var project = await _persistence.GetByIdAsync(id, GetEffectiveIncludeArchived(includeArchived));
 
             if (project == null)
             {
@@ -148,6 +159,7 @@ public class ProjectsController : ControllerBase
     /// Retrieves all projects associated with a specific delivery group.
     /// </summary>
     /// <param name="deliveryGroupId">The unique identifier of the delivery group.</param>
+    /// <param name="includeArchived">Whether to include archived projects.</param>
     /// <returns>A list of projects belonging to the specified delivery group.</returns>
     /// <response code="200">Returns the list of projects for the delivery group.</response>
     /// <response code="500">If an internal server error occurs.</response>
@@ -156,7 +168,7 @@ public class ProjectsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     [AllowAnonymous]
     [Obsolete("This endpoint is deprecated. Please use the main GET /projects endpoint with the delivery-group-id query parameter instead, or deliverygroups/{deliveryGroupId}/projects.")]
-    public async Task<IActionResult> GetByDeliveryGroup(string deliveryGroupId)
+    public async Task<IActionResult> GetByDeliveryGroup(string deliveryGroupId, [FromQuery] bool includeArchived = false)
     {
         _logger.LogDebug("Entering get projects by delivery group API call");
 
@@ -164,7 +176,10 @@ public class ProjectsController : ControllerBase
         {
             _logger.LogInformation("Getting all projects for Delivery Group ID='{DeliveryGroupId}'", deliveryGroupId);
 
-            var projects = await _persistence.GetByDeliveryGroupAsync(deliveryGroupId);
+            var projects = await _persistence.GetByDeliveryGroupAsync(
+                deliveryGroupId,
+                GetEffectiveIncludeArchived(includeArchived)
+            );
 
             _logger.LogDebug("Found {Count} projects for Delivery Group ID='{DeliveryGroupId}'", projects.Count, deliveryGroupId);
 
@@ -576,6 +591,252 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    private bool GetEffectiveIncludeArchived(bool includeArchived)
+    {
+        if (!includeArchived)
+        {
+            return false;
+        }
+
+        if (UserHasAdminRole())
+        {
+            return true;
+        }
+
+        _logger.LogWarning("Ignoring includeArchived=true for non-admin user");
+        return false;
+    }
+
+    private bool UserHasAdminRole()
+    {
+        const string MicrosoftRoleClaim =
+            "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+
+        return User?.Claims.Any(c =>
+            (
+                c.Type == MicrosoftRoleClaim
+                || c.Type == ClaimTypes.Role
+                || c.Type == "role"
+            )
+            && string.Equals(c.Value, "admin", StringComparison.OrdinalIgnoreCase)
+        ) == true;
+    }
+
+    /// <summary>
+    /// Records a project review without changing the normal project update metadata.
+    /// </summary>
+    /// <param name="id">The project ID.</param>
+    /// <param name="review">The project review details.</param>
+    /// <returns>The project with updated review details if successful.</returns>
+    /// <response code="200">Project review recorded successfully.</response>
+    /// <response code="404">Project not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
+    [HttpPost("{id}/review")]
+    [ProducesResponseType(typeof(ProjectModel), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [Authorize(Policy = "RequireAdmin")]
+    public async Task<IActionResult> Review(string id, [FromBody] ProjectReviewModel review)
+    {
+        _logger.LogDebug("Entering review project API call");
+
+        try
+        {
+            _logger.LogInformation("Recording project review for ID='{Id}'", id);
+
+            var existingProject = await _persistence.GetByIdAsync(id);
+            if (existingProject == null)
+            {
+                _logger.LogInformation("Unable to find project with ID='{Id}' for review", id);
+                return NotFound();
+            }
+
+            var reviewedAt = DateTime.UtcNow;
+            var reviewedBy = User.GetEmail();
+            var nextReviewDate = review?.NextReviewDate;
+
+            if (nextReviewDate.HasValue && nextReviewDate.Value.Date <= reviewedAt.Date)
+            {
+                return BadRequest("Next review date must be in the future.");
+            }
+
+            var updated = await _persistence.UpdateReviewAsync(
+                id,
+                reviewedAt,
+                reviewedBy,
+                nextReviewDate
+            );
+
+            if (!updated)
+            {
+                return NotFound();
+            }
+
+            await _historyPersistence.CreateAsync(new ProjectHistory
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                ProjectId = id,
+                Timestamp = reviewedAt,
+                ChangedBy = reviewedBy,
+                ChangedByName = User.GetName(),
+                Changes = new Changes
+                {
+                    LastReviewed = new DateTimeChange
+                    {
+                        From = existingProject.LastReviewed,
+                        To = reviewedAt,
+                    },
+                    NextReviewDate = new DateTimeChange
+                    {
+                        From = existingProject.NextReviewDate,
+                        To = nextReviewDate,
+                    },
+                },
+            });
+
+            existingProject.LastReviewed = reviewedAt;
+            existingProject.LastReviewedBy = reviewedBy;
+            existingProject.NextReviewDate = nextReviewDate;
+
+            return Ok(existingProject);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred whilst recording the project review");
+            return Problem($"Failed to review the project: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving review project API call");
+        }
+    }
+
+    /// <summary>
+    /// Archives a project by ID without hard-deleting it.
+    /// </summary>
+    /// <param name="id">The project ID.</param>
+    /// <param name="archive">The archive request details.</param>
+    /// <returns>No content if archived.</returns>
+    /// <response code="204">Project archived successfully.</response>
+    /// <response code="404">Project not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
+    [HttpPut("{id}/archive")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [Authorize(Policy = "RequireAdmin")]
+    public async Task<IActionResult> Archive(string id, [FromBody] ProjectArchiveModel? archive)
+    {
+        _logger.LogDebug("Entering archive project API call");
+
+        try
+        {
+            _logger.LogInformation("Archiving project with ID='{Id}'", id);
+
+            var archivedAt = DateTime.UtcNow;
+            var archivedBy = User.GetEmail();
+            var archiveReason = archive?.ArchiveReason;
+
+            var archived = await _persistence.ArchiveAsync(
+                id,
+                archivedAt,
+                archivedBy,
+                archiveReason
+            );
+
+            if (!archived)
+            {
+                return NotFound();
+            }
+
+            await _historyPersistence.CreateAsync(new ProjectHistory
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                ProjectId = id,
+                Timestamp = archivedAt,
+                ChangedBy = archivedBy,
+                ChangedByName = User.GetName(),
+                Changes = new Changes
+                {
+                    Archive = new ArchiveChange
+                    {
+                        From = false,
+                        To = true,
+                        Reason = archiveReason,
+                    },
+                },
+            });
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred whilst archiving the project");
+            return Problem($"Failed to archive the project: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving archive project API call");
+        }
+    }
+
+    /// <summary>
+    /// Restores an archived project by ID.
+    /// </summary>
+    /// <param name="id">The project ID.</param>
+    /// <returns>No content if restored.</returns>
+    /// <response code="204">Project restored successfully.</response>
+    /// <response code="404">Project not found.</response>
+    /// <response code="500">If an internal server error occurs.</response>
+    [HttpPut("{id}/restore")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [Authorize(Policy = "RequireAdmin")]
+    public async Task<IActionResult> Restore(string id)
+    {
+        _logger.LogDebug("Entering restore project API call");
+
+        try
+        {
+            _logger.LogInformation("Restoring project with ID='{Id}'", id);
+
+            var restored = await _persistence.RestoreAsync(id);
+            if (!restored)
+            {
+                return NotFound();
+            }
+
+            await _historyPersistence.CreateAsync(new ProjectHistory
+            {
+                Id = ObjectId.GenerateNewId().ToString(),
+                ProjectId = id,
+                Timestamp = DateTime.UtcNow,
+                ChangedBy = User.GetEmail(),
+                ChangedByName = User.GetName(),
+                Changes = new Changes
+                {
+                    Archive = new ArchiveChange
+                    {
+                        From = true,
+                        To = false,
+                    },
+                },
+            });
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred whilst restoring the project");
+            return Problem($"Failed to restore the project: {ex.Message}");
+        }
+        finally
+        {
+            _logger.LogDebug("Leaving restore project API call");
+        }
+    }
+
     /// <summary>
     /// Deletes a project by ID.
     /// </summary>
@@ -936,6 +1197,15 @@ public class ProjectsController : ControllerBase
             {
                 From = existing.DeliveryGroupId,
                 To = updated.DeliveryGroupId,
+            };
+            hasChanges = true;
+        }
+        if (existing.NextServiceAssessmentDate != updated.NextServiceAssessmentDate)
+        {
+            changes.NextServiceAssessmentDate = new DateTimeChange
+            {
+                From = existing.NextServiceAssessmentDate,
+                To = updated.NextServiceAssessmentDate,
             };
             hasChanges = true;
         }

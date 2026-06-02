@@ -25,16 +25,18 @@ public interface IProjectPersistence
     /// Retrieves a project by its ID asynchronously.
     /// </summary>
     /// <param name="id">The ID of the project to retrieve.</param>
+    /// <param name="includeArchived">Whether archived projects should be included.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the project, or null if not found.</returns>
-    Task<ProjectModel?> GetByIdAsync(string id);
+    Task<ProjectModel?> GetByIdAsync(string id, bool includeArchived = false);
 
 
     /// <summary>
     /// Retrieves a list of projects by their IDs.
     /// </summary>
     /// <param name="projectIds">The list of project IDs to retrieve.</param>
+    /// <param name="includeArchived">Whether archived projects should be included.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a list of projects.</returns>
-    Task<List<ProjectModel>> GetByIdsAsync(List<string> projectIds);
+    Task<List<ProjectModel>> GetByIdsAsync(List<string> projectIds, bool includeArchived = false);
 
     /// <summary>
     /// Updates an existing project asynchronously.
@@ -43,6 +45,41 @@ public interface IProjectPersistence
     /// <param name="project">The updated project data.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success.</returns>
     Task<bool> UpdateAsync(string id, ProjectModel project);
+
+    /// <summary>
+    /// Updates the project review fields asynchronously.
+    /// </summary>
+    /// <param name="id">The ID of the project to update.</param>
+    /// <param name="lastReviewed">The timestamp when the review was recorded.</param>
+    /// <param name="lastReviewedBy">The user who recorded the review.</param>
+    /// <param name="nextReviewDate">The next review date.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success.</returns>
+    Task<bool> UpdateReviewAsync(
+        string id,
+        DateTime lastReviewed,
+        string lastReviewedBy,
+        DateTime? nextReviewDate);
+
+    /// <summary>
+    /// Archives a project asynchronously.
+    /// </summary>
+    /// <param name="id">The ID of the project to archive.</param>
+    /// <param name="archivedAt">The timestamp when the project was archived.</param>
+    /// <param name="archivedBy">The user who archived the project.</param>
+    /// <param name="archiveReason">The reason the project was archived.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success.</returns>
+    Task<bool> ArchiveAsync(
+        string id,
+        DateTime archivedAt,
+        string archivedBy,
+        string? archiveReason);
+
+    /// <summary>
+    /// Restores an archived project asynchronously.
+    /// </summary>
+    /// <param name="id">The ID of the project to restore.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating success.</returns>
+    Task<bool> RestoreAsync(string id);
 
     /// <summary>
     /// Deletes all projects asynchronously.
@@ -75,6 +112,7 @@ public interface IProjectPersistence
     /// Retrieves all projects associated with a specific delivery group.
     /// </summary>
     /// <param name="deliveryGroupId">The ID of the delivery group.</param>
+    /// <param name="includeArchived">Whether archived projects should be included.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a list of projects.</returns>
-    Task<List<ProjectModel>> GetByDeliveryGroupAsync(string deliveryGroupId);
+    Task<List<ProjectModel>> GetByDeliveryGroupAsync(string deliveryGroupId, bool includeArchived = false);
 }

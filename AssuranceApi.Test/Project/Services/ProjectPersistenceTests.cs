@@ -195,6 +195,117 @@ public class ProjectPersistenceTests
 
     #endregion
 
+    #region UpdateReviewAsync Tests
+
+    [Fact]
+    public async Task UpdateReviewAsync_ShouldReturnTrue_WhenUpdateSucceeds()
+    {
+        // Arrange
+        var projectId = "507f1f77bcf86cd799439011";
+        var updateResult = Substitute.For<UpdateResult>();
+        updateResult.ModifiedCount.Returns(1);
+
+        _collectionMock
+            .UpdateOneAsync(
+                Arg.Any<FilterDefinition<ProjectModel>>(),
+                Arg.Any<UpdateDefinition<ProjectModel>>()
+            )
+            .Returns(updateResult);
+
+        // Act
+        var result = await _persistence.UpdateReviewAsync(
+            projectId,
+            DateTime.UtcNow,
+            "user@example.com",
+            new DateTime(2027, 06, 01)
+        );
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateReviewAsync_ShouldReturnFalse_WhenNoDocumentModified()
+    {
+        // Arrange
+        var projectId = "nonexistent";
+        var updateResult = Substitute.For<UpdateResult>();
+        updateResult.ModifiedCount.Returns(0);
+
+        _collectionMock
+            .UpdateOneAsync(
+                Arg.Any<FilterDefinition<ProjectModel>>(),
+                Arg.Any<UpdateDefinition<ProjectModel>>()
+            )
+            .Returns(updateResult);
+
+        // Act
+        var result = await _persistence.UpdateReviewAsync(
+            projectId,
+            DateTime.UtcNow,
+            "user@example.com",
+            null
+        );
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    #endregion
+
+    #region ArchiveAsync Tests
+
+    [Fact]
+    public async Task ArchiveAsync_ShouldReturnTrue_WhenUpdateSucceeds()
+    {
+        // Arrange
+        var projectId = "507f1f77bcf86cd799439011";
+        var updateResult = Substitute.For<UpdateResult>();
+        updateResult.ModifiedCount.Returns(1);
+
+        _collectionMock
+            .UpdateOneAsync(
+                Arg.Any<FilterDefinition<ProjectModel>>(),
+                Arg.Any<UpdateDefinition<ProjectModel>>()
+            )
+            .Returns(updateResult);
+
+        // Act
+        var result = await _persistence.ArchiveAsync(
+            projectId,
+            DateTime.UtcNow,
+            "user@example.com",
+            "No longer active"
+        );
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RestoreAsync_ShouldReturnTrue_WhenUpdateSucceeds()
+    {
+        // Arrange
+        var projectId = "507f1f77bcf86cd799439011";
+        var updateResult = Substitute.For<UpdateResult>();
+        updateResult.ModifiedCount.Returns(1);
+
+        _collectionMock
+            .UpdateOneAsync(
+                Arg.Any<FilterDefinition<ProjectModel>>(),
+                Arg.Any<UpdateDefinition<ProjectModel>>()
+            )
+            .Returns(updateResult);
+
+        // Act
+        var result = await _persistence.RestoreAsync(projectId);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    #endregion
+
     #region DeleteAsync Tests
 
     [Fact]

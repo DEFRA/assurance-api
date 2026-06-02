@@ -339,6 +339,20 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
         return dateRangeProjects;
     }
 
+    private static ProjectModel CreateIntegrationProject(string id, string name)
+    {
+        return new ProjectModel
+        {
+            Id = id,
+            Name = name,
+            Commentary = "A project for integration testing",
+            Status = "GREEN",
+            Phase = "Discovery",
+            LastUpdated = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            UpdateDate = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+        };
+    }
+
     [Fact]
     public async Task GetProjectsWithTagFilter_ReturnsFilteredResults()
     {
@@ -463,6 +477,180 @@ public class ProjectIntegrationTests : IClassFixture<TestApplicationFactory>
 
         // Act
         var response = await client.PutAsJsonAsync($"/api/v1.0/projects/{projectId}", project);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ReviewProject_ReturnsOkAndWritesHistory_WhenProjectExists()
+    {
+        // Arrange
+        await _factory.ClearDatabaseAsync();
+        var client = _factory.CreateAuthenticatedClient();
+
+        var projectId = ObjectId.GenerateNewId().ToString();
+        var project = CreateIntegrationProject(projectId, "Review Test Project");
+        var createResponse = await client.PostAsJsonAsync("/api/v1.0/projects", project);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var nextReviewDate = DateTime.UtcNow.AddDays(30);
+        var review = new ProjectReviewModel { NextReviewDate = nextReviewDate };
+
+        // Act
+        var response = await client.PostAsJsonAsync($"/api/v1.0/projects/{projectId}/review", review);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var reviewedProject = await response.Content.ReadFromJsonAsync<ProjectModel>();
+        reviewedProject.Should().NotBeNull();
+        reviewedProject!.LastReviewed.Should().NotBeNull();
+        reviewedProject.LastReviewedBy.Should().Be("Unknown User");
+        reviewedProject.NextReviewDate.Should().NotBeNull();
+        reviewedProject.NextReviewDate!.Value.Date.Should().Be(nextReviewDate.Date);
+        reviewedProject.LastUpdated.Should().Be(project.LastUpdated);
+        reviewedProject.UpdateDate.Should().Be(project.UpdateDate);
+
+        var historyResponse = await client.GetAsync($"/api/v1.0/projects/{projectId}/history");
+        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var history = await historyResponse.Content.ReadFromJsonAsync<List<ProjectHistory>>();
+        history.Should().Contain(h => h.Changes?.LastReviewed != null);
+    }
+
+    [Fact]
+    public async Task ReviewProject_RequiresAuthentication()
+    {
+        // Arrange
+        await _factory.ClearDatabaseAsync();
+        var client = _factory.CreateUnauthenticatedClient();
+
+        // Act
+        var response = await client.PostAsJsonAsync(
+            $"/api/v1.0/projects/{ObjectId.GenerateNewId()}/review",
+            new ProjectReviewModel { NextReviewDate = DateTime.UtcNow.AddDays(30) }
+        );
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ArchiveProject_ReturnsNoContentAndHidesFromDefaultReads_WhenProjectExists()
+    {
+        // Arrange
+        await _factory.ClearDatabaseAsync();
+        var client = _factory.CreateAuthenticatedClient();
+        var publicClient = _factory.CreateUnauthenticatedClient();
+
+        var projectId = ObjectId.GenerateNewId().ToString();
+        var project = CreateIntegrationProject(projectId, "Archive Test Project");
+        var createResponse = await client.PostAsJsonAsync("/api/v1.0/projects", project);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var archive = new ProjectArchiveModel { ArchiveReason = "No longer active" };
+
+        // Act
+        var response = await client.PutAsJsonAsync($"/api/v1.0/projects/{projectId}/archive", archive);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var defaultReadResponse = await client.GetAsync($"/api/v1.0/projects/{projectId}");
+        defaultReadResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var publicArchivedReadResponse = await publicClient.GetAsync(
+            $"/api/v1.0/projects/{projectId}?includeArchived=true"
+        );
+        publicArchivedReadResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var archivedReadResponse = await client.GetAsync(
+            $"/api/v1.0/projects/{projectId}?includeArchived=true"
+        );
+        archivedReadResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var archivedProject = await archivedReadResponse.Content.ReadFromJsonAsync<ProjectModel>();
+        archivedProject.Should().NotBeNull();
+        archivedProject!.IsArchived.Should().BeTrue();
+        archivedProject.ArchivedAt.Should().NotBeNull();
+        archivedProject.ArchivedBy.Should().Be("Unknown User");
+        archivedProject.ArchiveReason.Should().Be("No longer active");
+
+        var historyResponse = await client.GetAsync($"/api/v1.0/projects/{projectId}/history");
+        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var history = await historyResponse.Content.ReadFromJsonAsync<List<ProjectHistory>>();
+        history.Should().Contain(h => h.Changes?.Archive?.To == true);
+    }
+
+    [Fact]
+    public async Task ArchiveProject_RequiresAuthentication()
+    {
+        // Arrange
+        await _factory.ClearDatabaseAsync();
+        var client = _factory.CreateUnauthenticatedClient();
+
+        // Act
+        var response = await client.PutAsJsonAsync(
+            $"/api/v1.0/projects/{ObjectId.GenerateNewId()}/archive",
+            new ProjectArchiveModel { ArchiveReason = "No longer active" }
+        );
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task RestoreProject_ReturnsNoContentAndReturnsToDefaultReads_WhenProjectIsArchived()
+    {
+        // Arrange
+        await _factory.ClearDatabaseAsync();
+        var client = _factory.CreateAuthenticatedClient();
+
+        var projectId = ObjectId.GenerateNewId().ToString();
+        var project = CreateIntegrationProject(projectId, "Restore Test Project");
+        var createResponse = await client.PostAsJsonAsync("/api/v1.0/projects", project);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var archiveResponse = await client.PutAsJsonAsync(
+            $"/api/v1.0/projects/{projectId}/archive",
+            new ProjectArchiveModel { ArchiveReason = "Restore test setup" }
+        );
+        archiveResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Act
+        var response = await client.PutAsync(
+            $"/api/v1.0/projects/{projectId}/restore",
+            new StringContent(string.Empty)
+        );
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var restoredReadResponse = await client.GetAsync($"/api/v1.0/projects/{projectId}");
+        restoredReadResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var restoredProject = await restoredReadResponse.Content.ReadFromJsonAsync<ProjectModel>();
+        restoredProject.Should().NotBeNull();
+        restoredProject!.IsArchived.Should().BeFalse();
+        restoredProject.ArchivedAt.Should().BeNull();
+        restoredProject.ArchivedBy.Should().BeNull();
+        restoredProject.ArchiveReason.Should().BeNull();
+
+        var historyResponse = await client.GetAsync($"/api/v1.0/projects/{projectId}/history");
+        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var history = await historyResponse.Content.ReadFromJsonAsync<List<ProjectHistory>>();
+        history.Should().Contain(h => h.Changes?.Archive?.To == false);
+    }
+
+    [Fact]
+    public async Task RestoreProject_RequiresAuthentication()
+    {
+        // Arrange
+        await _factory.ClearDatabaseAsync();
+        var client = _factory.CreateUnauthenticatedClient();
+
+        // Act
+        var response = await client.PutAsync(
+            $"/api/v1.0/projects/{ObjectId.GenerateNewId()}/restore",
+            new StringContent(string.Empty)
+        );
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);

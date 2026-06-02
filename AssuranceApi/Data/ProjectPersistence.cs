@@ -17,6 +17,12 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
     public ProjectPersistence(IMongoDbClientFactory connectionFactory, ILoggerFactory loggerFactory)
         : base(connectionFactory, "projects", loggerFactory) { }
 
+    private static FilterDefinition<ProjectModel> ActiveProjectsFilter =>
+        Builders<ProjectModel>.Filter.Or(
+            Builders<ProjectModel>.Filter.Eq(x => x.IsArchived, false),
+            Builders<ProjectModel>.Filter.Exists("isArchived", false)
+        );
+
     /// <summary>
     /// Defines the indexes for the ProjectModel collection.
     /// </summary>
@@ -62,11 +68,15 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
     public async Task<List<ProjectModel>> GetAllAsync(ProjectQueryParameters projectQueryParameters)
     {
         var filter = Builders<ProjectModel>.Filter.Empty;
+        var filters = new List<FilterDefinition<ProjectModel>>();
+
+        if (projectQueryParameters?.IncludeArchived != true)
+        {
+            filters.Add(ActiveProjectsFilter);
+        }
 
         if (projectQueryParameters != null)
         {
-            var filters = new List<FilterDefinition<ProjectModel>>();
-
             if (projectQueryParameters.Tags != null)
             {
                 filters.Add(Builders<ProjectModel>.Filter.AnyEq(p => p.Tags, projectQueryParameters.Tags));
@@ -86,10 +96,10 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
             {
                 filters.Add(Builders<ProjectModel>.Filter.Eq(p => p.DeliveryGroupId, projectQueryParameters.DeliveryGroupId));
             }
-
-            if (filters.Any())
-                filter = Builders<ProjectModel>.Filter.And(filters);
         }
+
+        if (filters.Any())
+            filter = Builders<ProjectModel>.Filter.And(filters);
 
         var findOptions = new FindOptions
         {
@@ -107,9 +117,16 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
     /// </summary>
     /// <param name="id">The ID of the project to retrieve.</param>
     /// <returns>The project with the specified ID, or null if not found.</returns>
-    public async Task<ProjectModel?> GetByIdAsync(string id)
+    public async Task<ProjectModel?> GetByIdAsync(string id, bool includeArchived = false)
     {
-        return await Collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+        var filter = Builders<ProjectModel>.Filter.Eq(x => x.Id, id);
+
+        if (!includeArchived)
+        {
+            filter = Builders<ProjectModel>.Filter.And(filter, ActiveProjectsFilter);
+        }
+
+        return await Collection.Find(filter).FirstOrDefaultAsync();
     }
 
     /// <summary>
@@ -117,12 +134,17 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
     /// </summary>
     /// <param name="projectIds">The list of project IDs to retrieve.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a list of projects.</returns>
-    public async Task<List<ProjectModel>> GetByIdsAsync(List<string> projectIds)
+    public async Task<List<ProjectModel>> GetByIdsAsync(List<string> projectIds, bool includeArchived = false)
     {
         if (projectIds == null || projectIds.Count == 0)
             return [];
 
         var filter = Builders<ProjectModel>.Filter.In(x => x.Id, projectIds);
+        if (!includeArchived)
+        {
+            filter = Builders<ProjectModel>.Filter.And(filter, ActiveProjectsFilter);
+        }
+
         return await Collection.Find(filter).ToListAsync();
     }
 
@@ -159,6 +181,9 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
                 updates.Add(updateDef.Set(x => x.LastUpdated, project.LastUpdated));
             if (project.UpdateDate != null)
                 updates.Add(updateDef.Set(x => x.UpdateDate, project.UpdateDate));
+            if (project.NextReviewDate != null)
+                updates.Add(updateDef.Set(x => x.NextReviewDate, project.NextReviewDate));
+            updates.Add(updateDef.Set(x => x.NextServiceAssessmentDate, project.NextServiceAssessmentDate));
             if (project.StandardsSummary != null)
                 updates.Add(updateDef.Set(x => x.StandardsSummary, project.StandardsSummary));
 
@@ -169,7 +194,10 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
             }
 
             var result = await Collection.UpdateOneAsync(
-                x => x.Id == id,
+                Builders<ProjectModel>.Filter.And(
+                    Builders<ProjectModel>.Filter.Eq(x => x.Id, id),
+                    ActiveProjectsFilter
+                ),
                 updateDef.Combine(updates)
             );
 
@@ -182,6 +210,140 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to update project {ProjectId}", id);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Updates the project review fields in the database.
+    /// </summary>
+    /// <param name="id">The ID of the project to update.</param>
+    /// <param name="lastReviewed">The timestamp when the review was recorded.</param>
+    /// <param name="lastReviewedBy">The user who recorded the review.</param>
+    /// <param name="nextReviewDate">The next review date.</param>
+    /// <returns>True if the project was updated successfully; otherwise, false.</returns>
+    public async Task<bool> UpdateReviewAsync(
+        string id,
+        DateTime lastReviewed,
+        string lastReviewedBy,
+        DateTime? nextReviewDate)
+    {
+        try
+        {
+            Logger.LogInformation("Updating review fields for project {ProjectId}", id);
+
+            var update = Builders<ProjectModel>.Update
+                .Set(x => x.LastReviewed, lastReviewed)
+                .Set(x => x.LastReviewedBy, lastReviewedBy)
+                .Set(x => x.NextReviewDate, nextReviewDate);
+
+            var result = await Collection.UpdateOneAsync(
+                Builders<ProjectModel>.Filter.And(
+                    Builders<ProjectModel>.Filter.Eq(x => x.Id, id),
+                    ActiveProjectsFilter
+                ),
+                update
+            );
+
+            if (result.ModifiedCount == 0)
+            {
+                Logger.LogWarning("No project review fields were updated for ID {ProjectId}", id);
+            }
+
+            return result.ModifiedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to update review fields for project {ProjectId}", id);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Archives a project in the database.
+    /// </summary>
+    /// <param name="id">The ID of the project to archive.</param>
+    /// <param name="archivedAt">The timestamp when the project was archived.</param>
+    /// <param name="archivedBy">The user who archived the project.</param>
+    /// <param name="archiveReason">The reason the project was archived.</param>
+    /// <returns>True if the project was archived successfully; otherwise, false.</returns>
+    public async Task<bool> ArchiveAsync(
+        string id,
+        DateTime archivedAt,
+        string archivedBy,
+        string? archiveReason)
+    {
+        try
+        {
+            Logger.LogInformation("Archiving project with ID: {Id}", id);
+
+            var update = Builders<ProjectModel>.Update
+                .Set(x => x.IsArchived, true)
+                .Set(x => x.ArchivedAt, archivedAt)
+                .Set(x => x.ArchivedBy, archivedBy)
+                .Set(x => x.ArchiveReason, archiveReason);
+
+            var result = await Collection.UpdateOneAsync(
+                Builders<ProjectModel>.Filter.And(
+                    Builders<ProjectModel>.Filter.Eq(x => x.Id, id),
+                    ActiveProjectsFilter
+                ),
+                update
+            );
+
+            if (result.ModifiedCount == 0)
+            {
+                Logger.LogWarning("Project with ID {Id} not found for archiving", id);
+                return false;
+            }
+
+            Logger.LogInformation("Successfully archived project with ID: {Id}", id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error archiving project with ID: {Id}", id);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Restores an archived project in the database.
+    /// </summary>
+    /// <param name="id">The ID of the project to restore.</param>
+    /// <returns>True if the project was restored successfully; otherwise, false.</returns>
+    public async Task<bool> RestoreAsync(string id)
+    {
+        try
+        {
+            Logger.LogInformation("Restoring project with ID: {Id}", id);
+
+            var update = Builders<ProjectModel>.Update
+                .Set(x => x.IsArchived, false)
+                .Set(x => x.ArchivedAt, (DateTime?)null)
+                .Set(x => x.ArchivedBy, (string?)null)
+                .Set(x => x.ArchiveReason, (string?)null);
+
+            var result = await Collection.UpdateOneAsync(
+                Builders<ProjectModel>.Filter.And(
+                    Builders<ProjectModel>.Filter.Eq(x => x.Id, id),
+                    Builders<ProjectModel>.Filter.Eq(x => x.IsArchived, true)
+                ),
+                update
+            );
+
+            if (result.ModifiedCount == 0)
+            {
+                Logger.LogWarning("Project with ID {Id} not found for restoring", id);
+                return false;
+            }
+
+            Logger.LogInformation("Successfully restored project with ID: {Id}", id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error restoring project with ID: {Id}", id);
             return false;
         }
     }
@@ -285,14 +447,21 @@ public class ProjectPersistence : MongoService<ProjectModel>, IProjectPersistenc
     /// </summary>
     /// <param name="deliveryGroupId">The ID of the delivery group.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a list of projects.</returns>
-    public async Task<List<ProjectModel>> GetByDeliveryGroupAsync(string deliveryGroupId)
+    public async Task<List<ProjectModel>> GetByDeliveryGroupAsync(string deliveryGroupId, bool includeArchived = false)
     {
         Logger.LogDebug("Getting projects with Delivery Group ID: {DeliveryGroupId}", deliveryGroupId);
 
         try
         {
+            var filter = Builders<ProjectModel>.Filter.Eq(x => x.DeliveryGroupId, deliveryGroupId);
+
+            if (!includeArchived)
+            {
+                filter = Builders<ProjectModel>.Filter.And(filter, ActiveProjectsFilter);
+            }
+
             return await Collection
-                .Find(x => x.DeliveryGroupId == deliveryGroupId)
+                .Find(filter)
                 .ToListAsync();
         }
         catch (Exception ex)

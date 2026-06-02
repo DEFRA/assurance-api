@@ -21,11 +21,17 @@ namespace AssuranceApi.Data
         /// <param name="startDate">The start date of the date range in ISO 8601 format.</param>
         /// <param name="endDate">The end date of the date range in ISO 8601 format.</param>
         /// <param name="deliveryGroupId">The ID of the delivery group to filter by.</param>
-        public ProjectQueryParameters(string? tags, string? startDate, string? endDate, string? deliveryGroupId)
+        public ProjectQueryParameters(
+            string? tags,
+            string? startDate,
+            string? endDate,
+            string? deliveryGroupId = null,
+            bool includeArchived = false)
         {
             Tags = tags;
             StartDate = ParseDateTime(startDate);
             EndDate = ParseDateTime(endDate);
+            IncludeArchived = includeArchived;
 
             if (StartDate.HasValue && EndDate.HasValue && StartDate > EndDate)
             {
@@ -56,6 +62,11 @@ namespace AssuranceApi.Data
         /// Gets or sets the end date of the date range.
         /// </summary>
         public DateTime? EndDate { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether archived projects should be included.
+        /// </summary>
+        public bool IncludeArchived { get; set; }
 
         /// <summary>
         /// Parses a date string into a <see cref="DateTime"/> object.

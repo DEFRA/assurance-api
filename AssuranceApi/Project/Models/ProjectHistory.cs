@@ -80,6 +80,26 @@ public class Changes
     /// Gets or sets the tags change details, if applicable.
     /// </summary>
     public TagsChange? Tags { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last reviewed timestamp change details, if applicable.
+    /// </summary>
+    public DateTimeChange? LastReviewed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the next review date change details, if applicable.
+    /// </summary>
+    public DateTimeChange? NextReviewDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the next service assessment date change details, if applicable.
+    /// </summary>
+    public DateTimeChange? NextServiceAssessmentDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the archive state change details, if applicable.
+    /// </summary>
+    public ArchiveChange? Archive { get; set; }
 }
 
 /// <summary>
@@ -176,4 +196,41 @@ public class TagsChange
     /// Gets or sets the new tags.
     /// </summary>
     public List<string> To { get; set; } = new();
+}
+
+/// <summary>
+/// Represents a change in a nullable date and time field.
+/// </summary>
+public class DateTimeChange
+{
+    /// <summary>
+    /// Gets or sets the previous date and time.
+    /// </summary>
+    public DateTime? From { get; set; }
+
+    /// <summary>
+    /// Gets or sets the new date and time.
+    /// </summary>
+    public DateTime? To { get; set; }
+}
+
+/// <summary>
+/// Represents a change in the project's archive state.
+/// </summary>
+public class ArchiveChange
+{
+    /// <summary>
+    /// Gets or sets a value indicating whether the project was previously archived.
+    /// </summary>
+    public bool From { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the project is now archived.
+    /// </summary>
+    public bool To { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reason for the archive state change.
+    /// </summary>
+    public string? Reason { get; set; }
 }

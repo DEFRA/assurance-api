@@ -1353,6 +1353,34 @@ namespace AssuranceApi.Test
         }
 
         [Fact]
+        public async Task Update_TracksNextServiceAssessmentDate_WhenDateChanges()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            var changedModel = GetNewInstanceOfProjectModelToDiscardChanges();
+            var nextServiceAssessmentDate = new DateTime(2024, 05, 30);
+            changedModel.NextServiceAssessmentDate = nextServiceAssessmentDate;
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.Update(changedModel.Id, changedModel);
+
+            response.Should().BeOfType<OkObjectResult>();
+            await mockProjectHistoryPersistence
+                .Received(1)
+                .CreateAsync(Arg.Is<ProjectHistory>(h =>
+                    h.Changes.NextServiceAssessmentDate != null &&
+                    h.Changes.NextServiceAssessmentDate.To == nextServiceAssessmentDate));
+        }
+
+        [Fact]
         public async Task Update_ReturnsNotFoundResult_WithErrorMessage_WhenAValidProjectIsPassedWithAnInvalidId()
         {
             var mockProjectPersistence = GetProjectPersistenceMock();
@@ -1404,6 +1432,119 @@ namespace AssuranceApi.Test
 
             response.Should().BeOfType<ObjectResult>();
             response.As<ObjectResult>().StatusCode.Should().Be(500);
+        }
+
+        [Fact]
+        public async Task Review_ReturnsOkObjectResult_AndUsesTargetedReviewUpdate_WhenProjectExists()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var review = new ProjectReviewModel
+            {
+                NextReviewDate = DateTime.UtcNow.AddDays(30),
+            };
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.Review("1", review);
+
+            response.Should().BeOfType<OkObjectResult>();
+            await mockProjectPersistence
+                .Received(1)
+                .UpdateReviewAsync(
+                    "1",
+                    Arg.Any<DateTime>(),
+                    Arg.Any<string>(),
+                    review.NextReviewDate);
+            await mockProjectPersistence
+                .DidNotReceive()
+                .UpdateAsync(Arg.Any<string>(), Arg.Any<ProjectModel>());
+            await mockProjectHistoryPersistence
+                .Received(1)
+                .CreateAsync(Arg.Is<ProjectHistory>(h =>
+                    h.ProjectId == "1" &&
+                    h.Changes.LastReviewed != null &&
+                    h.Changes.NextReviewDate != null));
+        }
+
+        [Fact]
+        public async Task Review_ReturnsNotFoundResult_WhenProjectDoesNotExist()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.Review("missing", new ProjectReviewModel());
+
+            response.Should().BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
+        public async Task Archive_ReturnsNoContentResult_WhenProjectExists()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+            var archive = new ProjectArchiveModel { ArchiveReason = "No longer active" };
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.Archive("1", archive);
+
+            response.Should().BeOfType<NoContentResult>();
+            await mockProjectPersistence
+                .Received(1)
+                .ArchiveAsync("1", Arg.Any<DateTime>(), Arg.Any<string>(), archive.ArchiveReason);
+            await mockProjectHistoryPersistence
+                .Received(1)
+                .CreateAsync(Arg.Is<ProjectHistory>(h =>
+                    h.ProjectId == "1" &&
+                    h.Changes.Archive != null &&
+                    h.Changes.Archive.To));
+        }
+
+        [Fact]
+        public async Task Restore_ReturnsNoContentResult_WhenProjectExists()
+        {
+            var mockProjectPersistence = GetProjectPersistenceMock();
+            var mockProjectHistoryPersistence = GetProjectHistoryPersistenceMock();
+
+            var controller = new ProjectsController(
+                mockProjectPersistence,
+                mockProjectHistoryPersistence,
+                null,
+                _validator,
+                _logger
+            );
+
+            var response = await controller.Restore("1");
+
+            response.Should().BeOfType<NoContentResult>();
+            await mockProjectPersistence.Received(1).RestoreAsync("1");
+            await mockProjectHistoryPersistence
+                .Received(1)
+                .CreateAsync(Arg.Is<ProjectHistory>(h =>
+                    h.ProjectId == "1" &&
+                    h.Changes.Archive != null &&
+                    !h.Changes.Archive.To));
         }
 
         [Fact]
@@ -1865,6 +2006,21 @@ namespace AssuranceApi.Test
             mockProjectPersistence
                 .UpdateAsync(Arg.Any<string>(), Arg.Any<ProjectModel>())
                 .Returns(true);
+            mockProjectPersistence
+                .UpdateReviewAsync(
+                    Arg.Any<string>(),
+                    Arg.Any<DateTime>(),
+                    Arg.Any<string>(),
+                    Arg.Any<DateTime?>())
+                .Returns(true);
+            mockProjectPersistence
+                .ArchiveAsync(
+                    Arg.Any<string>(),
+                    Arg.Any<DateTime>(),
+                    Arg.Any<string>(),
+                    Arg.Any<string?>())
+                .Returns(true);
+            mockProjectPersistence.RestoreAsync(Arg.Any<string>()).Returns(true);
 
             // Mock for GetByDeliveryGroupAsync - return projects that match the delivery group ID
             mockProjectPersistence.GetByDeliveryGroupAsync("test-delivery-group")

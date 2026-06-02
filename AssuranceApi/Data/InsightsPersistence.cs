@@ -18,6 +18,12 @@ public class InsightsPersistence : IInsightsPersistence
     private readonly IMongoCollection<ServiceStandardModel> _serviceStandardsCollection;
     private readonly ILogger<InsightsPersistence> _logger;
 
+    private static FilterDefinition<ProjectModel> ActiveProjectsFilter =>
+        Builders<ProjectModel>.Filter.Or(
+            Builders<ProjectModel>.Filter.Eq(x => x.IsArchived, false),
+            Builders<ProjectModel>.Filter.Exists("isArchived", false)
+        );
+
     /// <summary>
     /// Initializes a new instance of the <see cref="InsightsPersistence"/> class.
     /// </summary>
@@ -44,8 +50,8 @@ public class InsightsPersistence : IInsightsPersistence
         var cutoffDate = DateTime.UtcNow.AddDays(-standardThresholdDays);
         var result = new List<DeliveryNeedingUpdate>();
 
-        // Get all projects
-        var projects = await _projectsCollection.Find(_ => true).ToListAsync();
+        // Get all active projects
+        var projects = await _projectsCollection.Find(ActiveProjectsFilter).ToListAsync();
 
         foreach (var project in projects)
         {
@@ -92,8 +98,8 @@ public class InsightsPersistence : IInsightsPersistence
             .ToListAsync();
         var standardLookup = serviceStandards.ToDictionary(s => s.Id, s => s);
 
-        // Get all projects
-        var projects = await _projectsCollection.Find(_ => true).ToListAsync();
+        // Get all active projects
+        var projects = await _projectsCollection.Find(ActiveProjectsFilter).ToListAsync();
 
         foreach (var project in projects)
         {
